@@ -15,6 +15,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Node 的 fetch 默认不走 HTTPS_PROXY，代理注入的认证头就拿不到：带上 NODE_USE_ENV_PROXY 重启自己
+if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) {
+  const { spawnSync } = await import('node:child_process');
+  const r = spawnSync(process.execPath, ['--no-warnings', ...process.argv.slice(1)], {
+    stdio: 'inherit', env: { ...process.env, NODE_USE_ENV_PROXY: '1' },
+  });
+  process.exit(r.status ?? 1);
+}
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const API = 'https://api.meshy.ai/openapi/v2/text-to-3d';
