@@ -4,6 +4,7 @@
 
 - **截止**：2026-10-09 07:59（北京时间）
 - **平台**：[Chrona.world](https://chrona.world)，上传 ZIP（index.html + assets）≤ 200 MiB，发布即公开
+- **在线试玩**：https://khaoszen.github.io/ChronaMeshyProject/（合进 main 自动部署，调试加 `?debug`）
 - **设计文档**：Claude Docs「ROOT 设计文档」（玩法、叙事、谜题池、资产清单、概念图提示词）
 - **技术**：Three.js + 外链 GLB（Meshy API 生成）
 
