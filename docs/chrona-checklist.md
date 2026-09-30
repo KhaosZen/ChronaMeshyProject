@@ -15,14 +15,16 @@
 
 ## 当前的接入方式
 
-所有平台相关的调用都走 `Platform.emit(evt, detail)`，目前只 `console.log` 并派发 `window` 事件 `rooted:<evt>`：
+所有平台相关的调用都走 `Platform.emit(evt, detail)`。目前只派发 `window` 事件 `root:<evt>`，`?debug` 下同时打印到控制台：
 
-| 事件 | detail |
-|---|---|
-| `ready` | — |
-| `start` | `{ loop }` |
-| `pickup` | `{ id, label, loop }` |
-| `loop` | `{ loop }`（进入新循环） |
-| `end` | `{ loop, endingItem }` |
+| 事件 | detail | 含义 |
+|---|---|---|
+| `ready` | — | 资源载入完成 |
+| `start` | `{ floor }` | 玩家点击进入 |
+| `pickup` | `{ id, label, floor }` | 拾取道具 |
+| `use` | `{ target, floor, item }` | 对物体使用道具（钥匙开门、花盆放进光斑） |
+| `repeat` | `{ floor, repeat }` | 没解开谜题，回到本层起点 |
+| `floor` | `{ floor }` | 进入新一层 |
+| `end` | `{ floor, endingItem }` | 结局 |
 
-确认 Chrona API 后只需要改 `Platform` 对象；如果平台自己接管拾取/触发，把 `tryPickup()` 和 `nextLoop()` 的触发条件换成平台回调即可。
+确认 Chrona API 后只需要改 `Platform` 对象。如果平台自己接管拾取和触发，就把 `tryInteract()`、`repeatFloor()`、`nextFloor()` 的触发条件换成平台回调。

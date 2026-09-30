@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>ROOTED（工作名）</title>
+<title>ROOT（工作名）</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1c1a; color: #cfc8b8;
     font-family: "Songti SC", "Noto Serif SC", Georgia, serif; user-select: none; }
@@ -33,7 +33,7 @@
 </head>
 <body>
 <div id="start" class="layer">
-  <h1>ROOTED</h1>
+  <h1>ROOT</h1>
   <p>WASD 移动 · Shift 快走 · 鼠标 视角<br>E / 左键 拾取 · Esc 暂停</p>
   <p class="go" id="startText">载入中…</p>
 </div>
@@ -66,7 +66,7 @@ const C = {
   terracotta: '#8a5f4b', cloth: '#766b62', crack: '#2b2622', ink: '#3a2e29', bulb: '#f2dcb0',
 };
 
-// 窗外光：循环 1-2 傍晚，3 起正午
+// 窗外光：1-2 楼傍晚，3 楼起正午
 const SKY = {
   dusk: { sky: '#a07a5c', light: '#d9a276', intensity: 5 },
   noon: { sky: '#bdbbae', light: '#e8e4d4', intensity: 7 },
@@ -75,17 +75,19 @@ const SKY = {
 // 墙上字迹（TODO: 待定文案。三行合起来像一句话但差一个词）
 const TEXT_LINES = ['（词）（词）', '（词）（词）', '（词）（词）'];
 
-// 影响结局的特定道具（TODO: 待定）
+// 影响结局的特定道具（暂定钥匙，体验后再调）
 const ENDING_ITEM = 'key';
 
 /* 资产清单：file = assets/ 下的 GLB 文件名；null = 用程序化占位几何体。
  * size = 目标包围盒 [x, y, z]（米）。GLB 载入后会拉伸到该尺寸，并把底面中心对齐到原点。
+ * rot  = 可选，载入后先旋转 [x, y, z]（弧度），用于修正 Meshy 模型朝向。
  * 约定：模块宽度沿 X，正面朝 +Z，底面在 y=0。 */
 const ASSET_BASE = './assets/';
 const ASSETS = {
   // 建筑
   wall:       { file: null, size: [2, 3, 0.2] },
   wallDoor:   { file: null, size: [2, 3, 0.2] },   // 门框（关）
+  wallDoorOpen: { file: null, size: [2, 3, 0.2] }, // 门框（开）
   wallWindow: { file: null, size: [2, 3, 0.2] },   // 窗框
   floor:      { file: null, size: [2, 0.1, 2] },
   ceiling:    { file: null, size: [2, 0.1, 2] },
@@ -95,9 +97,10 @@ const ASSETS = {
   trunk:      { file: null, size: [1, 7, 1] },
   rootMass:   { file: null, size: [1.2, 1.6, 0.6] },
   moss:       { file: null, size: [1.2, 0.03, 1.2] },
+  leaves:     { file: null, size: [0.8, 0.6, 0.8] },   // 树冠块
   // 道具
   chair:      { file: null, size: [0.5, 0.95, 0.5] },
-  cup:        { file: null, size: [0.12, 0.1, 0.1] },
+  cup:        { file: null, size: [0.12, 0.1, 0.1], rot: [Math.PI, 0, 0] },  // 倒扣
   frame:      { file: null, size: [0.36, 0.46, 0.03] },
   letter:     { file: null, size: [0.2, 0.04, 0.14] },
   key:        { file: null, size: [0.12, 0.02, 0.04] },
@@ -117,7 +120,7 @@ const Platform = {
   name: 'standalone',
   emit(evt, detail = {}) {
     if (DEBUG) console.log('[platform]', evt, detail);
-    window.dispatchEvent(new CustomEvent('rooted:' + evt, { detail }));
+    window.dispatchEvent(new CustomEvent('root:' + evt, { detail }));
   },
 };
 
@@ -190,21 +193,29 @@ function taperedTube(points, r0, r1 = r0 * 0.15, seg = 12, radial = 5, color = C
   return new THREE.Mesh(g, mat(color));
 }
 
-const PLACEHOLDER = {
-  wall: ([w, h, d]) => group(box(w, h, d, C.wall, 0, h / 2), box(w, 0.12, 0.03, C.trim, 0, 0.06, d / 2 + 0.015)),
-  wallDoor: ([w, h, d]) => {
-    const ow = 1.0, oh = 2.2, pw = (w - ow) / 2;
-    return group(
+// 墙段＋门框；open=true 时门板向内打开
+function doorWall([w, h, d], open) {
+  const ow = 1.0, oh = 2.2, pw = (w - ow) / 2;
+  const leaf = new THREE.Group(); leaf.position.set(-ow / 2 + 0.01, 0, -0.02); // 铰链在左侧
+  leaf.add(box(ow - 0.02, oh - 0.02, 0.05, C.wood2, (ow - 0.02) / 2, (oh - 0.02) / 2, 0),
+    box(0.03, 0.12, 0.04, C.metal, ow - 0.13, 1.0, 0.05));
+  if (open) leaf.rotation.y = 1.35;
+  return group(
       box(pw, h, d, C.wall, -(ow + pw) / 2, h / 2), box(pw, h, d, C.wall, (ow + pw) / 2, h / 2),
       box(ow, h - oh, d, C.wall, 0, oh + (h - oh) / 2),
       box(0.08, oh + 0.05, d + 0.04, C.wood, -ow / 2 - 0.04, (oh + 0.05) / 2),
       box(0.08, oh + 0.05, d + 0.04, C.wood, ow / 2 + 0.04, (oh + 0.05) / 2),
       box(ow + 0.16, 0.08, d + 0.04, C.wood, 0, oh + 0.04),
-      box(ow - 0.02, oh - 0.02, 0.05, C.wood2, 0, (oh - 0.02) / 2, -0.02),
-      box(0.03, 0.12, 0.04, C.metal, ow / 2 - 0.12, 1.0, 0.03),
       box(pw, 0.12, 0.03, C.trim, -(ow + pw) / 2, 0.06, d / 2 + 0.015),
-      box(pw, 0.12, 0.03, C.trim, (ow + pw) / 2, 0.06, d / 2 + 0.015));
-  },
+      box(pw, 0.12, 0.03, C.trim, (ow + pw) / 2, 0.06, d / 2 + 0.015),
+      leaf);
+}
+
+const PLACEHOLDER = {
+  wall: ([w, h, d]) => group(box(w, h, d, C.wall, 0, h / 2), box(w, 0.12, 0.03, C.trim, 0, 0.06, d / 2 + 0.015)),
+  wallDoor: size => doorWall(size, false),
+  wallDoorOpen: size => doorWall(size, true),
+  leaves: ([w, h]) => { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(w / 2, 0), mat(C.leaf)); m.scale.y = h / w; m.position.y = h / 2; return m; },
   wallWindow: ([w, h, d]) => {
     const y0 = 0.9, y1 = 2.2, ow = 1.2, pw = (w - ow) / 2;
     return group(
@@ -306,7 +317,8 @@ const PLACEHOLDER = {
  * 5. 资产加载（GLB 外链，失败回落到占位体）
  * ===================================================================*/
 const templates = {};
-function normalizeGLB(root, size) {
+function normalizeGLB(root, { size, rot }) {
+  if (rot) { root.rotation.set(...rot); root.updateMatrixWorld(true); }
   const bb = new THREE.Box3().setFromObject(root), s = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
   root.position.set(-c.x, -bb.min.y, -c.z);
   const wrap = group(root);
@@ -324,7 +336,7 @@ async function loadAssets() {
   const loader = new GLTFLoader();
   await Promise.all(Object.entries(ASSETS).map(async ([name, a]) => {
     if (a.file) {
-      try { templates[name] = normalizeGLB((await loader.loadAsync(ASSET_BASE + a.file)).scene, a.size); }
+      try { templates[name] = normalizeGLB((await loader.loadAsync(ASSET_BASE + a.file)).scene, a); }
       catch (e) { console.warn(`GLB 载入失败，改用占位体: ${a.file}`, e); }
     }
     if (!templates[name]) templates[name] = PLACEHOLDER[name](a.size);
@@ -350,8 +362,8 @@ function collider(minX, maxX, minZ, maxZ, minY = -1, maxY = 20) {
 }
 
 /* =====================================================================
- * 7. 关卡：一楼走廊 + 楼梯间（Day 1）
- *    坐标：玩家沿 -Z 前进；走廊 x∈[-1.6,1.6]，z∈[0,-28]；楼梯间 z∈[-28,-38]
+ * 7. 关卡：走廊 + 楼梯间。每一层都复用这段空间，按楼层切换状态（8号出口式）
+ *    坐标：玩家沿 -Z 前进；走廊 x∈[-1.6,1.6]，z∈[0,-28]；楼梯间 z∈[-28,-38]；楼梯顶的门通往下一层
  * ===================================================================*/
 const W = 3.2, HW = W / 2, H = 3, M = 2;
 const Z_STAIR = -28, Z_END = -38, STAIR_H = 6.4;
@@ -360,7 +372,11 @@ const LEFT = Math.PI / 2, RIGHT = -Math.PI / 2;
 const world = {
   lamps: [], windowLights: [], sky: null, sun: null, texts: [], props: {}, sprouts: {},
   roots: [], blockedDoorRoots: null, swapDoor: null, swapWall: null, chair: null, trunk: null,
+  curtain: null, extraRoot: null, railRoots: null, windowBranches: null, sunPatch: null, placedPot: null,
+  landingDoor: null, landingDoorOpen: null, doorCollider: null, floorSign: null,
 };
+const interactables = []; // 非拾取类交互：{ obj.userData.interact = { label(), act() } }
+function makeInteractable(obj, label, act) { obj.userData.interact = { label, act }; interactables.push(obj); }
 
 function buildLevel() {
   const rng = mulberry32(2026);
@@ -377,7 +393,7 @@ function buildLevel() {
   const leftDoors = [2, 6, 10], rightWindows = [1, 4, 7, 12];
   for (let i = 0; i < 14; i++) {
     const z = -(i * M + M / 2);
-    if (i === 10) { // 循环 4 的布局微变：这扇门变成墙
+    if (i === 10) { // 4 楼的布局微变：这扇门变成墙
       world.swapDoor = part('wallDoor', -HW - 0.1, 0, z, LEFT);
       world.swapWall = part('wall', -HW - 0.1, 0, z, LEFT); world.swapWall.visible = false;
     } else part(leftDoors.includes(i) ? 'wallDoor' : 'wall', -HW - 0.1, 0, z, LEFT);
@@ -388,7 +404,7 @@ function buildLevel() {
     }
   }
   // 残破窗帘
-  part('curtain', HW - 0.02, 0.8, -(4 * M + M / 2) + 0.45, RIGHT);
+  world.curtain = part('curtain', HW - 0.02, 0.8, -(4 * M + M / 2) + 0.45, RIGHT);
 
   // --- 楼梯间墙（两层高）
   for (let i = 14; i < 19; i++) {
@@ -401,11 +417,24 @@ function buildLevel() {
     part('wall', x, H, Z_STAIR + 0.1, Math.PI).scale.x = 0.8;
     part('wall', x, 0, Z_END - 0.1).scale.x = 0.8;
   }
-  part('wallDoor', 0, H, Z_END - 0.1);
   for (const x of [-1.3, 1.3]) part('wall', x, H, Z_END - 0.1).scale.x = 0.3;
+  // 楼梯顶的门：解开本层谜题才能打开
+  world.landingDoor = part('wallDoor', 0, H, Z_END - 0.1);
+  world.landingDoorOpen = part('wallDoorOpen', 0, H, Z_END - 0.1); world.landingDoorOpen.visible = false;
+  makeInteractable(world.landingDoor, doorLabel, tryOpenDoor);
+  // 门后：一小段黑暗的过道
+  walkQuad([-0.5, H, Z_END], [0.5, H, Z_END], [0.5, H, Z_END - 2], [-0.5, H, Z_END - 2]);
 
   collider(-HW - 0.2, -HW, Z_END - 0.2, 0.2); collider(HW, HW + 0.2, Z_END - 0.2, 0.2);
-  collider(-HW, HW, 0, 0.2); collider(-HW, HW, Z_END - 0.2, Z_END);
+  collider(-HW, HW, 0, 0.2);
+  collider(-HW, HW, Z_END - 0.2, Z_END, -1, H);                     // 尽头墙下层
+  collider(-HW, -0.5, Z_END - 0.2, Z_END, H); collider(0.5, HW, Z_END - 0.2, Z_END, H); // 门两侧
+  world.doorCollider = collider(-0.5, 0.5, Z_END - 0.2, Z_END, H);  // 门板（关着时）
+  collider(-0.7, -0.5, Z_END - 2, Z_END, H); collider(0.5, 0.7, Z_END - 2, Z_END, H);  // 过道两侧
+
+  // 楼层号牌（楼梯口左墙）
+  world.floorSign = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshStandardMaterial({ roughness: 1 }));
+  world.floorSign.position.set(-HW + 0.01, 1.7, -28.6); world.floorSign.rotation.y = Math.PI / 2; scene.add(world.floorSign);
 
   // --- 楼梯 z∈[-29,-35] 升到 y=3，平台 z∈[-35,-38]
   part('stairs', 0, 0, -32);
@@ -416,6 +445,16 @@ function buildLevel() {
   const railLen = Math.hypot(6, H), rail = box(0.05, 0.05, railLen, C.wood, -HW + 0.15, H / 2 + 0.9, -32);
   rail.rotation.x = Math.atan2(H, 6); scene.add(rail);
   for (let k = 0; k <= 7; k++) { const t = k / 7; scene.add(box(0.03, 0.9, 0.03, C.metal, -HW + 0.15, t * H + 0.45, -29 - t * 6)); }
+  // 2 楼起：根缠绕扶手
+  world.railRoots = new THREE.Group(); scene.add(world.railRoots);
+  {
+    const pts = [];
+    for (let t = 0; t <= 1.0001; t += 0.02) {
+      const a = t * Math.PI * 16, y = 0.9 + t * H, z = -29 - t * 6;
+      pts.push(new THREE.Vector3(-HW + 0.15 + Math.sin(a) * 0.06, y + Math.cos(a) * 0.06, z));
+    }
+    world.railRoots.add(taperedTube([new THREE.Vector3(-HW + 0.3, -0.05, -28.6), new THREE.Vector3(-HW + 0.2, 0.5, -28.9), ...pts], 0.05, 0.015, 80, 4));
+  }
 
   // --- 树：主干从平台角落穿出屋顶
   world.trunk = part('trunk', 1.0, 0, -37.2);
@@ -445,8 +484,25 @@ function buildLevel() {
     rootsGroup(x, z, g => arch(g, rng() * Math.PI * 2, 0.6 + rng() * 0.5, 0.15 + rng() * 0.12, 0.035));
   }
   for (const [x, z] of [[0.6, -27.5], [-0.9, -26.2], [1.2, -20.5]]) part('moss', x, 0, z, rng() * 6);
+  // 重复同一层时的异常之一：走廊中间多出一条根
+  world.extraRoot = rootsGroup(0.1, -11, g => arch(g, 0.4, 1.2, 0.3, 0.06)); world.extraRoot.visible = false;
 
-  // --- 循环 2：被根堵住的门（左侧 i=6）
+  // 3 楼起：树枝穿窗
+  world.windowBranches = new THREE.Group(); scene.add(world.windowBranches);
+  for (const i of rightWindows) {
+    const z = -(i * M + M / 2), dz = (rng() - 0.5) * 0.6;
+    const tip = new THREE.Vector3(0.3 + rng() * 0.4, 1.7 + rng() * 0.3, z + dz + 0.4);
+    world.windowBranches.add(taperedTube([new THREE.Vector3(5, 2.9, z + dz - 1), new THREE.Vector3(2.6, 1.8, z + dz),
+      new THREE.Vector3(HW, 1.55, z + dz * 0.5), tip], 0.1, 0.02, 12, 5));
+    for (let k = 0; k < 2; k++) {
+      const lf = part('leaves', 0, 0, 0, rng() * 6, world.windowBranches);
+      lf.position.copy(tip).add(new THREE.Vector3((rng() - 0.5) * 0.4, -0.3 + rng() * 0.2, (rng() - 0.5) * 0.5));
+      lf.scale.setScalar(0.25 + rng() * 0.2);
+    }
+    const out = part('leaves', 3.2, 1.6, z + dz, rng() * 6, world.windowBranches); out.scale.setScalar(1.6);
+  }
+
+  // --- 2 楼起：被根堵住的门（左侧 i=6）
   world.blockedDoorRoots = part('rootMass', -HW + 0.05, 0, -(6 * M + M / 2), LEFT);
   world.blockedDoorRoots.add(part('moss', 0.2, 0, 0.4, 0, world.blockedDoorRoots));
 
@@ -459,6 +515,17 @@ function buildLevel() {
   world.sky.position.set(HW + 3, 3, -19); world.sky.rotation.y = -Math.PI / 2; scene.add(world.sky);
   world.sun = new THREE.DirectionalLight(SKY.dusk.light, 0.4); world.sun.position.set(10, 6, -10); scene.add(world.sun);
 
+  // --- 2 楼谜题：窗下地上的光斑，把空花盆放进去
+  const spotZ = -(7 * M + M / 2);
+  world.sunPatch = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.1), new THREE.MeshBasicMaterial({ color: SKY.dusk.light, transparent: true, opacity: 0.18, depthWrite: false }));
+  world.sunPatch.rotation.x = -Math.PI / 2; world.sunPatch.position.set(HW - 0.55, 0.006, spotZ); scene.add(world.sunPatch);
+  const hitBox = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 1.1), proxyMat); hitBox.visible = false; hitBox.position.z = 0.15; // 光斑平面已旋转，局部 z 即世界向上
+  world.sunPatch.add(hitBox); hitBox.rotation.x = Math.PI / 2;
+  makeInteractable(world.sunPatch,
+    () => state.floor === 2 && state.picked.has('pot') && !state.potPlaced ? 'E　把空花盆放进光里' : '',
+    placePot);
+  world.placedPot = part('pot', HW - 0.55, 0, spotZ, 0.5); world.placedPot.visible = false;
+
   // --- 墙上字迹（左墙 z≈-9 附近，逐行出现）
   TEXT_LINES.forEach((t, i) => {
     const m = textPlane(t); m.position.set(-HW + 0.01, 1.85 - i * 0.28, -9.2 + i * 0.07); m.rotation.y = Math.PI / 2;
@@ -468,9 +535,9 @@ function buildLevel() {
   // --- 道具
   world.chair = part('chair', -1.0, 0, -6, 0.4);
   addProp('cup', '倒扣的杯子', 0.8, 0, -12, 0.3);
+  addProp('key', '钥匙', 0.8, 0, -12, 2.2);   // 1 楼谜题：钥匙扣在杯子下面
   addProp('frame', '空相框', HW - 0.12, 0, -17, RIGHT, -0.25);
   addProp('letter', '折叠的信', -0.6, 0, -20, 1.1);
-  addProp('key', '钥匙', 1.0, 0, -24, 2.2);
   addProp('pot', '空花盆', -1.2, 0, -26.8, 0);
 }
 
@@ -512,58 +579,128 @@ function textPlane(text) {
 }
 
 /* =====================================================================
- * 8. 循环系统
+ * 8. 楼层 / 循环系统
+ *    楼层 = 原设计的"循环 1-5"。解开本层谜题 → 楼梯顶的门打开 → 下一层；
+ *    没解开 → 走到楼梯顶就回到本层起点，并随机出现一处细微异常。
  * ===================================================================*/
-const LOOPS = {
-  1: { lampsOff: [],       sky: 'dusk', texts: 0, blockedDoor: false, sprouts: false, layoutShift: false },
-  2: { lampsOff: [2],      sky: 'dusk', texts: 1, blockedDoor: true,  sprouts: false, layoutShift: false },
-  3: { lampsOff: [2],      sky: 'noon', texts: 2, blockedDoor: true,  sprouts: true,  layoutShift: false },
-  4: { lampsOff: 'all',    sky: 'noon', texts: 3, blockedDoor: true,  sprouts: true,  layoutShift: true },
-  5: { lampsOff: 'all',    sky: 'noon', texts: 3, blockedDoor: true,  sprouts: true,  layoutShift: true, final: true },
+const FLOORS = {
+  1: { lampsOff: [],    sky: 'dusk', texts: 0, blockedDoor: false, sprouts: false, railRoots: false, windowBranches: false, layoutShift: false },
+  2: { lampsOff: [2],   sky: 'dusk', texts: 1, blockedDoor: true,  sprouts: false, railRoots: true,  windowBranches: false, layoutShift: false },
+  3: { lampsOff: [2],   sky: 'noon', texts: 2, blockedDoor: true,  sprouts: true,  railRoots: true,  windowBranches: true,  layoutShift: false },
+  4: { lampsOff: 'all', sky: 'noon', texts: 3, blockedDoor: true,  sprouts: true,  railRoots: true,  windowBranches: true,  layoutShift: true },
+  5: { lampsOff: 'all', sky: 'noon', texts: 3, blockedDoor: true,  sprouts: true,  railRoots: true,  windowBranches: true,  layoutShift: true, final: true },
 };
-const state = { loop: 1, picked: new Set(), busy: false, ended: false };
+// 每层谜题：canOpen() 为真时楼梯顶的门可以打开
+const PUZZLES = {
+  1: { canOpen: () => state.picked.has('key'), openLabel: 'E　用钥匙开门' },
+  2: { canOpen: () => state.potPlaced,         openLabel: 'E　开门' },
+  3: { canOpen: () => true,                    openLabel: 'E　开门' },  // TODO: 3 楼谜题待设计
+  4: { canOpen: () => true,                    openLabel: 'E　开门' },  // TODO: 4 楼谜题待设计
+};
+// 重复同一层时的细微异常（每次随机一个）
+const ANOMALIES = {
+  chairTurned:  () => { world.chair.rotation.y += Math.PI; },
+  curtainMoved: () => { world.curtain.position.z = -(12 * M + M / 2) + 0.45; },
+  extraRoot:    () => { world.extraRoot.visible = true; },
+};
+const state = {
+  floor: 1, repeat: 0, anomaly: null,
+  picked: new Set(),   // 背包里的
+  gone: new Set(),     // 已从原位拿走的（捡起过就不再刷新）
+  potPlaced: false, doorOpen: false, busy: false, ended: false,
+};
+const puzzle = () => PUZZLES[state.floor];
 
-function applyLoop(n) {
-  const L = LOOPS[n];
+function applyFloor(n) {
+  const L = FLOORS[n];
   world.lamps.forEach((l, i) => setLamp(l, !(L.lampsOff === 'all' || L.lampsOff.includes(i))));
   const s = SKY[L.sky];
-  world.sky.material.color.set(s.sky); world.sun.color.set(s.light);
+  world.sky.material.color.set(s.sky); world.sun.color.set(s.light); world.sunPatch.material.color.set(s.light);
   world.windowLights.forEach(l => { l.color.set(s.light); l.intensity = s.intensity * (L.lampsOff === 'all' ? 1.3 : 1); });
   hemi.intensity = L.lampsOff === 'all' ? 0.2 : 0.35;
   world.texts.forEach((t, i) => t.visible = i < L.texts);
   world.blockedDoorRoots.visible = L.blockedDoor;
+  world.railRoots.visible = L.railRoots;
+  world.windowBranches.visible = L.windowBranches;
+  world.placedPot.visible = state.potPlaced;
   for (const id in world.props) {
-    world.props[id].visible = !state.picked.has(id);
-    world.sprouts[id].visible = L.sprouts && state.picked.has(id);
+    world.props[id].visible = !state.gone.has(id) && (id !== 'key' || state.gone.has('cup'));
+    world.sprouts[id].visible = L.sprouts && state.gone.has(id);
   }
   // 树又长了一点
   const grow = 1 + 0.12 * (n - 1);
   world.roots.forEach(g => g.scale.setScalar(grow));
   world.trunk.scale.set(1 + 0.05 * (n - 1), 1, 1 + 0.05 * (n - 1));
-  // 布局微变（TODO: 多层楼搭好后换成更显著的变化）
+  // 布局微变
   world.swapDoor.visible = !L.layoutShift; world.swapWall.visible = L.layoutShift;
   if (L.layoutShift) { world.chair.position.set(0, 0, -14); world.chair.rotation.y = 0; }
   else { world.chair.position.set(-1.0, 0, -6); world.chair.rotation.y = 0.4; }
+  // 门重新锁上
+  state.doorOpen = false;
+  world.landingDoor.visible = true; world.landingDoorOpen.visible = false; world.doorCollider.enabled = true;
+  setFloorSign(n);
+  // 异常：先复位，重复时再随机挑一个
+  world.curtain.position.z = -(4 * M + M / 2) + 0.45; world.extraRoot.visible = false;
+  state.anomaly = null;
+  if (state.repeat > 0) {
+    const names = Object.keys(ANOMALIES);
+    state.anomaly = names[Math.floor(Math.random() * names.length)];
+    ANOMALIES[state.anomaly]();
+  }
+  updateInv();
+}
+
+function setFloorSign(n) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#3d3832'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#b9b2a2'; g.font = '40px Georgia,serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(n >= 5 ? '?' : String(n), 32, 34);
+  const m = world.floorSign.material; m.map?.dispose(); m.map = new THREE.CanvasTexture(cv); m.map.colorSpace = THREE.SRGBColorSpace; m.needsUpdate = true;
+}
+
+function doorLabel() {
+  const pz = puzzle();
+  if (!pz || state.doorOpen) return '';
+  return pz.canOpen() ? pz.openLabel : '锁着';
+}
+function tryOpenDoor() {
+  const pz = puzzle();
+  if (!pz || state.doorOpen || !pz.canOpen()) return;
+  state.doorOpen = true;
+  world.landingDoor.visible = false; world.landingDoorOpen.visible = true; world.doorCollider.enabled = false;
+  Platform.emit('use', { target: 'door', floor: state.floor, item: state.floor === 1 ? 'key' : null });
+}
+function placePot() {
+  if (state.floor !== 2 || !state.picked.has('pot') || state.potPlaced) return;
+  state.picked.delete('pot'); state.potPlaced = true; world.placedPot.visible = true;
+  Platform.emit('use', { target: 'sunPatch', floor: state.floor, item: 'pot' });
   updateInv();
 }
 
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(r => setTimeout(r, ms));
-async function nextLoop() {
-  if (state.busy || state.ended) return;
+async function transition(fn, white = false) {
   state.busy = true;
-  if (LOOPS[state.loop].final) {
-    // TODO: 顶层树冠区 + 爬主干到树顶。当前占位：直接结束
-    state.ended = true;
-    Platform.emit('end', { loop: state.loop, endingItem: state.picked.has(ENDING_ITEM) });
-    $('fade').classList.add('white'); $('fade').style.opacity = 1;
-    await wait(1400); $('end').style.display = 'flex'; document.exitPointerLock?.();
-    return;
-  }
-  $('fade').style.opacity = 1; await wait(1300);
-  state.loop++; applyLoop(state.loop); resetPlayer();
-  Platform.emit('loop', { loop: state.loop });
+  $('fade').classList.toggle('white', white); $('fade').style.opacity = 1; await wait(1300);
+  fn(); resetPlayer();
   await wait(400); $('fade').style.opacity = 0; state.busy = false;
+}
+function repeatFloor() {
+  if (state.busy || state.ended) return;
+  transition(() => { state.repeat++; applyFloor(state.floor); Platform.emit('repeat', { floor: state.floor, repeat: state.repeat }); });
+}
+function nextFloor() {
+  if (state.busy || state.ended) return;
+  transition(() => { state.floor++; state.repeat = 0; applyFloor(state.floor); Platform.emit('floor', { floor: state.floor }); });
+}
+async function endGame() {
+  // TODO: 顶层树冠区 + 爬主干到树顶。当前占位：到楼梯顶直接结束
+  if (state.busy || state.ended) return;
+  state.busy = state.ended = true;
+  Platform.emit('end', { floor: state.floor, endingItem: state.gone.has(ENDING_ITEM) });
+  $('fade').classList.add('white'); $('fade').style.opacity = 1;
+  await wait(1400); $('end').style.display = 'flex'; document.exitPointerLock?.();
 }
 
 /* =====================================================================
@@ -575,8 +712,8 @@ function resetPlayer() { player.pos.set(0, 0, -1.2); player.vy = 0; player.yaw =
 const keys = {};
 addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (e.code === 'KeyE') tryPickup();
-  if (DEBUG && /^Digit[1-5]$/.test(e.code)) { state.loop = +e.code.slice(5); applyLoop(state.loop); resetPlayer(); }
+  if (e.code === 'KeyE') tryInteract();
+  if (DEBUG && /^Digit[1-5]$/.test(e.code)) { state.floor = +e.code.slice(5); state.repeat = 0; applyFloor(state.floor); resetPlayer(); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
@@ -590,7 +727,7 @@ function look(dx, dy) {
 addEventListener('mousemove', e => {
   if (document.pointerLockElement === canvas || (dragLook && dragging)) look(e.movementX, e.movementY);
 });
-canvas.addEventListener('mousedown', e => { if (dragLook) dragging = true; if (playing && e.button === 0) tryPickup(); });
+canvas.addEventListener('mousedown', e => { if (dragLook) dragging = true; if (playing && e.button === 0) tryInteract(); });
 addEventListener('mouseup', () => { dragging = false; });
 
 $('start').addEventListener('click', () => {
@@ -600,7 +737,7 @@ $('start').addEventListener('click', () => {
 });
 function startPlaying() {
   playing = true; $('start').style.display = 'none';
-  if (!started) { started = true; $('fade').style.opacity = 0; Platform.emit('start', { loop: state.loop }); }
+  if (!started) { started = true; $('fade').style.opacity = 0; Platform.emit('start', { floor: state.floor }); }
 }
 function enableDragLook() { dragLook = true; startPlaying(); } // iframe 不允许 pointer lock 时，按住拖拽转视角
 document.addEventListener('pointerlockerror', enableDragLook);
@@ -656,8 +793,12 @@ function updatePlayer(dt) {
   camera.position.set(p.x, p.y + CFG.eyeHeight + Math.sin(bob) * 0.025, p.z);
   camera.rotation.set(player.pitch, player.yaw, 0);
 
-  // 循环触发：到达楼梯顶平台
-  if (p.y > H - 0.3 && p.z < -35.8) nextLoop();
+  // 楼梯顶：顶层 → 结局；门开着走进去 → 下一层；谜题没解开 → 回到本层起点
+  if (p.y > H - 0.3) {
+    if (FLOORS[state.floor].final) { if (p.z < -35.8) endGame(); }
+    else if (state.doorOpen && p.z < Z_END - 0.4) nextFloor();
+    else if (!puzzle().canOpen() && p.z < -35.8) repeatFloor();
+  }
 }
 let bob = 0;
 
@@ -668,19 +809,22 @@ const center = new THREE.Vector2(0, 0);
 let focused = null;
 function findFocus() {
   ray.setFromCamera(center, camera); ray.far = CFG.reach;
-  const targets = Object.values(world.props).filter(o => o.visible);
+  const targets = [...Object.values(world.props), ...interactables].filter(o => o.visible);
   const hit = ray.intersectObjects(targets, true)[0];
-  let o = hit?.object; while (o && !o.userData.pickup) o = o.parent;
-  focused = o || null;
+  let o = hit?.object; while (o && !o.userData.pickup && !o.userData.interact) o = o.parent;
+  const label = !o ? '' : o.userData.pickup ? `E　拾取　${o.userData.pickup.label}` : o.userData.interact.label();
+  focused = label ? o : null;
   const el = $('prompt');
-  el.textContent = focused ? `E　拾取　${focused.userData.pickup.label}` : '';
-  el.style.opacity = focused && playing ? 0.85 : 0;
+  if (label) el.textContent = label;
+  el.style.opacity = label && playing ? 0.85 : 0;
 }
-function tryPickup() {
+function tryInteract() {
   if (!playing || !focused || state.busy) return;
+  if (!focused.userData.pickup) { focused.userData.interact.act(); focused = null; return; }
   const { id, label } = focused.userData.pickup;
-  focused.visible = false; state.picked.add(id); focused = null;
-  Platform.emit('pickup', { id, label, loop: state.loop });
+  focused.visible = false; state.gone.add(id); state.picked.add(id); focused = null;
+  if (id === 'cup' && !state.gone.has('key')) world.props.key.visible = true; // 杯子下面露出钥匙
+  Platform.emit('pickup', { id, label, floor: state.floor });
   updateInv();
 }
 function updateInv() {
@@ -696,21 +840,21 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   updatePlayer(dt);
   if (playing) findFocus();
-  // 灯微微闪（循环 3 起）
-  if (state.loop >= 3) world.lamps.forEach(l => { if (l.light.visible) l.light.intensity = 6 * (0.9 + Math.random() * 0.1); });
+  // 灯微微闪（3 楼起）
+  if (state.floor >= 3) world.lamps.forEach(l => { if (l.light.visible) l.light.intensity = 6 * (0.9 + Math.random() * 0.1); });
   renderer.render(scene, camera);
   if (DEBUG) {
     const p = player.pos;
-    $('hud').textContent = `loop ${state.loop}  pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}\n` +
-      `picked [${[...state.picked]}]  calls ${renderer.info.render.calls}  [1-5] 跳循环`;
+    $('hud').textContent = `floor ${state.floor}  repeat ${state.repeat}  anomaly ${state.anomaly}  door ${state.doorOpen ? 'open' : puzzle()?.canOpen() ? 'unlocked' : 'locked'}\n` +
+      `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  picked [${[...state.picked]}]  calls ${renderer.info.render.calls}  [1-5] 跳楼层`;
   }
   requestAnimationFrame(tick);
 }
 
 (async () => {
-  if (DEBUG) { $('hud').style.display = 'block'; window.__game = { player, state, world, applyLoop, nextLoop }; }
+  if (DEBUG) { $('hud').style.display = 'block'; window.__game = { player, state, world, applyFloor }; }
   await loadAssets();
-  buildLevel(); applyLoop(1); resetPlayer();
+  buildLevel(); applyFloor(1); resetPlayer();
   ready = true; $('startText').textContent = '点 击 进 入';
   Platform.emit('ready');
   tick();
