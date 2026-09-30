@@ -47,10 +47,12 @@ docs/chrona-checklist.md Chrona 平台待确认项与对应代码位置
 ## Meshy 资产生成
 
 ```bash
-MESHY_API_KEY=... node tools/meshy/generate.mjs --dry-run      # 看计划
-MESHY_API_KEY=... node tools/meshy/generate.mjs --only chair    # 先试一个
-MESHY_API_KEY=... node tools/meshy/generate.mjs                 # 生成全部缺失的
+node tools/meshy/generate.mjs --dry-run      # 看计划
+node tools/meshy/generate.mjs --only chair    # 先试一个
+node tools/meshy/generate.mjs                 # 生成全部缺失的
 ```
+
+认证：云环境里在环境设置的 API credentials 为 `api.meshy.ai` 配 Bearer token，由代理自动加认证头；本地运行时设 `MESHY_API_KEY` 环境变量。
 
 提示词在 `tools/meshy/assets.json`。GLB 下载到 `assets/`，并自动填进 `index.html` 的 `ASSETS`。任务 id 存在 `tools/meshy/tasks.json`，中断后重跑不会重复扣费。`--no-texture` 只生成无贴图的 preview，更省 credits。
 

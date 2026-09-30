@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Meshy Text-to-3D 批量生成 → assets/*.glb，并把文件名写回 index.html 的 ASSETS。
 //
-//   MESHY_API_KEY=... node tools/meshy/generate.mjs              生成所有缺失的资产
+//   node tools/meshy/generate.mjs                                生成所有缺失的资产
 //   node tools/meshy/generate.mjs --only chair,cup               只生成指定 key
 //   node tools/meshy/generate.mjs --force                        已存在也重新生成
 //   node tools/meshy/generate.mjs --no-texture                   只做 preview（无贴图，省 credits）
 //   node tools/meshy/generate.mjs --dry-run                      只打印计划，不调用 API
 //
+// 认证：云环境里由代理自动给 api.meshy.ai 加认证头（环境设置 → API credentials）；
+// 本地运行时设 MESHY_API_KEY 环境变量即可。
 // 任务 id 记在 tools/meshy/tasks.json，中断后重跑会接着轮询，不会重复扣费。
 // API 参考：https://docs.meshy.ai/en/api/text-to-3d
 import fs from 'node:fs';
@@ -29,15 +31,15 @@ const cfg = JSON.parse(fs.readFileSync(path.join(HERE, 'assets.json'), 'utf8'));
 const tasks = fs.existsSync(TASKS) ? JSON.parse(fs.readFileSync(TASKS, 'utf8')) : {};
 const saveTasks = () => fs.writeFileSync(TASKS, JSON.stringify(tasks, null, 2) + '\n');
 
-const KEY = process.env.MESHY_API_KEY;
-if (!KEY && !DRY) { console.error('缺少环境变量 MESHY_API_KEY'); process.exit(1); }
+const KEY = process.env.MESHY_API_KEY; // 可选：没设时依赖代理注入
 
 async function api(method, url, body) {
   const res = await fetch(url, {
-    method, headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+    method, headers: { 'Content-Type': 'application/json', ...(KEY && { Authorization: `Bearer ${KEY}` }) },
     body: body && JSON.stringify(body),
   });
   const text = await res.text();
+  if (res.status === 401) throw new Error('401 未认证：检查环境设置里 api.meshy.ai 的 API credentials（需新会话生效），或设置 MESHY_API_KEY');
   if (!res.ok) throw new Error(`${method} ${url} → ${res.status} ${text}`);
   return JSON.parse(text);
 }
