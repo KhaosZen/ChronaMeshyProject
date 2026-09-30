@@ -16,12 +16,22 @@ python3 -m http.server 8000   # GLB 外链需要 http 访问，不能直接双�
 # http://localhost:8000/?debug  调试：显示楼层/坐标/门状态，数字键 1-5 跳楼层
 ```
 
+## 打包上传 Chrona
+
+```bash
+npm install
+npm run pack        # → dist/root.zip（index.html + assets + 本地化的 three，不依赖 CDN）
+```
+
+Chrona 接受 HTML 或 ZIP，上限 200 MiB；发布的世界是公开的。
+
 ## 结构
 
 ```
 index.html               全部游戏逻辑（按编号分节：配置 / 平台适配层 / 占位几何体 / 资产加载 / 物理 / 关卡 / 楼层系统 / 控制 / 交互）
 assets/                  GLB 资产
 tools/meshy/             Meshy API 批量生成脚本 + 提示词清单
+tools/pack.mjs           打包 dist/root.zip
 docs/assets.md           资产清单、尺寸、朝向约定
 docs/chrona-checklist.md Chrona 平台待确认项与对应代码位置
 ```
@@ -61,7 +71,8 @@ node tools/meshy/generate.mjs                 # 生成全部缺失的
 - [x] Day 1 基础场景：走廊＋楼梯＋第一人称移动
 - [x] 楼层推进＋同层重复＋随机异常；1、2 楼简单谜题（拾取 / 使用道具 / 放置道具三种交互）
 - [x] Meshy 批量生成脚本（未实跑，等 API key 和网络）
-- [ ] Chrona 注册、上传测试版，确认 GLB 加载方式、大小上限、交互 API（见 `docs/chrona-checklist.md`）
+- [x] Chrona 上传方式：ZIP ≤ 200 MiB；打包脚本 `npm run pack`
+- [ ] 上传测试版，确认 iframe / Pointer Lock、交互 API 等（见 `docs/chrona-checklist.md`）
 - [ ] 按 Chrona API 调整平台适配层
 - [ ] Meshy 生成资产并替换占位体
 - [ ] 3、4 楼谜题，顶层树冠区，结局
