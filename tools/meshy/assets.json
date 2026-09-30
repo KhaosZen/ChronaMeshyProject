@@ -1,0 +1,27 @@
+{
+  "style": "low poly game asset, flat shading, matte surface, muted desaturated colors, simple shapes, no fine detail, no text",
+  "defaults": { "target_polycount": 3000 },
+  "assets": [
+    { "key": "wall",         "file": "wall_segment.glb",      "prompt": "a straight section of an old apartment corridor wall, plaster, with a wooden skirting board, flat rectangular panel" },
+    { "key": "wallDoor",     "file": "wall_door_closed.glb",  "prompt": "a section of old apartment corridor wall with a closed wooden door and door frame" },
+    { "key": "wallDoorOpen", "file": "wall_door_open.glb",    "prompt": "a section of old apartment corridor wall with a wooden door frame and the door swung half open inward" },
+    { "key": "wallWindow",   "file": "wall_window.glb",       "prompt": "a section of old apartment corridor wall with an empty wooden window frame opening, cross mullion, no glass" },
+    { "key": "floor",        "file": "floor_tile.glb",        "prompt": "a square worn wooden floor tile slab" },
+    { "key": "ceiling",      "file": "ceiling_tile.glb",      "prompt": "a square plaster ceiling panel slab, slightly stained" },
+    { "key": "stairs",       "file": "stairs_flight.glb",     "prompt": "a single straight flight of old concrete stairs with 15 steps", "target_polycount": 4000 },
+    { "key": "railing",      "file": "railing.glb",           "prompt": "a straight section of old metal stair railing with a wooden handrail" },
+    { "key": "trunk",        "file": "tree_trunk.glb",        "prompt": "a tall thick gnarled tree trunk segment, bark, no leaves, no roots", "target_polycount": 4000 },
+    { "key": "rootMass",     "file": "tree_root_mass.glb",    "prompt": "a tangled mass of thick tree roots growing upward in a flat cluster, like covering a doorway" },
+    { "key": "moss",         "file": "moss_patch.glb",        "prompt": "a thin flat irregular patch of moss on the ground", "target_polycount": 800 },
+    { "key": "leaves",       "file": "tree_canopy_chunk.glb", "prompt": "a rounded cluster of tree foliage, canopy chunk", "target_polycount": 1500 },
+    { "key": "chair",        "file": "chair_old.glb",         "prompt": "an old simple wooden chair with a slatted back" },
+    { "key": "cup",          "file": "cup.glb",               "prompt": "a plain ceramic mug with a handle", "target_polycount": 800 },
+    { "key": "frame",        "file": "photo_frame_empty.glb", "prompt": "an empty wooden picture frame with no picture, just the frame and a dark backing", "target_polycount": 800 },
+    { "key": "letter",       "file": "letter_folded.glb",     "prompt": "a folded paper letter, slightly creased", "target_polycount": 500 },
+    { "key": "key",          "file": "key.glb",               "prompt": "an old brass door key with a round bow", "target_polycount": 800 },
+    { "key": "pot",          "file": "flower_pot_empty.glb",  "prompt": "an empty terracotta flower pot", "target_polycount": 800 },
+    { "key": "lamp",         "file": "pendant_lamp.glb",      "prompt": "a simple hanging pendant ceiling lamp with a cone metal shade, cord and bulb", "target_polycount": 1500 },
+    { "key": "curtain",      "file": "curtain_torn.glb",      "prompt": "a single torn old fabric curtain hanging straight down, ragged bottom edge", "target_polycount": 1500 },
+    { "key": "crack",        "file": "floor_crack.glb",       "prompt": "a thin flat jagged crack decal piece for a floor", "target_polycount": 500 }
+  ]
+}
