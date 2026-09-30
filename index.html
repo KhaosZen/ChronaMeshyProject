@@ -70,7 +70,7 @@ const FLOORS = {
 // name：交互提示；text：拿到时的字幕；note：过渡房间墙上对应的便条（没拿到时字迹模糊）
 const KEYS = {
   photo:    { name: '全家福',     note: '照片 挂好',  text: '照片里缺了一张脸。' },
-  cup:      { name: '倒扣的杯子', note: '杯子 扣着',  text: '杯子倒扣着。有人在等谁回家。' },
+  cup:      { name: '杯子',       note: '杯子 扣着',  text: '杯子倒扣着。有人在等谁回家。' },
   radio:    { name: '收音机',     note: '收音机 别关', text: '「……水位仍在上涨，请居民尽快撤离……」' },
   poster:   { name: '寻人启事',   note: '启事 又贴',  text: '「寻人：离家时 16 岁……」名字被水泡糊了。' },
   tickets:  { name: '船票存根',   note: '船票 收好',  text: '背面写着：「今天又去码头问了，还是没有你的消息。」' },
@@ -95,19 +95,23 @@ const LINES = {
 };
 const WALL_NOTES = ['门 没锁', '花 浇了', '等你 回来']; // 2 楼起每层多一行
 
-// 一楼灰色板 → 四楼彩色板
-const PAL0 = { wall: '#6c6c6a', floor: '#4a4a48', ceil: '#767674', trim: '#525250', furn: '#5e5e5c', key: '#9a9a98',
-  root: '#343230', plant: '#565c56', sea: '#586064', sky: '#2c2f31' };
-const PAL1 = { wall: '#d6c7a6', floor: '#8a6a48', ceil: '#e4dac4', trim: '#9a7a56', furn: '#a27a54', key: '#e2b25e',
-  root: '#5b4431', plant: '#6f9b4c', sea: '#3d8db0', sky: '#a9c8d4' };
+// 一楼暗冷的蓝灰 → 四楼温暖、鲜艳
+const PAL0 = { wall: '#4d5864', floor: '#343c46', ceil: '#59636f', trim: '#3c4550', furn: '#46505b', key: '#8d99a6',
+  root: '#29303a', plant: '#44524f', sea: '#34424e', sky: '#1d242c' };
+const PAL1 = { wall: '#ecc996', floor: '#a06a3a', ceil: '#f5e0bc', trim: '#b0743c', furn: '#b87a40', key: '#f2b445',
+  root: '#6e4a28', plant: '#7cb847', sea: '#2aa0c8', sky: '#f2cf9c' };
+const HEMI0 = '#9fb3c8', HEMI1 = '#ffe0b0';   // 环境光也从冷变暖
 // 每层的光与雾；到新楼层后几秒内平滑过渡
 const LOOK = {
-  1: { f: 0,    lamp: 3.8, lampColor: '#c6ccd2', sun: 0.30, hemi: 0.30, fog: [5, 22], flicker: true },
-  2: { f: 0.3,  lamp: 4.1, lampColor: '#e2d4bc', sun: 0.55, hemi: 0.36, fog: [6, 30] },
-  3: { f: 0.62, lamp: 4.3, lampColor: '#eedcbc', sun: 0.85, hemi: 0.44, fog: [7, 40] },
-  4: { f: 0.9,  lamp: 4.8, lampColor: '#ffe2b2', sun: 1.20, hemi: 0.55, fog: [9, 55] },
-  5: { f: 1,    lamp: 4.8, lampColor: '#ffe2b2', sun: 2.20, hemi: 1.00, fog: [80, 700], sky: '#9fd0ea' },
+  1: { f: 0,    lamp: 3.8, lampColor: '#b4c6de', sun: 0.30, hemi: 0.32, fog: [5, 22], flicker: true },
+  2: { f: 0.25, lamp: 4.1, lampColor: '#d9d4c8', sun: 0.55, hemi: 0.38, fog: [6, 30] },
+  3: { f: 0.55, lamp: 4.4, lampColor: '#f3d3a4', sun: 0.85, hemi: 0.46, fog: [7, 40] },
+  4: { f: 1,    lamp: 4.8, lampColor: '#ffc585', sun: 1.20, hemi: 0.56, fog: [9, 55] },
+  5: { f: 1,    lamp: 4.8, lampColor: '#ffc585', sun: 2.20, hemi: 1.00, fog: [80, 700], sky: '#9fd0ea' },
 };
+// 每把「钥匙」只出现在跟它有关的摆放点（鞋柜=门口，电话桌、边桌、纸箱……）
+const KEY_SPOTS = { photo: [3, 2, 6], cup: [1, 2, 7], radio: [6, 2, 4], poster: [5, 7, 3],
+  tickets: [1, 6, 8], machine: [6, 2, 4], housekey: [1, 7, 8], can: [5, 7, 4] };
 
 /* =====================================================================
  * 2. 平台适配层：所有与 Chrona 相关的调用集中在这里（待确认 API 后接入）
@@ -306,7 +310,7 @@ function buildStart(ctx, isStub) {
   solid(ctx, -0.2, 5, -0.2, H, 3, 3.2, M.wall);                               // 南墙
   box(4.7, 0.1, 0.03, M.trim, 2.65, 0.05, 0.015, ctx.parent); box(5, 0.1, 0.03, M.trim, 2.5, 0.05, 2.985, ctx.parent);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), world.signMat);
-  sign.position.set(1.5, 1.6, 2.99); sign.rotation.y = Math.PI; ctx.parent.add(sign);
+  sign.position.set(3.4, 1.65, 2.99); sign.rotation.y = Math.PI; ctx.parent.add(sign);   // 出生点右前方
   lampVisual(ctx.parent, 3, 1.5, 0);
   if (isStub) { // 复制品：只做看得到的部分，远处封死；灯与真走廊的第一盏同步
     solid(ctx, 4.9, 5, 0, H, 0, 3, M.wall, false);
@@ -322,6 +326,11 @@ function buildBuilding() {
   // --- 入口楼梯 + 走廊起点
   buildStairwell(c, true);
   buildStart(c, false);
+  // 1 楼开局：楼梯口是一扇关着的门（第一次进过渡房间后撤掉，之后都是从楼梯上来）
+  const sd = new THREE.Group(); B.add(sd); const sctx = { parent: sd, T: I4, collide: false };
+  solid(sctx, 0.3, 0.9, 0, H, -0.2, 0, M.wall); solid(sctx, 2.1, 2.7, 0, H, -0.2, 0, M.wall); solid(sctx, 0.9, 2.1, 2.2, H, -0.2, 0, M.wall);
+  box(1.2, 2.2, 0.06, M.trim, 1.5, 1.1, -0.05, sd); box(0.04, 0.12, 0.05, M.white, 1.95, 1.05, 0, sd);
+  sd.userData.col = collider(0.3, 2.7, -0.2, 0, -0.2, H); world.startDoor = sd;
   world.replicaLight = pointLight(B, 1.5, -0.8, -14.2);   // = T⁻¹(过渡房间的灯)：出口楼梯底部被房间灯照到，入口楼梯底部也要一样
   // --- 走廊 A 其余部分（x 5→24）
   solid(c, 5, 24, -0.1, 0, 0, 3, M.floor, false); solid(c, 21, 24, -0.1, 0, -16.3, 0, M.floor, false);
@@ -358,8 +367,15 @@ function buildBuilding() {
   world.entranceLeaf.userData.col = collider(21.9, 23.1, -16.25, -15.95, 0, H);
   world.farLeaf = box(0.06, 2.2, 1.2, M.trim, 18.4, 1.1, -19, B);
   world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H);
-  box(1.4, 0.75, 0.8, M.furn, 24.6, 0.375, -20.4, B); collider(23.9, 25.3, -20.8, -20, 0, 0.8);
-  box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B);
+  // 过渡房间逐层"恢复"：1 楼空着，2 楼有桌子，3 楼有椅子，4 楼两把椅子和一瓶花
+  const rf = world.roomFurn = {
+    table: box(1.4, 0.75, 0.8, M.furn, 24.6, 0.375, -20.4, B), chair: box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B),
+    chair2: box(0.45, 0.45, 0.45, M.furn, 23.6, 0.225, -20.4, B), vase: new THREE.Group(),
+  };
+  rf.table.userData.col = collider(23.9, 25.3, -20.8, -20, 0, 0.8);
+  rf.vase.add(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.2, 7), std('#e8e2d4')));
+  for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), M.flower[i]); f.position.set((i - 1.5) * 0.05, 0.16 + (i % 2) * 0.04, 0); rf.vase.add(f); }
+  rf.vase.position.set(24.9, 0.85, -20.4); B.add(rf.vase);
   WALL_NOTES.forEach((t, i) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.33),
       new THREE.MeshStandardMaterial({ map: textTexture([t], { font: 60 }), transparent: true, roughness: 1 }));
@@ -388,10 +404,58 @@ function buildBuilding() {
   permTargets.push(sw);
 
   for (const a of ANCHORS) world.anchors.push(buildFurniture(a));
+  buildStoryProps();
   world.sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), M.sea);
   world.sea.rotation.x = -Math.PI / 2; world.sea.position.set(12, -6, 0); scene.add(world.sea);
   buildGreenery();
 }
+
+// 环境叙事：墙上的全家福、邻居门和搬迁通知、寻人启事、门口的拖鞋
+function faceTexture(faces, clear) {
+  return canvasTex(128, 160, (g, w, h) => {
+    g.fillStyle = '#6d6356'; g.fillRect(0, 0, w, h); g.fillStyle = '#8f8575'; g.fillRect(8, 96, w - 16, h - 104);
+    [34, 64, 94].forEach((x, i) => {
+      if (i >= faces) { g.fillStyle = '#d8d2c4'; g.fillRect(x - 12, 48, 24, 34); return; }   // 缺了的那张脸
+      if (!clear) g.filter = 'blur(5px)';
+      g.fillStyle = '#e8cfb0'; g.beginPath(); g.arc(x, 62, 11, 0, 7); g.fill();
+      g.fillStyle = '#4a3f36'; g.fillRect(x - 13, 76, 26, 44); g.filter = 'none';
+    });
+  });
+}
+function posterTexture(i) {
+  return canvasTex(128, 176, (g, w, h) => {
+    g.fillStyle = i % 2 ? '#e4dcc6' : '#d8cfb6'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#3a312b'; g.font = '30px "Songti SC","Noto Serif SC",serif'; g.textAlign = 'center'; g.fillText('寻 人', w / 2, 36);
+    g.filter = 'blur(2px)'; g.beginPath(); g.arc(w / 2, 78, 16, 0, 7); g.fill(); g.fillRect(w / 2 - 20, 94, 40, 30); g.filter = 'none';
+    g.fillStyle = 'rgba(58,49,43,.5)'; for (let k = 0; k < 3; k++) g.fillRect(20, 136 + k * 12, w - 40 - k * 14, 5);
+  });
+}
+function wallPlane(w, h, map, x, y, z, rotY) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map, roughness: 1 }));
+  m.position.set(x, y, z); m.rotation.y = rotY; building.add(m); return m;
+}
+function buildStoryProps() {
+  world.photos = [];
+  for (const [x, z, r] of [[7.5, 0.03, 0], [11, 0.03, 0], [10, 2.97, Math.PI], [16.5, 2.97, Math.PI]]) {
+    const f = box(0.44, 0.54, 0.03, M.trim, x, 1.65, z + (r ? 0.015 : -0.015), building); f.rotation.y = r;
+    world.photos.push(wallPlane(0.34, 0.44, faceTexture(3, false), x, 1.65, z + (r ? -0.01 : 0.01), r));
+  }
+  world.notices = [];
+  for (const x of [8.5, 17]) { // 邻居家的门（摆设），2 楼起贴着搬迁通知
+    box(1.1, 2.3, 0.04, M.trim, x, 1.15, 0.02, building); box(0.96, 2.16, 0.02, M.furn, x, 1.1, 0.05, building);
+    world.notices.push(wallPlane(0.3, 0.38, textTexture(['搬 迁', '通 知'], { w: 128, h: 160, font: 34, bg: '#e9e4d6' }), x + 0.15, 1.5, 0.065, 0));
+  }
+  world.posters = [];
+  const P = [[6.3, 1.5, 0.02, 0], [9.7, 1.7, 0.02, 0], [12, 1.4, 0.02, 0], [14.8, 1.6, 0.02, 0], [19.5, 1.5, 0.02, 0],
+    [8.5, 1.5, 2.98, Math.PI], [12.2, 1.6, 2.98, Math.PI], [15.5, 1.5, 2.98, Math.PI], [19.8, 1.7, 2.98, Math.PI]];
+  P.forEach(([x, y, z, r], i) => { const m = wallPlane(0.3, 0.41, posterTexture(i), x, y, z, r); m.rotation.z = (i % 3 - 1) * 0.05; world.posters.push(m); });
+  [[-3, 1.5], [-7.5, 1.7], [-10.5, 1.4]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 9), 21.02, y, z, Math.PI / 2)));
+  [[-3.5, 1.6], [-9.5, 1.5], [-14, 1.7]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 12), 23.98, y, z, -Math.PI / 2)));
+  world.slippers = new THREE.Group(); // 4 楼：房间门口两双拖鞋
+  for (const [x, c] of [[22.05, '#c98f86'], [22.95, '#8fa7c4']]) for (const dx of [-0.08, 0.08]) box(0.1, 0.04, 0.26, std(c), x + dx, 0.02, -15.4, world.slippers);
+  building.add(world.slippers);
+}
+function setPhotosClear(clear) { world.photos.forEach(m => { m.material.map?.dispose(); m.material.map = faceTexture(3, clear); m.material.needsUpdate = true; }); }
 
 function buildFurniture(a) {
   const g = new THREE.Group(); g.position.set(a.x, 0, a.z); g.rotation.y = a.rot; building.add(g);
@@ -494,7 +558,7 @@ function buildRoof() {
  * ===================================================================*/
 const state = {
   floor: 1, next: 1, phase: 'corridor',  // corridor → room → stairs → (传送) corridor；4 楼成功后 → roof
-  keysGot: new Set(), wrong: false, lightsOn: true, roofMode: false,
+  keysGot: new Set(), recovered: new Set(), wrong: false, lightsOn: true, roofMode: false, ambT: 0,
   busy: false, ended: false, puzzles: [], experienced: 0, solved: 0, t0: 0, forceTpl: [],
 };
 
@@ -505,11 +569,17 @@ function applyContent(n) {
   world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
   world.branches.forEach(b => b.visible = n >= 3);
   world.sea.visible = n >= 2 || state.roofMode;
+  setPhotosClear(state.recovered.has('photo'));
+  world.notices.forEach(m => m.visible = n >= 2);
+  world.posters.forEach((m, i) => m.visible = i < [0, 0, 15, 4][n - 1]);
+  world.slippers.visible = n === 4;
   const s = world.signMat; s.map?.dispose(); s.map = textTexture([String(n)], { w: 64, h: 64, font: 40, color: '#b9b2a2', bg: '#3a352f' }); s.needsUpdate = true;
 }
 // 过渡房间墙上的字：母亲的便条 + 本层「钥匙」便条（拿到的清楚，没拿到的模糊）
 function applyRoomNotes(n) {
   world.notes.forEach((m, i) => m.visible = i < n - 1);
+  const rf = world.roomFurn; rf.table.visible = rf.table.userData.col.enabled = n >= 2;
+  rf.chair.visible = n >= 3; rf.chair2.visible = rf.vase.visible = n >= 4;
   const ks = FLOORS[n]?.keys || [];
   world.keyNotes.forEach((m, i) => {
     m.visible = i < ks.length; if (!m.visible) return;
@@ -519,7 +589,8 @@ function applyRoomNotes(n) {
   });
 }
 
-const look = { f: 0, lamp: 3.8, hemi: 0.3, sun: 0.3, near: 5, far: 22, sky: new THREE.Color(PAL0.sky), lampColor: new THREE.Color('#c6ccd2') };
+const look = { f: 0, lamp: 3.8, hemi: 0.32, sun: 0.3, near: 5, far: 22, sky: new THREE.Color(PAL0.sky), lampColor: new THREE.Color('#b4c6de') };
+const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1);
 let lookTo = null;
 function lookTarget(n) {
   const L = LOOK[n];
@@ -533,7 +604,7 @@ function updateLook(dt, instant) {
   look.sky.lerp(t.sky, k); look.lampColor.lerp(t.lampColor, k);
   applyPalette(look.f);
   scene.background.copy(look.sky); scene.fog.color.copy(look.sky); scene.fog.near = look.near; scene.fog.far = look.far;
-  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); sun.intensity = look.sun;
+  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
     l.light.visible = state.lightsOn; l.light.color.copy(look.lampColor);
@@ -555,26 +626,71 @@ let puzzleTargets = [];
 function interactable(obj, label, act) { obj.userData.interact = { label, act }; puzzleTargets.push(obj); return obj; }
 function hitSphere(obj, r = 0.25, y = 0.1) { const h = new THREE.Mesh(new THREE.SphereGeometry(r, 6, 4), proxyMat); h.visible = false; h.position.y = y; obj.add(h); }
 
-function makeKey(id, mat = M.key) {
-  const g = new THREE.Group(), b = (w, h, d, x = 0, y = 0, z = 0, m = mat) => box(w, h, d, m, x, y, z, g);
+// 「钥匙」外形。variant = 'real'（和母亲的痕迹对得上）/ 'fake'（真假谜题里的假货）
+function makeKey(id, variant = 'real', mat = M.key) {
+  const real = variant === 'real', g = new THREE.Group(), b = (w, h, d, x = 0, y = 0, z = 0, m = mat) => box(w, h, d, m, x, y, z, g);
   switch (id) {
-    case 'photo': { const f = b(0.34, 0.44, 0.03, 0, 0.22, 0); f.rotation.x = -0.18; const p = b(0.26, 0.34, 0.01, 0, 0.22, 0.02, M.dark); p.rotation.x = -0.18; break; }
-    case 'cup': { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.11, 8), mat); c.position.y = 0.055; g.add(c); b(0.015, 0.06, 0.03, 0.06, 0.055, 0); break; }
-    case 'radio': b(0.3, 0.18, 0.1, 0, 0.09, 0); b(0.01, 0.25, 0.01, 0.1, 0.3, 0); b(0.08, 0.08, 0.01, -0.07, 0.1, 0.055, M.dark); break;
-    case 'poster': b(0.34, 0.02, 0.46, 0, 0.01, 0, M.white); b(0.12, 0.022, 0.14, 0, 0.012, -0.08, M.dark); break;
-    case 'tickets': for (let i = 0; i < 4; i++) { const t = b(0.14, 0.012, 0.07, 0.01 * i, 0.006 + i * 0.012, 0); t.rotation.y = i * 0.2; } break;
-    case 'machine': b(0.24, 0.07, 0.17, 0, 0.035, 0); b(0.02, 0.01, 0.02, 0.08, 0.075, 0.05, std('#f33', { emissive: '#f22', emissiveIntensity: 2 })); break;
-    case 'housekey': { const r = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 4, 8), mat); r.rotation.x = Math.PI / 2; r.position.set(-0.04, 0.008, 0); g.add(r); b(0.08, 0.01, 0.012, 0.02, 0.008, 0); break; }
-    case 'can': { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.2, 8), mat); c.position.y = 0.1; g.add(c); const s = b(0.02, 0.02, 0.2, 0, 0.14, 0.12); s.rotation.x = -0.6; break; }
+    case 'photo': { // 真：缺一张脸；假：三个人都在
+      const f = b(0.34, 0.44, 0.03, 0, 0.22, 0); f.rotation.x = -0.18;
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.34), new THREE.MeshStandardMaterial({ map: faceTexture(real ? 2 : 3, true), roughness: 1 }));
+      pic.position.set(0, 0.22, 0.017); pic.rotation.x = -0.18; g.add(pic); break;
+    }
+    case 'cup': { // 真：扣着；假：正放（能看到杯口）
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(real ? 0.04 : 0.05, real ? 0.05 : 0.04, 0.11, 8), mat); c.position.y = 0.055; g.add(c);
+      b(0.015, 0.06, 0.03, 0.06, 0.055, 0);
+      if (!real) { const m = new THREE.Mesh(new THREE.CircleGeometry(0.043, 8), M.dark); m.rotation.x = -Math.PI / 2; m.position.y = 0.111; g.add(m); }
+      break;
+    }
+    case 'radio': // 真：刻度灯亮着、有沙沙声；假：没声音
+      b(0.3, 0.18, 0.1, 0, 0.09, 0); b(0.01, 0.25, 0.01, 0.1, 0.3, 0); b(0.08, 0.08, 0.01, -0.07, 0.1, 0.055, M.dark);
+      b(0.07, 0.02, 0.01, 0.07, 0.13, 0.055, real ? std('#ffd27a', { emissive: '#ffb84a', emissiveIntensity: 1.5 }) : M.dark);
+      g.userData.crackle = real; break;
+    case 'poster': { // 真：贴了又贴，一层压一层；假：干净的一张
+      const n = real ? 3 : 1;
+      for (let i = 0; i < n; i++) { const s = b(0.34, 0.006, 0.46, (i - 1) * 0.02 * (n > 1), 0.004 + i * 0.006, 0, i === n - 1 ? M.white : std('#d6ceb8')); s.rotation.y = (i - 1) * 0.12 * (n > 1); }
+      b(0.12, 0.004, 0.14, 0, 0.006 * n + 0.004, -0.08, M.dark); break;
+    }
+    case 'tickets': // 真：一沓，捆得整整齐齐；假：散落的一张
+      if (real) { for (let i = 0; i < 6; i++) b(0.14, 0.01, 0.07, 0, 0.005 + i * 0.01, 0); b(0.02, 0.065, 0.075, 0, 0.03, 0, M.dark); }
+      else { const t = b(0.14, 0.01, 0.07, 0, 0.005, 0); t.rotation.y = 0.5; }
+      break;
+    case 'machine': { // 真：红灯在闪（有留言）；假：灯灭着
+      b(0.24, 0.07, 0.17, 0, 0.035, 0);
+      const led = b(0.02, 0.01, 0.02, 0.08, 0.075, 0.05, real ? std('#f33', { emissive: '#f22', emissiveIntensity: 2 }) : M.dark);
+      if (real) g.userData.blink = led; break;
+    }
+    case 'housekey': // 真：挂在钥匙钩上；假：随手扔在台面
+      if (real) {
+        b(0.02, 0.2, 0.02, 0, 0.1, 0, M.trim); b(0.02, 0.02, 0.07, 0, 0.19, 0.035, M.trim);
+        const r = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 4, 8), mat); r.position.set(0, 0.16, 0.07); g.add(r);
+        b(0.012, 0.08, 0.01, 0, 0.1, 0.07);
+      } else {
+        const r = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 4, 8), mat); r.rotation.x = Math.PI / 2; r.position.set(-0.04, 0.008, 0); g.add(r);
+        b(0.08, 0.01, 0.012, 0.02, 0.008, 0);
+      }
+      break;
+    case 'can': { // 真：装满水、还在滴；假：空的
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.2, 8), mat); c.position.y = 0.1; g.add(c);
+      const sp = b(0.02, 0.02, 0.2, 0, 0.14, 0.12); sp.rotation.x = -0.6;
+      if (real) { const w = std('#7cc3e6', { emissive: '#2a6f93', emissiveIntensity: 0.4 }); for (let i = 0; i < 3; i++) { const d = new THREE.Mesh(new THREE.IcosahedronGeometry(0.012, 0), w); d.position.set(0, 0.16 - i * 0.05, 0.21 + i * 0.005); g.add(d); } }
+      break;
+    }
     case 'tool': b(0.16, 0.03, 0.03, 0, 0.015, 0, M.trim); b(0.03, 0.03, 0.08, 0.07, 0.015, 0.03, M.trim); break;
   }
   hitSphere(g, 0.28, 0.12);
   return g;
 }
 function takeKey(obj, id) {
-  obj.visible = false; state.keysGot.add(id); state.solved++;
+  const P = obj.getWorldPosition(V(0, 0, 0));
+  obj.visible = false; state.keysGot.add(id); state.solved++; stopSound(obj.userData.snd);
   say(KEYS[id].text, 3800); Platform.emit('pickup', { id, floor: state.floor });
+  // 场景对「钥匙」的回应
+  if (id === 'photo') setPhotosClear(true);                  // 墙上照片里的脸清楚了
+  if (id === 'can') growPlants();                            // 周围的植物长出来、开花
+  if (audio) ({ radio: () => sfx.broadcast(P, 6, 0.16), machine: () => sfx.beeps(P, 3), tickets: () => sfx.horn(),
+    housekey: () => sfx.click(P) })[id]?.();
 }
+function growPlants() { const shown = world.plants.filter(p => p.visible).length; world.plants.forEach((p, i) => { if (i < shown + 10) p.visible = true; }); }
 const takeLabel = id => () => `E　拿起　${KEYS[id].name}`;
 function wrongPick(obj) {
   obj.visible = false; state.wrong = true; Platform.emit('wrong', { floor: state.floor });
@@ -588,9 +704,9 @@ const TEMPLATES = {
   misplaced: { anchors: 1, build(id, [r]) {
     const o = placeAt(makeKey(id), r, 0.22); interactable(o, takeLabel(id), () => takeKey(o, id)); return { obj: o };
   } },
-  twin: { anchors: 2, build(id, [r1, r2]) { // 待讨论：怎样让玩家分得清真假
-    const real = placeAt(makeKey(id, std('#b9a27a')), r1, 0.2); real.rotation.y += Math.PI; real.scale.setScalar(1.06);
-    const fake = placeAt(makeKey(id), r2, 0.2);
+  // 真假：两份，和母亲留下的痕迹对得上的才是真的（过渡房间的便条写着这个特征）
+  twin: { anchors: 2, build(id, [r1, r2]) {
+    const real = placeAt(makeKey(id, 'real'), r1, 0.2), fake = placeAt(makeKey(id, 'fake'), r2, 0.2);
     interactable(real, takeLabel(id), () => takeKey(real, id));
     interactable(fake, takeLabel(id), () => wrongPick(fake));
     return { obj: real, fake };
@@ -607,7 +723,7 @@ const TEMPLATES = {
     } };
   } },
   dark: { anchors: 1, build(id, [r]) {
-    const o = placeAt(makeKey(id, M.glowKey), r, 0.22); o.visible = !state.lightsOn;
+    const o = placeAt(makeKey(id, 'real', M.glowKey), r, 0.22); o.visible = !state.lightsOn;
     interactable(o, takeLabel(id), () => takeKey(o, id));
     return { obj: o, onLights(on) { if (!state.keysGot.has(id)) o.visible = !on; } };
   } },
@@ -620,7 +736,7 @@ const TEMPLATES = {
     const snd = startSound(anchorTop(r, 0));
     return { obj: o, cab: body, cleanup() { stopSound(snd); cab.open = false; cab.leaf.rotation.y = 0; r.group.remove(o); body.userData.interact = null; } };
   } },
-  combo: { anchors: 2, build(id, [r1, r2]) {
+  combo: { anchors: 2, keyAt: 1, build(id, [r1, r2]) {
     const tool = placeAt(makeKey('tool'), r1, 0.25); let hasTool = false;
     const chest = placeAt(group(box(0.44, 0.26, 0.3, M.furn, 0, 0.13, 0)), r2, 0.2);
     const lid = box(0.44, 0.04, 0.3, M.trim, 0, 0.28, 0, chest); hitSphere(chest, 0.3, 0.15);
@@ -643,21 +759,27 @@ function inView(p) {
   _frustum.setFromProjectionMatrix(_m4); return _frustum.containsPoint(V(p.x, p.y + 0.1, p.z)) && camera.position.distanceTo(p) < 12;
 }
 
-function clearPuzzles() { for (const p of state.puzzles) p.cleanup?.(); state.puzzles = []; puzzleTargets = []; puzzleGroup.clear(); }
+function clearPuzzles() { for (const p of state.puzzles) { p.cleanup?.(); stopSound(p.obj?.userData.snd); } state.puzzles = []; puzzleTargets = []; puzzleGroup.clear(); }
 function genPuzzles(n) {
   clearPuzzles();
   const F = FLOORS[n]; if (!F.keys) return;
   const free = shuffle(world.anchors.slice());
-  const take = (k, cab) => {
-    const out = [];
-    for (let i = 0; i < free.length && out.length < k; i++) if (!cab || free[i].cabinet) out.push(free.splice(i--, 1)[0]);
-    return out.length === k ? out : null;
+  // 放「钥匙」的那个点优先选跟它有关的摆放点；其余（假货、把手）随便放
+  const take = (Tp, id) => {
+    if (!Tp.anchors) return [];
+    const ok = r => !Tp.needsCabinet || r.cabinet;
+    let i = free.findIndex(r => ok(r) && KEY_SPOTS[id].includes(r.a.id)); if (i < 0) i = free.findIndex(ok); if (i < 0) return null;
+    const main = free.splice(i, 1)[0], rest = free.splice(0, Tp.anchors - 1);
+    if (rest.length < Tp.anchors - 1) return null;
+    const out = rest.slice(); out.splice(Tp.keyAt || 0, 0, main); return out;
   };
   for (const id of F.keys) {
-    let tpl = state.forceTpl.shift() || pick(F.pool), Tp = TEMPLATES[tpl], rs = take(Tp.anchors, Tp.needsCabinet);
-    if (!rs) { tpl = 'misplaced'; Tp = TEMPLATES.misplaced; rs = take(1); }
-    state.puzzles.push({ id, tpl, anchors: rs.map(r => r.a.id), ...Tp.build(id, rs) });
-    state.experienced++;
+    let tpl = state.forceTpl.shift() || pick(F.pool), Tp = TEMPLATES[tpl], rs = take(Tp, id);
+    if (!rs) { tpl = 'misplaced'; Tp = TEMPLATES.misplaced; rs = take(Tp, id); }
+    const inst = { id, tpl, anchors: rs.map(r => r.a.id), ...Tp.build(id, rs) };
+    // 真的收音机一直开着，发出沙沙声（跟着玩家移动的「回头」除外）
+    if (inst.obj?.userData.crackle && tpl !== 'behind' && tpl !== 'sound') inst.obj.userData.snd = startSound(inst.obj.getWorldPosition(V(0, 0, 0)), 'crackle');
+    state.puzzles.push(inst); state.experienced++;
   }
   Platform.emit('puzzles', { floor: n, list: state.puzzles.map(p => p.tpl) });
 }
@@ -665,20 +787,50 @@ function genPuzzles(n) {
 /* =====================================================================
  * 9. 声音（循声谜题；Web Audio 定位声源）
  * ===================================================================*/
-let audio = null; const sounds = new Set();
+let audio = null, noiseBuf = null; const sounds = new Set();
 function initAudio() { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch { audio = null; } }
-function startSound(pos) {
-  const s = { timer: setInterval(() => {
-    if (!audio || state.phase !== 'corridor') return;
-    const pan = new PannerNode(audio, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 1.5, rolloffFactor: 1.2, positionX: pos.x, positionY: pos.y, positionZ: pos.z });
-    const osc = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
-    osc.frequency.setValueAtTime(880, t); osc.frequency.exponentialRampToValueAtTime(620, t + 0.18);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-    osc.connect(g).connect(pan).connect(audio.destination); osc.start(t); osc.stop(t + 0.3);
-  }, 1500) };
+function outNode(pos, gain) { // pos 为空 = 不定位（远处的声音）
+  const g = audio.createGain(); g.gain.value = gain;
+  if (pos) g.connect(new PannerNode(audio, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 1.5, rolloffFactor: 1.2, positionX: pos.x, positionY: pos.y, positionZ: pos.z })).connect(audio.destination);
+  else g.connect(audio.destination);
+  return g;
+}
+function noiseSrc() {
+  if (!noiseBuf) { noiseBuf = audio.createBuffer(1, audio.sampleRate, audio.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const n = audio.createBufferSource(); n.buffer = noiseBuf; n.loop = true; return n;
+}
+function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+const sfx = {
+  blip(pos) { const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain(); o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(620, t + 0.18); env(g, t, 0.02, 0.35, 0.23); o.connect(g).connect(outNode(pos, 1)); o.start(t); o.stop(t + 0.3); },
+  crackle(pos) { const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 1400 + Math.random() * 800, Q: 1.5 }), g = audio.createGain(); env(g, t, 0.05, 0.12, 0.5); n.connect(f).connect(g).connect(outNode(pos, 1)); n.start(t, Math.random()); n.stop(t + 0.6); },
+  broadcast(pos, dur, gain) { // 撤离广播：提示音 + 带杂音的"人声"起伏
+    const t = audio.currentTime, out = outNode(pos, gain);
+    [660, 520].forEach((fq, i) => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = fq; env(g, t + i * 0.35, 0.02, 0.5, 0.3); o.connect(g).connect(out); o.start(t + i * 0.35); o.stop(t + i * 0.35 + 0.4); });
+    const n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 900, Q: 2 }), g = audio.createGain(), lfo = audio.createOscillator(), lg = audio.createGain();
+    g.gain.value = 0.25; lfo.frequency.value = 3.5; lg.gain.value = 0.2; lfo.connect(lg).connect(g.gain);
+    n.connect(f).connect(g).connect(out); n.start(t + 0.8); n.stop(t + 0.8 + dur); lfo.start(t + 0.8); lfo.stop(t + 0.8 + dur);
+  },
+  beeps(pos, k) { for (let i = 0; i < k; i++) { const t = audio.currentTime + i * 0.3, o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 1000; env(g, t, 0.01, 0.3, 0.12); o.connect(g).connect(outNode(pos, 1)); o.start(t); o.stop(t + 0.2); } },
+  horn() { const t = audio.currentTime, f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 380 }), g = audio.createGain(); env(g, t, 0.6, 0.3, 2.2); f.connect(g).connect(outNode(null, 1));
+    for (const fq of [98, 147]) { const o = audio.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fq; o.connect(f); o.start(t); o.stop(t + 3); } },
+  click(pos) { const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'highpass', frequency: 2500 }), g = audio.createGain(); env(g, t, 0.003, 0.5, 0.05); n.connect(f).connect(g).connect(outNode(pos, 1)); n.start(t); n.stop(t + 0.1); },
+  hum() { // 4 楼：隐约有人在哼歌
+    const t0 = audio.currentTime, f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 900 }), out = outNode(null, 0.05); f.connect(out);
+    [392, 440, 494, 440, 392, 330, 392, 294].forEach((fq, i) => { const t = t0 + i * 0.6, o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = fq; env(g, t, 0.15, 1, 0.5); o.connect(g).connect(f); o.start(t); o.stop(t + 0.7); });
+  },
+};
+function startSound(pos, kind = 'blip') {
+  const s = { timer: setInterval(() => { if (audio && state.phase === 'corridor') sfx[kind](pos); }, kind === 'crackle' ? 700 : 1500) };
   sounds.add(s); return s;
 }
 function stopSound(s) { if (s) { clearInterval(s.timer); sounds.delete(s); } }
+// 楼层氛围声：2 楼远处的撤离广播，4 楼有人哼歌
+function ambience(dt) {
+  if (!audio || state.phase !== 'corridor') return;
+  state.ambT += dt;
+  if (state.floor === 2 && state.ambT > 16) { state.ambT = 0; sfx.broadcast(null, 5, 0.04); }
+  if (state.floor === 4 && state.ambT > 14) { state.ambT = 0; sfx.hum(); }
+}
 function updateListener() {
   if (!audio) return; const L = audio.listener, f = V(0, 0, -1).applyQuaternion(camera.quaternion);
   if (L.positionX) { L.positionX.value = camera.position.x; L.positionY.value = camera.position.y; L.positionZ.value = camera.position.z;
@@ -707,6 +859,8 @@ async function enterRoom() {
   Platform.emit('room', { floor: state.floor, result: all ? 'success' : state.wrong ? 'confused' : 'hint' });
   // 走廊已经看不见了：换成下一段要走的状态（失败则同层重来，钥匙清空）
   state.next = all ? state.floor + 1 : state.floor;
+  if (all) F.keys.forEach(k => state.recovered.add(k));
+  if (world.startDoor.visible) { world.startDoor.visible = false; world.startDoor.userData.col.enabled = false; }  // 之后都从楼梯上来
   state.keysGot.clear(); state.wrong = false; setLights(true);
   state.roofMode = state.next === 5; world.stub.visible = !state.roofMode; roof.visible = state.roofMode;
   applyContent(state.next); genPuzzles(state.next);
@@ -844,6 +998,8 @@ function debugJump(n) {
   state.floor = state.next = state.prevFloor = n; state.keysGot.clear(); state.wrong = false; setLights(true);
   state.roofMode = n === 5; world.stub.visible = !state.roofMode; roof.visible = state.roofMode;
   setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, false);
+  world.startDoor.visible = false; world.startDoor.userData.col.enabled = false;
+  for (let k = 1; k < n; k++) FLOORS[k].keys.forEach(id => state.recovered.add(id));
   applyContent(n); applyRoomNotes(n); genPuzzles(n); setLook(n, true);
   if (n === 5) { state.phase = 'roof'; sun.position.set(30, 40, 20); player.pos.set(6, 3.2, -19); player.yaw = Math.PI / 2; }
   else { state.phase = 'corridor'; sun.position.set(0, 50, 0); spawn(); }
@@ -857,7 +1013,8 @@ const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   updatePlayer(dt);
-  for (const p of state.puzzles) p.update?.(dt);
+  for (const p of state.puzzles) { p.update?.(dt); const led = p.obj?.userData.blink; if (led) led.material.emissiveIntensity = Math.sin(performance.now() / 180) > 0 ? 2.5 : 0; }
+  ambience(dt);
   if (playing) findFocus();
   updateLook(dt);
   updateListener();
