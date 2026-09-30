@@ -5,25 +5,30 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ROOT（工作名）</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1c1a; color: #cfc8b8;
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #141414; color: #d6d0c2;
     font-family: "Songti SC", "Noto Serif SC", Georgia, serif; user-select: none; }
   canvas { display: block; }
   .layer { position: fixed; inset: 0; pointer-events: none; }
   #start { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(20,19,17,.88); pointer-events: auto; cursor: pointer; text-align: center; gap: 18px; }
-  #start h1 { font-weight: 400; letter-spacing: .5em; margin: 0; font-size: 28px; }
+    background: rgba(18,18,18,.9); pointer-events: auto; cursor: pointer; text-align: center; gap: 18px; }
+  #start h1 { font-weight: 400; letter-spacing: .6em; margin: 0; font-size: 28px; }
   #start p { margin: 0; opacity: .7; font-size: 14px; line-height: 1.9; }
   #start .go { opacity: .95; font-size: 16px; letter-spacing: .3em; }
   #crosshair { left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; inset: auto;
-    border-radius: 50%; background: #cfc8b8; opacity: .55; position: fixed; }
-  #prompt { top: auto; bottom: 18%; text-align: center; font-size: 15px; letter-spacing: .15em; opacity: 0; transition: opacity .2s; }
-  #inv { inset: auto 16px 16px auto; font-size: 13px; opacity: .55; text-align: right; line-height: 1.7; }
-  #fade { background: #000; opacity: 0; transition: opacity 1.2s ease; }
-  #fade.white { background: #e9e5da; }
-  #end { display: none; align-items: center; justify-content: center; color: #2b2622; font-size: 22px; letter-spacing: .6em; }
+    border-radius: 50%; background: #d6d0c2; opacity: .55; position: fixed; }
+  #prompt { top: auto; bottom: 26%; text-align: center; font-size: 15px; letter-spacing: .15em; opacity: 0; transition: opacity .2s; }
+  #subtitle { top: auto; bottom: 12%; left: 10%; right: 10%; text-align: center; font-size: 19px; line-height: 1.7;
+    letter-spacing: .08em; opacity: 0; transition: opacity .6s; text-shadow: 0 0 8px #000, 0 0 2px #000; }
+  #inv { inset: auto 16px 16px auto; font-size: 13px; opacity: .6; text-align: right; line-height: 1.7; }
+  #fade { background: #000; opacity: 0; transition: opacity .3s ease; }
+  #fade.slow { transition: opacity 1.6s ease; }
+  #fade.white { background: #f4f2ec; }
+  #end { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 22px; color: #3a3530; }
+  #end .t { font-size: 26px; letter-spacing: .8em; }
+  #end #stats { font-size: 15px; letter-spacing: .2em; opacity: .75; }
   #hud { inset: 8px auto auto 8px; font: 12px/1.5 ui-monospace, monospace; color: #9f9; white-space: pre; display: none; }
 </style>
-<!-- Three.js 走 CDN。若 Chrona 不允许外链脚本，需要把 three 打包进本文件（见 docs/chrona-checklist.md）-->
+<!-- Three.js 走 CDN；npm run pack 打包时会换成 ZIP 内的本地文件 -->
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
@@ -34,90 +39,81 @@
 <body>
 <div id="start" class="layer">
   <h1>ROOT</h1>
-  <p>WASD 移动 · Shift 快走 · 鼠标 视角<br>E / 左键 拾取 · Esc 暂停</p>
+  <p>WASD 移动 · Shift 快走 · 鼠标 视角<br>E / 左键 交互 · Esc 暂停</p>
   <p class="go" id="startText">载入中…</p>
 </div>
 <div id="crosshair"></div>
 <div id="prompt" class="layer"></div>
+<div id="subtitle" class="layer"></div>
 <div id="inv" class="layer"></div>
-<div id="end" class="layer">循 环 停 止</div>
 <div id="fade" class="layer"></div>
+<div id="end" class="layer"><div class="t">回 家</div><div id="stats"></div></div>
 <div id="hud" class="layer"></div>
 
 <script type="module">
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
 
 /* =====================================================================
- * 1. 配置
+ * 1. 设计数据（对应设计文档）
  * ===================================================================*/
 const CFG = {
   eyeHeight: 1.6, radius: 0.3, walkSpeed: 2.0, runSpeed: 3.2,
-  gravity: 20, stepHeight: 0.45, lookSens: 0.0022, reach: 2.2,
+  gravity: 20, stepHeight: 0.45, lookSens: 0.0022, reach: 2.3,
 };
 
-// 哑光低饱和色板
-const C = {
-  fog: '#1d1c1a', wall: '#8c877a', trim: '#5e574c', floor: '#5a4e44', ceiling: '#a19c90',
-  wood: '#6a5646', wood2: '#57473b', metal: '#6d6a62', stair: '#6b6157',
-  bark: '#4b4037', moss: '#5d6a4a', leaf: '#58664a', paper: '#cbc2ab', brass: '#8d7d57',
-  terracotta: '#8a5f4b', cloth: '#766b62', crack: '#2b2622', ink: '#3a2e29', bulb: '#f2dcb0',
+// 每层要找的「钥匙」和可用的谜题模板（数门、顺序、窗外尚未实现）
+const FLOORS = {
+  1: { keys: ['photo'], pool: ['misplaced'] },
+  2: { keys: ['cup', 'radio'], pool: ['misplaced', 'twin', 'behind', 'dark'] },
+  3: { keys: ['poster', 'tickets', 'machine'], pool: ['twin', 'behind', 'dark', 'sound', 'combo'] },
+  4: { keys: ['housekey', 'can'], pool: ['sound', 'combo'] },
+  5: { rooftop: true },
 };
-
-// 窗外光：1-2 楼傍晚，3 楼起正午
-const SKY = {
-  dusk: { sky: '#a07a5c', light: '#d9a276', intensity: 5 },
-  noon: { sky: '#bdbbae', light: '#e8e4d4', intensity: 7 },
+const KEYS = {
+  photo:    { name: '全家福',   text: '照片里缺了一张脸。' },
+  cup:      { name: '倒扣的杯子', text: '杯子倒扣着。有人在等谁回家。' },
+  radio:    { name: '收音机',   text: '「……水位仍在上涨，请居民尽快撤离……」' },
+  poster:   { name: '寻人启事', text: '「寻人：离家时 16 岁……」名字被水泡糊了。' },
+  tickets:  { name: '船票存根', text: '背面写着：「今天又去码头问了，还是没有你的消息。」' },
+  machine:  { name: '答录机',   text: '「大家都搬走了。我不走，怕你回来找不到家。」' },
+  housekey: { name: '家门钥匙', text: '钥匙一直挂在门边。' },
+  can:      { name: '喷壶',     text: '「花盆里种了你小时候捡的那颗种子。等它长大，你就回来吧。」' },
 };
-
-// 墙上字迹（TODO: 待定文案。三行合起来像一句话但差一个词）
-const TEXT_LINES = ['（词）（词）', '（词）（词）', '（词）（词）'];
-
-// 影响结局的特定道具（暂定钥匙，体验后再调）
-const ENDING_ITEM = 'key';
-
-/* 资产清单：file = assets/ 下的 GLB 文件名；null = 用程序化占位几何体。
- * size = 目标包围盒 [x, y, z]（米）。GLB 载入后会拉伸到该尺寸，并把底面中心对齐到原点。
- * rot  = 可选，载入后先旋转 [x, y, z]（弧度），用于修正 Meshy 模型朝向。
- * 约定：模块宽度沿 X，正面朝 +Z，底面在 y=0。 */
-const ASSET_BASE = './assets/';
-const ASSETS = {
-  // 建筑
-  wall:       { file: null, size: [2, 3, 0.2] },
-  wallDoor:   { file: null, size: [2, 3, 0.2] },   // 门框（关）
-  wallDoorOpen: { file: null, size: [2, 3, 0.2] }, // 门框（开）
-  wallWindow: { file: null, size: [2, 3, 0.2] },   // 窗框
-  floor:      { file: null, size: [2, 0.1, 2] },
-  ceiling:    { file: null, size: [2, 0.1, 2] },
-  stairs:     { file: null, size: [3.2, 3, 6] },   // 向 -Z 上升的一整跑楼梯
-  railing:    { file: null, size: [2, 1, 0.1] },
-  // 树
-  trunk:      { file: null, size: [1, 7, 1] },
-  rootMass:   { file: null, size: [1.2, 1.6, 0.6] },
-  moss:       { file: null, size: [1.2, 0.03, 1.2] },
-  leaves:     { file: null, size: [0.8, 0.6, 0.8] },   // 树冠块
-  // 道具
-  chair:      { file: null, size: [0.5, 0.95, 0.5] },
-  cup:        { file: null, size: [0.12, 0.1, 0.1], rot: [Math.PI, 0, 0] },  // 倒扣
-  frame:      { file: null, size: [0.36, 0.46, 0.03] },
-  letter:     { file: null, size: [0.2, 0.04, 0.14] },
-  key:        { file: null, size: [0.12, 0.02, 0.04] },
-  pot:        { file: null, size: [0.26, 0.24, 0.26] },
-  // 氛围
-  lamp:       { file: null, size: [0.5, 1, 0.5] },   // 发光材质（emissive）作为灯泡
-  curtain:    { file: null, size: [0.7, 1.4, 0.02] },
-  crack:      { file: null, size: [1.2, 0.01, 0.4] },
+const LINES = {
+  success: {
+    1: '照片上那张空着的脸……是我。我在这里长大。',
+    2: '杯子扣着，是在等人回家。窗外……整座城都没了。',
+    3: '我一直以为是我在找她。原来是她一直在找我。',
+    4: '门从来没锁。花一直有人浇。……我该回家了。',
+  },
+  hint: {
+    1: ['墙上的照片，好像少了点什么。', '这条走廊，刚才也是这样吗？'],
+    2: ['有什么东西摆得不太对。', '是收音机的声音吗？'],
+    3: ['码头……她是不是去过很多次？', '贴在墙上的纸，写的是谁？'],
+    4: ['门边原来挂着什么来着？', '花，好像还是湿的。'],
+  },
+  confused: ['……不对，不是这个。', '我刚才碰了什么？', '好像越来越想不起来了。', '这里……我来过吗？', '头有点疼。'],
 };
-const MATTE_OVERRIDE = true; // 强制 GLB 材质哑光，去掉法线/粗糙度/金属度贴图
+const WALL_NOTES = ['门 没锁', '花 浇了', '等你 回来']; // 2 楼起每层多一行
+
+// 一楼灰色板 → 四楼彩色板，按楼层线性过渡
+const PAL0 = { wall: '#5e5e5e', floor: '#3d3d3d', ceil: '#6a6a6a', trim: '#474747', furn: '#545454', key: '#8e8e8e',
+  root: '#2c2c2c', plant: '#4a504a', sea: '#4d5357', sky: '#141414' };
+const PAL1 = { wall: '#d6c7a6', floor: '#8a6a48', ceil: '#e4dac4', trim: '#9a7a56', furn: '#a27a54', key: '#e2b25e',
+  root: '#5b4431', plant: '#6f9b4c', sea: '#3d8db0', sky: '#a9c8d4' };
+const LOOK = { // 每层的光与雾
+  1: { f: 0,    lamp: 2.8, lampColor: '#b8c2cc', sun: 0.1, hemi: 0.16, fog: [2, 16],  flicker: true },
+  2: { f: 0.33, lamp: 3.6, lampColor: '#e8d2b0', sun: 0.5, hemi: 0.22, fog: [3, 26] },
+  3: { f: 0.66, lamp: 3.0, lampColor: '#f0dcb8', sun: 1.1, hemi: 0.38, fog: [4, 38] },
+  4: { f: 1,    lamp: 5.5, lampColor: '#ffe1ae', sun: 1.5, hemi: 0.55, fog: [6, 55] },
+};
 
 /* =====================================================================
- * 2. 平台适配层 —— 所有与 Chrona 相关的调用集中在这里
- *    TODO(Day1 晚): 确认 Chrona 交互 API 后在此接入（拾取 / 触发 / 对话）
+ * 2. 平台适配层：所有与 Chrona 相关的调用集中在这里（待确认 API 后接入）
  * ===================================================================*/
 const Platform = {
-  name: 'standalone',
   emit(evt, detail = {}) {
     if (DEBUG) console.log('[platform]', evt, detail);
     window.dispatchEvent(new CustomEvent('root:' + evt, { detail }));
@@ -132,626 +128,624 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
 document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(C.fog);
-scene.fog = new THREE.Fog(C.fog, 3, 24);
-
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 80);
+scene.background = new THREE.Color(PAL0.sky);
+scene.fog = new THREE.Fog(PAL0.sky, 2, 15);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 900);
 camera.rotation.order = 'YXZ';
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-
-const hemi = new THREE.HemisphereLight('#8f8a80', '#2a2622', 0.35);
-scene.add(hemi);
+const hemi = new THREE.HemisphereLight('#c8ccd0', '#2a2622', 0.12); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff1d8', 0.1); sun.position.set(20, 30, 40); scene.add(sun);
 
 /* =====================================================================
- * 4. 程序化占位几何体（Meshy GLB 到位前使用）
+ * 4. 材质与几何工具
  * ===================================================================*/
-const matCache = new Map();
-function mat(color, opts = {}) {
-  const key = color + JSON.stringify(opts);
-  if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial(
-    { color, roughness: 1, metalness: 0, flatShading: true, ...opts }));
-  return matCache.get(key);
-}
-function box(w, h, d, color, x = 0, y = 0, z = 0) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
-  m.position.set(x, y, z); return m;
-}
-function group(...children) { const g = new THREE.Group(); children.forEach(c => g.add(c)); return g; }
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 1, metalness: 0, flatShading: true, ...o });
+const M = {};
+for (const k in PAL0) M[k] = std(PAL0[k]);
+M.dark = std('#101010');
+M.glowKey = std('#fff4d0', { emissive: '#ffd27a', emissiveIntensity: 1.4 });
+M.white = std('#f2f2f2');
+M.flower = [std('#e0a0a8'), std('#f1d06a'), std('#c9a6e0'), std('#f3f0e6')];
+const _c0 = {}, _c1 = {};
+for (const k in PAL0) { _c0[k] = new THREE.Color(PAL0[k]); _c1[k] = new THREE.Color(PAL1[k]); }
+function applyPalette(f) { for (const k in PAL0) M[k].color.copy(_c0[k]).lerp(_c1[k], f); }
 
+const building = new THREE.Group(); scene.add(building);   // 1–4 楼共用的空间
+const roof = new THREE.Group(); scene.add(roof);           // 天台
+const puzzleGroup = new THREE.Group(); building.add(puzzleGroup);
+
+function box(w, h, d, mat, x = 0, y = 0, z = 0, parent) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z);
+  if (parent) parent.add(m); return m;
+}
+function group(...kids) { const g = new THREE.Group(); kids.forEach(k => g.add(k)); return g; }
 function mulberry32(a) {
   return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-// 锥形管（树根/树枝），低多边形
-function taperedTube(points, r0, r1 = r0 * 0.15, seg = 12, radial = 5, color = C.bark) {
+// 锥形管（树根/树枝）
+function taperedTube(points, r0, r1, mat, seg = 12, radial = 5) {
   const curve = new THREE.CatmullRomCurve3(points);
-  const frames = curve.computeFrenetFrames(seg, false);
-  const pos = [], idx = [];
+  const frames = curve.computeFrenetFrames(seg, false), pos = [], idx = [];
   for (let i = 0; i <= seg; i++) {
-    const t = i / seg, p = curve.getPointAt(t), r = r0 + (r1 - r0) * t;
-    const N = frames.normals[i], B = frames.binormals[i];
+    const t = i / seg, p = curve.getPointAt(t), r = r0 + (r1 - r0) * t, N = frames.normals[i], B = frames.binormals[i];
     for (let j = 0; j < radial; j++) {
       const a = j / radial * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
       pos.push(p.x + r * (c * N.x + s * B.x), p.y + r * (c * N.y + s * B.y), p.z + r * (c * N.z + s * B.z));
     }
   }
   for (let i = 0; i < seg; i++) for (let j = 0; j < radial; j++) {
-    const a = i * radial + j, b = i * radial + (j + 1) % radial, c = a + radial, d = b + radial;
-    idx.push(a, b, c, b, d, c);
+    const a = i * radial + j, b = i * radial + (j + 1) % radial; idx.push(a, b, a + radial, b, b + radial, a + radial);
   }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setIndex(idx); g.computeVertexNormals();
-  return new THREE.Mesh(g, mat(color));
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx); g.computeVertexNormals(); return new THREE.Mesh(g, mat);
 }
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-// 墙段＋门框；open=true 时门板向内打开
-function doorWall([w, h, d], open) {
-  const ow = 1.0, oh = 2.2, pw = (w - ow) / 2;
-  const leaf = new THREE.Group(); leaf.position.set(-ow / 2 + 0.01, 0, -0.02); // 铰链在左侧
-  leaf.add(box(ow - 0.02, oh - 0.02, 0.05, C.wood2, (ow - 0.02) / 2, (oh - 0.02) / 2, 0),
-    box(0.03, 0.12, 0.04, C.metal, ow - 0.13, 1.0, 0.05));
-  if (open) leaf.rotation.y = 1.35;
-  return group(
-      box(pw, h, d, C.wall, -(ow + pw) / 2, h / 2), box(pw, h, d, C.wall, (ow + pw) / 2, h / 2),
-      box(ow, h - oh, d, C.wall, 0, oh + (h - oh) / 2),
-      box(0.08, oh + 0.05, d + 0.04, C.wood, -ow / 2 - 0.04, (oh + 0.05) / 2),
-      box(0.08, oh + 0.05, d + 0.04, C.wood, ow / 2 + 0.04, (oh + 0.05) / 2),
-      box(ow + 0.16, 0.08, d + 0.04, C.wood, 0, oh + 0.04),
-      box(pw, 0.12, 0.03, C.trim, -(ow + pw) / 2, 0.06, d / 2 + 0.015),
-      box(pw, 0.12, 0.03, C.trim, (ow + pw) / 2, 0.06, d / 2 + 0.015),
-      leaf);
-}
-
-const PLACEHOLDER = {
-  wall: ([w, h, d]) => group(box(w, h, d, C.wall, 0, h / 2), box(w, 0.12, 0.03, C.trim, 0, 0.06, d / 2 + 0.015)),
-  wallDoor: size => doorWall(size, false),
-  wallDoorOpen: size => doorWall(size, true),
-  leaves: ([w, h]) => { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(w / 2, 0), mat(C.leaf)); m.scale.y = h / w; m.position.y = h / 2; return m; },
-  wallWindow: ([w, h, d]) => {
-    const y0 = 0.9, y1 = 2.2, ow = 1.2, pw = (w - ow) / 2;
-    return group(
-      box(w, y0, d, C.wall, 0, y0 / 2), box(w, h - y1, d, C.wall, 0, y1 + (h - y1) / 2),
-      box(pw, y1 - y0, d, C.wall, -(ow + pw) / 2, (y0 + y1) / 2), box(pw, y1 - y0, d, C.wall, (ow + pw) / 2, (y0 + y1) / 2),
-      box(ow + 0.1, 0.05, d + 0.1, C.trim, 0, y0 + 0.025, 0.03),
-      box(0.05, y1 - y0, 0.06, C.wood, -ow / 2 + 0.025, (y0 + y1) / 2), box(0.05, y1 - y0, 0.06, C.wood, ow / 2 - 0.025, (y0 + y1) / 2),
-      box(0.04, y1 - y0, 0.04, C.wood, 0, (y0 + y1) / 2), box(ow, 0.04, 0.04, C.wood, 0, y0 + (y1 - y0) * 0.65),
-      box(w, 0.12, 0.03, C.trim, 0, 0.06, d / 2 + 0.015));
-  },
-  floor: ([w, h, d]) => box(w, h, d, C.floor, 0, h / 2),
-  ceiling: ([w, h, d]) => box(w, h, d, C.ceiling, 0, h / 2),
-  stairs: ([w, h, d]) => {
-    const n = 15, rise = h / n, run = d / n, g = new THREE.Group();
-    for (let i = 0; i < n; i++) g.add(box(w, (i + 1) * rise, run, C.stair, 0, (i + 1) * rise / 2, d / 2 - (i + 0.5) * run));
-    return g;
-  },
-  railing: ([w, h]) => {
-    const g = group(box(w, 0.05, 0.06, C.wood, 0, h));
-    for (let x = -w / 2 + 0.1; x <= w / 2; x += 0.25) g.add(box(0.03, h, 0.03, C.metal, x, h / 2));
-    return g;
-  },
-  trunk: ([w, h]) => {
-    const pts = [[0, -0.5, 0], [0.08, h * 0.3, 0.05], [-0.05, h * 0.6, -0.04], [0.06, h, 0]].map(p => new THREE.Vector3(...p));
-    return taperedTube(pts, w / 2, w * 0.35, 10, 7);
-  },
-  rootMass: ([w, h]) => {
-    const rng = mulberry32(7), g = new THREE.Group();
-    for (let i = 0; i < 6; i++) {
-      const x0 = (rng() - 0.5) * w, x1 = (rng() - 0.5) * w;
-      g.add(taperedTube([new THREE.Vector3(x0, -0.1, 0.1), new THREE.Vector3((x0 + x1) / 2 + (rng() - .5) * .4, h * (0.4 + rng() * 0.4), 0.15 + rng() * 0.2),
-        new THREE.Vector3(x1, h, 0)], 0.08 + rng() * 0.05, 0.02, 10, 5));
-    }
-    return g;
-  },
-  moss: ([w]) => {
-    const geo = new THREE.CircleGeometry(w / 2, 7); const p = geo.attributes.position;
-    for (let i = 1; i < p.count; i++) { const s = 0.6 + Math.sin(i * 12.9898) * 0.4; p.setXY(i, p.getX(i) * s, p.getY(i) * s); }
-    const m = new THREE.Mesh(geo, mat(C.moss, { polygonOffset: true, polygonOffsetFactor: -1 }));
-    m.rotation.x = -Math.PI / 2; m.position.y = 0.005; return m;
-  },
-  chair: () => {
-    const g = group(box(0.46, 0.04, 0.44, C.wood, 0, 0.46));
-    for (const [x, z] of [[-0.2, -0.19], [0.2, -0.19], [-0.2, 0.19], [0.2, 0.19]]) g.add(box(0.04, 0.46, 0.04, C.wood2, x, 0.23, z));
-    g.add(box(0.04, 0.5, 0.04, C.wood2, -0.2, 0.72, -0.19), box(0.04, 0.5, 0.04, C.wood2, 0.2, 0.72, -0.19),
-      box(0.44, 0.08, 0.03, C.wood, 0, 0.9, -0.19), box(0.44, 0.06, 0.03, C.wood, 0, 0.72, -0.19));
-    return g;
-  },
-  cup: () => { // 倒扣：宽口朝下
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.1, 7), mat(C.paper)); body.position.y = 0.05;
-    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.008, 4, 6, Math.PI), mat(C.paper));
-    handle.position.set(0.045, 0.05, 0); handle.rotation.z = -Math.PI / 2;
-    return group(body, handle);
-  },
-  frame: ([w, h, d]) => group(box(w, 0.04, d, C.wood, 0, 0.02), box(w, 0.04, d, C.wood, 0, h - 0.02),
-    box(0.04, h, d, C.wood, -w / 2 + 0.02, h / 2), box(0.04, h, d, C.wood, w / 2 - 0.02, h / 2),
-    box(w - 0.06, h - 0.06, 0.005, C.cloth, 0, h / 2, -d / 2)),
-  letter: () => {
-    const a = box(0.2, 0.004, 0.07, C.paper, 0, 0.02, 0.03), b = box(0.2, 0.004, 0.07, C.paper, 0, 0.02, -0.03);
-    a.rotation.x = 0.35; b.rotation.x = -0.35; return group(a, b);
-  },
-  key: () => {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.005, 4, 8), mat(C.brass));
-    ring.rotation.x = Math.PI / 2; ring.position.set(-0.04, 0.006, 0);
-    return group(ring, box(0.07, 0.008, 0.008, C.brass, 0.02, 0.006), box(0.01, 0.008, 0.016, C.brass, 0.045, 0.006, 0.01));
-  },
-  pot: () => {
-    const pts = [[0, 0], [0.09, 0], [0.11, 0.18], [0.13, 0.2], [0.13, 0.24], [0.11, 0.24], [0.1, 0.05]].map(([x, y]) => new THREE.Vector2(x, y));
-    return new THREE.Mesh(new THREE.LatheGeometry(pts, 7), mat(C.terracotta, { side: THREE.DoubleSide }));
-  },
-  lamp: ([, h]) => {
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.18, 6, 1, true), mat(C.metal, { side: THREE.DoubleSide }));
-    shade.position.y = 0.25;
-    const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), mat(C.bulb, { emissive: C.bulb, emissiveIntensity: 1 }));
-    bulb.position.y = 0.17;
-    return group(box(0.01, h - 0.34, 0.01, C.metal, 0, 0.34 + (h - 0.34) / 2), shade, bulb);
-  },
-  curtain: ([w, h]) => {
-    const geo = new THREE.PlaneGeometry(w, h, 6, 4); const p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i);
-      p.setZ(i, Math.sin(x * 14) * 0.03);
-      if (y < -h / 4) p.setY(i, y + Math.abs(Math.sin(x * 23 + i)) * h * 0.25); // 破损下摆
-    }
-    geo.computeVertexNormals(); geo.translate(0, h / 2, 0);
-    return new THREE.Mesh(geo, mat(C.cloth, { side: THREE.DoubleSide }));
-  },
-  crack: ([w, , d]) => {
-    const shape = new THREE.Shape(); const rng = mulberry32(3);
-    shape.moveTo(-w / 2, 0);
-    for (let i = 1; i <= 8; i++) shape.lineTo(-w / 2 + w * i / 8, (rng() - 0.5) * d * 0.5 + d * 0.08);
-    for (let i = 8; i >= 0; i--) shape.lineTo(-w / 2 + w * i / 8, (rng() - 0.5) * d * 0.5 - d * 0.08);
-    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), mat(C.crack, { polygonOffset: true, polygonOffsetFactor: -2 }));
-    m.rotation.x = -Math.PI / 2; m.position.y = 0.004; return m;
-  },
-};
-
-/* =====================================================================
- * 5. 资产加载（GLB 外链，失败回落到占位体）
- * ===================================================================*/
-const templates = {};
-function normalizeGLB(root, { size, rot }) {
-  if (rot) { root.rotation.set(...rot); root.updateMatrixWorld(true); }
-  const bb = new THREE.Box3().setFromObject(root), s = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
-  root.position.set(-c.x, -bb.min.y, -c.z);
-  const wrap = group(root);
-  wrap.scale.set(size[0] / (s.x || 1), size[1] / (s.y || 1), size[2] / (s.z || 1));
-  if (MATTE_OVERRIDE) root.traverse(o => {
-    if (!o.isMesh) return;
-    for (const m of [].concat(o.material)) {
-      if (!m.isMeshStandardMaterial) continue;
-      m.roughness = 1; m.metalness = 0; m.normalMap = m.roughnessMap = m.metalnessMap = null; m.flatShading = true; m.needsUpdate = true;
-    }
-  });
-  return wrap;
-}
-async function loadAssets() {
-  const loader = new GLTFLoader();
-  await Promise.all(Object.entries(ASSETS).map(async ([name, a]) => {
-    if (a.file) {
-      try { templates[name] = normalizeGLB((await loader.loadAsync(ASSET_BASE + a.file)).scene, a); }
-      catch (e) { console.warn(`GLB 载入失败，改用占位体: ${a.file}`, e); }
-    }
-    if (!templates[name]) templates[name] = PLACEHOLDER[name](a.size);
-  }));
-}
-function part(name, x = 0, y = 0, z = 0, rotY = 0, parent = scene) {
-  const o = templates[name].clone(true);
-  o.position.set(x, y, z); o.rotation.y = rotY; parent.add(o); return o;
+function textTexture(lines, { w = 512, h = 128, font = 56, color = '#2b2521', bg = null } = {}) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d');
+  if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); }
+  g.fillStyle = color; g.font = `${font}px "Songti SC","Noto Serif SC",serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  lines.forEach((t, i) => g.fillText(t, w / 2, h / (lines.length + 1) * (i + 1)));
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
 
 /* =====================================================================
- * 6. 物理代理（不可见的行走面 + AABB 墙体碰撞），与视觉模型解耦
+ * 5. 物理代理：不可见行走面 + AABB 碰撞
  * ===================================================================*/
 const walkables = [], colliders = [];
 const proxyMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
-function walkQuad(a, b, c, d) { // 四个角点 [x,y,z]
+function walkQuad(a, b, c, d, parent = scene) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3));
-  const m = new THREE.Mesh(g, proxyMat); m.visible = false; scene.add(m); walkables.push(m); return m;
+  const m = new THREE.Mesh(g, proxyMat); m.visible = false; parent.add(m); walkables.push(m); return m;
 }
-function collider(minX, maxX, minZ, maxZ, minY = -1, maxY = 20) {
-  const c = { minX, maxX, minZ, maxZ, minY, maxY, enabled: true }; colliders.push(c); return c;
+function collider(x0, x1, z0, z1, y0 = -1, y1 = 4) {
+  const c = { minX: x0, maxX: x1, minZ: z0, maxZ: z1, minY: y0, maxY: y1, enabled: true }; colliders.push(c); return c;
+}
+// 实体方块：视觉 + 碰撞（y 范围同方块）
+function solid(x0, x1, y0, y1, z0, z1, mat, parent = building, collide = true) {
+  const m = box(x1 - x0, y1 - y0, z1 - z0, mat, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, parent);
+  if (collide) collider(x0, x1, z0, z1, y0, y1);
+  return m;
 }
 
 /* =====================================================================
- * 7. 关卡：走廊 + 楼梯间。每一层都复用这段空间，按楼层切换状态（8号出口式）
- *    坐标：玩家沿 -Z 前进；走廊 x∈[-1.6,1.6]，z∈[0,-28]；楼梯间 z∈[-28,-38]；楼梯顶的门通往下一层
+ * 6. 关卡（单位：米）
+ *   走廊 A：x 0→24，z 0→3（玩家向 +x 走）；转角后走廊 B：x 21→24，z 0→-16（向 -z 走）
+ *   过渡房间：x 18.5→26.5，z -16→-22；房间西墙的门通往出口楼梯（向 -x 上升 3 米）
+ *   入口楼梯：x -8→0 从 y=-3 升到 0，接走廊 A 起点。出口楼梯走到一半时无缝传送到入口楼梯同一位置。
  * ===================================================================*/
-const W = 3.2, HW = W / 2, H = 3, M = 2;
-const Z_STAIR = -28, Z_END = -38, STAIR_H = 6.4;
-const LEFT = Math.PI / 2, RIGHT = -Math.PI / 2;
-
+const H = 3;
+const EXIT = { x0: 18.5, run: 8, rise: 3, zc: -19 };   // 出口楼梯
+const ENTRY = { x0: -8, y0: -3, zc: 1.5 };              // 入口楼梯（底端）
+const ROOF_DZ = 100;                                     // 天台偏移
 const world = {
-  lamps: [], windowLights: [], sky: null, sun: null, texts: [], props: {}, sprouts: {},
-  roots: [], blockedDoorRoots: null, swapDoor: null, swapWall: null, chair: null, trunk: null,
-  curtain: null, extraRoot: null, railRoots: null, windowBranches: null, sunPatch: null, placedPot: null,
-  landingDoor: null, landingDoorOpen: null, doorCollider: null, floorSign: null,
+  lamps: [], plants: [], roots: [], branches: [], notes: [], sign: null, switchObj: null,
+  entranceLeaf: null, entranceCol: null, farLeaf: null, farCol: null, sea: null, anchors: [],
 };
-const interactables = []; // 非拾取类交互：{ obj.userData.interact = { label(), act() } }
-function makeInteractable(obj, label, act) { obj.userData.interact = { label, act }; interactables.push(obj); }
 
-function buildLevel() {
-  const rng = mulberry32(2026);
+// 8 个摆放点（与设计文档平面图一致）：位置、朝向、家具
+const FACE = { N: 0, S: Math.PI, E: -Math.PI / 2, W: Math.PI / 2 }; // 家具正面朝向：N 墙上的家具面朝 +z …
+const ANCHORS = [
+  { id: 1, x: 5,     z: 0.45,  rot: FACE.N, furn: 'shoeCabinet' },
+  { id: 2, x: 9,     z: 2.55,  rot: FACE.S, furn: 'sideTable' },
+  { id: 3, x: 13,    z: 0.3,   rot: FACE.N, furn: 'shelf' },
+  { id: 4, x: 18,    z: 2.55,  rot: FACE.S, furn: 'cabinet' },
+  { id: 5, x: 23.45, z: 2.2,   rot: FACE.E, furn: 'boxes' },
+  { id: 6, x: 21.45, z: -5,    rot: FACE.W, furn: 'phoneTable' },
+  { id: 7, x: 23.6,  z: -8.5,  rot: FACE.E, furn: 'bench' },
+  { id: 8, x: 21.45, z: -13,   rot: FACE.W, furn: 'lowCabinet' },
+];
 
-  // --- 地板 / 天花板
-  for (let z = -M / 2; z > Z_END; z -= M) for (const x of [-0.8, 0.8]) {
-    const f = part('floor', x, -0.1, z); f.scale.x = 0.8;
-    const cy = z > Z_STAIR ? H : STAIR_H;
-    const c = part('ceiling', x, cy, z); c.scale.x = 0.8;
+function stairsVisual(x0, y0, dir, zc, width, parent) { // dir: +1 向 +x 上升，-1 向 -x 上升
+  for (let i = 0; i < 16; i++) {
+    const top = y0 + (i + 1) * 3 / 16, xa = x0 + dir * i * 0.5, xb = x0 + dir * (i + 1) * 0.5;
+    box(0.5, top - (y0 - 0.1), width, M.floor, (xa + xb) / 2, (top + y0 - 0.1) / 2, zc, parent);
   }
-  walkQuad([-HW, 0, 0], [HW, 0, 0], [HW, 0, Z_END], [-HW, 0, Z_END]);
+}
 
-  // --- 走廊墙：左侧门、右侧窗
-  const leftDoors = [2, 6, 10], rightWindows = [1, 4, 7, 12];
-  for (let i = 0; i < 14; i++) {
-    const z = -(i * M + M / 2);
-    if (i === 10) { // 4 楼的布局微变：这扇门变成墙
-      world.swapDoor = part('wallDoor', -HW - 0.1, 0, z, LEFT);
-      world.swapWall = part('wall', -HW - 0.1, 0, z, LEFT); world.swapWall.visible = false;
-    } else part(leftDoors.includes(i) ? 'wallDoor' : 'wall', -HW - 0.1, 0, z, LEFT);
-    part(rightWindows.includes(i) ? 'wallWindow' : 'wall', HW + 0.1, 0, z, RIGHT);
-    if (rightWindows.includes(i)) {
-      const l = new THREE.PointLight(SKY.dusk.light, 2, 5, 1.5); l.position.set(HW - 0.4, 1.6, z); scene.add(l);
-      world.windowLights.push(l);
-    }
+function buildBuilding() {
+  const B = building;
+  // --- 地面与天花
+  solid(0, 24, -0.1, 0, 0, 3, M.floor, B, false); solid(21, 24, -0.1, 0, -16.3, 0, M.floor, B, false);
+  solid(18.3, 26.7, -0.1, 0, -22.2, -16.2, M.floor, B, false);
+  solid(0, 24, H, H + 0.2, 0, 3, M.ceil, B, false); solid(21, 24, H, H + 0.2, -16.2, 0, M.ceil, B, false);
+  solid(18.3, 26.7, H, H + 0.2, -22.2, -16.2, M.ceil, B, false);
+  walkQuad([0, 0, 0], [24, 0, 0], [24, 0, 3], [0, 0, 3]);
+  walkQuad([21, 0, -16.3], [24, 0, -16.3], [24, 0, 0], [21, 0, 0]);
+  walkQuad([18.5, 0, -22], [26.5, 0, -22], [26.5, 0, -16.2], [18.5, 0, -16.2]);
+
+  // --- 走廊墙（南墙和东墙开窗，碰撞按整面墙）
+  solid(-0.2, 21, -0.2, H, -0.2, 0, M.wall);                       // A 北墙
+  const winA = [[6, 7.5], [13, 14.5]], winB = [[-12.5, -11], [-6.5, -5]];
+  let xs = 0; for (const [a, b] of [...winA, [24.2, 24.2]]) {
+    solid(xs, a, 0, H, 3, 3.2, M.wall, B, false);
+    if (a < 24) { solid(a, b, 0, 0.9, 3, 3.2, M.wall, B, false); solid(a, b, 2.1, H, 3, 3.2, M.wall, B, false); }
+    xs = b;
   }
-  // 残破窗帘
-  world.curtain = part('curtain', HW - 0.02, 0.8, -(4 * M + M / 2) + 0.45, RIGHT);
-
-  // --- 楼梯间墙（两层高）
-  for (let i = 14; i < 19; i++) {
-    const z = -(i * M + M / 2);
-    for (const y of [0, H]) { part('wall', -HW - 0.1, y, z, LEFT); part('wall', HW + 0.1, y, z, RIGHT); }
+  collider(-0.2, 24.2, 3, 3.2);                                       // A 南墙
+  let zs = -16; for (const [a, b] of [...winB, [3.2, 3.2]]) {
+    solid(24, 24.2, 0, H, zs, a, M.wall, B, false);
+    if (a < 3) { solid(24, 24.2, 0, 0.9, a, b, M.wall, B, false); solid(24, 24.2, 2.1, H, a, b, M.wall, B, false); }
+    zs = b;
   }
-  // 起点墙、走廊天花板上方的隔墙、尽头墙（上层带门）
-  for (const x of [-0.8, 0.8]) {
-    part('wall', x, 0, 0.1, Math.PI).scale.x = 0.8;
-    part('wall', x, H, Z_STAIR + 0.1, Math.PI).scale.x = 0.8;
-    part('wall', x, 0, Z_END - 0.1).scale.x = 0.8;
-  }
-  for (const x of [-1.3, 1.3]) part('wall', x, H, Z_END - 0.1).scale.x = 0.3;
-  // 楼梯顶的门：解开本层谜题才能打开
-  world.landingDoor = part('wallDoor', 0, H, Z_END - 0.1);
-  world.landingDoorOpen = part('wallDoorOpen', 0, H, Z_END - 0.1); world.landingDoorOpen.visible = false;
-  makeInteractable(world.landingDoor, doorLabel, tryOpenDoor);
-  // 门后：一小段黑暗的过道
-  walkQuad([-0.5, H, Z_END], [0.5, H, Z_END], [0.5, H, Z_END - 2], [-0.5, H, Z_END - 2]);
+  collider(24, 24.2, -16, 3.2);                                       // B 东墙
+  solid(20.8, 21, -0.2, H, -16, 0, M.wall);                           // B 西墙
+  // 踢脚线
+  box(21, 0.1, 0.03, M.trim, 10.5, 0.05, 0.015, B); box(24, 0.1, 0.03, M.trim, 12, 0.05, 2.985, B);
 
-  collider(-HW - 0.2, -HW, Z_END - 0.2, 0.2); collider(HW, HW + 0.2, Z_END - 0.2, 0.2);
-  collider(-HW, HW, 0, 0.2);
-  collider(-HW, HW, Z_END - 0.2, Z_END, -1, H);                     // 尽头墙下层
-  collider(-HW, -0.5, Z_END - 0.2, Z_END, H); collider(0.5, HW, Z_END - 0.2, Z_END, H); // 门两侧
-  world.doorCollider = collider(-0.5, 0.5, Z_END - 0.2, Z_END, H);  // 门板（关着时）
-  collider(-0.7, -0.5, Z_END - 2, Z_END, H); collider(0.5, 0.7, Z_END - 2, Z_END, H);  // 过道两侧
+  // --- 入口楼梯（x -8→0，y -3→0），两侧墙、底端墙、天花
+  stairsVisual(ENTRY.x0, ENTRY.y0, +1, ENTRY.zc, 2.4, B);
+  solid(-10, -8, ENTRY.y0 - 0.1, ENTRY.y0, 0.3, 2.7, M.floor, B, false);
+  walkQuad([-8, -3, 0.3], [0, 0, 0.3], [0, 0, 2.7], [-8, -3, 2.7]);
+  walkQuad([-10, -3, 0.3], [-8, -3, 0.3], [-8, -3, 2.7], [-10, -3, 2.7]);
+  solid(-10, 0, -3.2, H, 0.1, 0.3, M.wall); solid(-10, 0, -3.2, H, 2.7, 2.9, M.wall);
+  solid(-10.2, -10, -3.2, H, 0.1, 2.9, M.wall);
+  solid(-10, 0, H, H + 0.2, 0.1, 2.9, M.ceil, B, false);
+  solid(-0.2, 0, -0.2, H, -0.2, 0.3, M.wall); solid(-0.2, 0, -0.2, H, 2.7, 3.2, M.wall);
 
-  // 楼层号牌（楼梯口左墙）
-  world.floorSign = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshStandardMaterial({ roughness: 1 }));
-  world.floorSign.position.set(-HW + 0.01, 1.7, -28.6); world.floorSign.rotation.y = Math.PI / 2; scene.add(world.floorSign);
-
-  // --- 楼梯 z∈[-29,-35] 升到 y=3，平台 z∈[-35,-38]
-  part('stairs', 0, 0, -32);
-  scene.add(box(W, H, 3, C.stair, 0, H / 2, -36.5));
-  walkQuad([-HW, 0, -29], [HW, 0, -29], [HW, H, -35], [-HW, H, -35]);
-  walkQuad([-HW, H, -35], [HW, H, -35], [HW, H, Z_END], [-HW, H, Z_END]);
-  // 沿墙扶手（倾斜）
-  const railLen = Math.hypot(6, H), rail = box(0.05, 0.05, railLen, C.wood, -HW + 0.15, H / 2 + 0.9, -32);
-  rail.rotation.x = Math.atan2(H, 6); scene.add(rail);
-  for (let k = 0; k <= 7; k++) { const t = k / 7; scene.add(box(0.03, 0.9, 0.03, C.metal, -HW + 0.15, t * H + 0.45, -29 - t * 6)); }
-  // 2 楼起：根缠绕扶手
-  world.railRoots = new THREE.Group(); scene.add(world.railRoots);
-  {
-    const pts = [];
-    for (let t = 0; t <= 1.0001; t += 0.02) {
-      const a = t * Math.PI * 16, y = 0.9 + t * H, z = -29 - t * 6;
-      pts.push(new THREE.Vector3(-HW + 0.15 + Math.sin(a) * 0.06, y + Math.cos(a) * 0.06, z));
-    }
-    world.railRoots.add(taperedTube([new THREE.Vector3(-HW + 0.3, -0.05, -28.6), new THREE.Vector3(-HW + 0.2, 0.5, -28.9), ...pts], 0.05, 0.015, 80, 4));
-  }
-
-  // --- 树：主干从平台角落穿出屋顶
-  world.trunk = part('trunk', 1.0, 0, -37.2);
-  collider(0.55, 1.45, -37.65, -36.75);
-
-  // --- 树根（一楼：刚冒出来）
-  const rootsGroup = (x, z, build) => { const g = new THREE.Group(); g.position.set(x, 0, z); build(g); scene.add(g); world.roots.push(g); return g; };
-  const creeping = (g, angle, len, r0) => {
-    const pts = []; let a = angle, x = 0, z = 0;
-    for (let i = 0; i <= 6; i++) {
-      pts.push(new THREE.Vector3(x, r0 * 0.4 + Math.sin(i * 1.7) * 0.03, z));
-      a += (rng() - 0.5) * 0.7; x += Math.sin(a) * len / 6; z += Math.cos(a) * len / 6;
-    }
-    g.add(taperedTube(pts, r0, r0 * 0.12, 14, 5));
-  };
-  const arch = (g, angle, len, hgt, r0) => {
-    const d = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
-    const pts = [0, 0.3, 0.6, 1].map((t, i) => d.clone().multiplyScalar(len * t).setY([-0.08, hgt, hgt * 0.7, -0.08][i]));
-    g.add(taperedTube(pts, r0, r0 * 0.5, 10, 5));
-  };
-  // 楼梯底下涌出的主根，爬向走廊
-  rootsGroup(0.9, -29.2, g => { for (let k = 0; k < 4; k++) creeping(g, Math.PI * (0.85 + rng() * 0.3), 4 + rng() * 5, 0.09 + rng() * 0.05); });
-  rootsGroup(-1.0, -29.2, g => { for (let k = 0; k < 3; k++) creeping(g, Math.PI * (0.9 + rng() * 0.2), 3 + rng() * 3, 0.07 + rng() * 0.04); });
-  // 地板裂缝中拱起的细根
-  for (const [x, z] of [[0.4, -8.5], [-0.7, -15], [0.9, -21], [-0.3, -25.5]]) {
-    part('crack', x, 0, z, rng() * Math.PI);
-    rootsGroup(x, z, g => arch(g, rng() * Math.PI * 2, 0.6 + rng() * 0.5, 0.15 + rng() * 0.12, 0.035));
-  }
-  for (const [x, z] of [[0.6, -27.5], [-0.9, -26.2], [1.2, -20.5]]) part('moss', x, 0, z, rng() * 6);
-  // 重复同一层时的异常之一：走廊中间多出一条根
-  world.extraRoot = rootsGroup(0.1, -11, g => arch(g, 0.4, 1.2, 0.3, 0.06)); world.extraRoot.visible = false;
-
-  // 3 楼起：树枝穿窗
-  world.windowBranches = new THREE.Group(); scene.add(world.windowBranches);
-  for (const i of rightWindows) {
-    const z = -(i * M + M / 2), dz = (rng() - 0.5) * 0.6;
-    const tip = new THREE.Vector3(0.3 + rng() * 0.4, 1.7 + rng() * 0.3, z + dz + 0.4);
-    world.windowBranches.add(taperedTube([new THREE.Vector3(5, 2.9, z + dz - 1), new THREE.Vector3(2.6, 1.8, z + dz),
-      new THREE.Vector3(HW, 1.55, z + dz * 0.5), tip], 0.1, 0.02, 12, 5));
-    for (let k = 0; k < 2; k++) {
-      const lf = part('leaves', 0, 0, 0, rng() * 6, world.windowBranches);
-      lf.position.copy(tip).add(new THREE.Vector3((rng() - 0.5) * 0.4, -0.3 + rng() * 0.2, (rng() - 0.5) * 0.5));
-      lf.scale.setScalar(0.25 + rng() * 0.2);
-    }
-    const out = part('leaves', 3.2, 1.6, z + dz, rng() * 6, world.windowBranches); out.scale.setScalar(1.6);
-  }
-
-  // --- 2 楼起：被根堵住的门（左侧 i=6）
-  world.blockedDoorRoots = part('rootMass', -HW + 0.05, 0, -(6 * M + M / 2), LEFT);
-  world.blockedDoorRoots.add(part('moss', 0.2, 0, 0.4, 0, world.blockedDoorRoots));
-
-  // --- 吊灯
-  for (const z of [-3, -9, -15, -21, -27]) addLamp(0, H - 1, z);
-  addLamp(0, STAIR_H - 1.4, -32);
-
-  // --- 窗外天空 + 外部光
-  world.sky = new THREE.Mesh(new THREE.PlaneGeometry(60, 12), new THREE.MeshBasicMaterial({ color: SKY.dusk.sky, fog: false }));
-  world.sky.position.set(HW + 3, 3, -19); world.sky.rotation.y = -Math.PI / 2; scene.add(world.sky);
-  world.sun = new THREE.DirectionalLight(SKY.dusk.light, 0.4); world.sun.position.set(10, 6, -10); scene.add(world.sun);
-
-  // --- 2 楼谜题：窗下地上的光斑，把空花盆放进去
-  const spotZ = -(7 * M + M / 2);
-  world.sunPatch = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.1), new THREE.MeshBasicMaterial({ color: SKY.dusk.light, transparent: true, opacity: 0.18, depthWrite: false }));
-  world.sunPatch.rotation.x = -Math.PI / 2; world.sunPatch.position.set(HW - 0.55, 0.006, spotZ); scene.add(world.sunPatch);
-  const hitBox = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 1.1), proxyMat); hitBox.visible = false; hitBox.position.z = 0.15; // 光斑平面已旋转，局部 z 即世界向上
-  world.sunPatch.add(hitBox); hitBox.rotation.x = Math.PI / 2;
-  makeInteractable(world.sunPatch,
-    () => state.floor === 2 && state.picked.has('pot') && !state.potPlaced ? 'E　把空花盆放进光里' : '',
-    placePot);
-  world.placedPot = part('pot', HW - 0.55, 0, spotZ, 0.5); world.placedPot.visible = false;
-
-  // --- 墙上字迹（左墙 z≈-9 附近，逐行出现）
-  TEXT_LINES.forEach((t, i) => {
-    const m = textPlane(t); m.position.set(-HW + 0.01, 1.85 - i * 0.28, -9.2 + i * 0.07); m.rotation.y = Math.PI / 2;
-    m.visible = false; scene.add(m); world.texts.push(m);
+  // --- 过渡房间：南墙入口门、西墙出口门
+  solid(18.3, 21.9, 0, H, -16.2, -16, M.wall); solid(23.1, 26.7, 0, H, -16.2, -16, M.wall);
+  solid(21.9, 23.1, 2.2, H, -16.2, -16, M.wall, B, false);
+  solid(18.3, 26.7, 0, H, -22.2, -22, M.wall); solid(26.5, 26.7, 0, H, -22.2, -16, M.wall);
+  solid(18.3, 18.5, 0, H, -22.2, -19.6, M.wall); solid(18.3, 18.5, 0, H, -18.4, -16, M.wall);
+  solid(18.3, 18.5, 2.2, H, -19.6, -18.4, M.wall, B, false);
+  world.entranceLeaf = box(1.2, 2.2, 0.06, M.trim, 22.5, 1.1, -16.1, B);
+  world.entranceCol = collider(21.9, 23.1, -16.25, -15.95, 0, H);
+  world.farLeaf = box(0.06, 2.2, 1.2, M.trim, 18.4, 1.1, -19, B);
+  world.farCol = collider(18.25, 18.55, -19.6, -18.4, 0, H);
+  // 房间家具与墙上便条
+  box(1.4, 0.75, 0.8, M.furn, 24.6, 0.375, -20.4, B); collider(23.9, 25.3, -20.8, -20, 0, 0.8);
+  box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B);
+  WALL_NOTES.forEach((t, i) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.25),
+      new THREE.MeshStandardMaterial({ map: textTexture([t], { w: 512, h: 128, font: 60 }), transparent: true, roughness: 1 }));
+    m.position.set(21.4, 2.1 - i * 0.34, -21.98); B.add(m); world.notes.push(m);
   });
 
-  // --- 道具
-  world.chair = part('chair', -1.0, 0, -6, 0.4);
-  addProp('cup', '倒扣的杯子', 0.8, 0, -12, 0.3);
-  addProp('key', '钥匙', 0.8, 0, -12, 2.2);   // 1 楼谜题：钥匙扣在杯子下面
-  addProp('frame', '空相框', HW - 0.12, 0, -17, RIGHT, -0.25);
-  addProp('letter', '折叠的信', -0.6, 0, -20, 1.1);
-  addProp('pot', '空花盆', -1.2, 0, -26.8, 0);
+  // --- 出口楼梯（x 18.5→10.5，y 0→3），很暗
+  stairsVisual(EXIT.x0, 0, -1, EXIT.zc, 2.4, B);
+  solid(8.5, 10.5, 2.9, 3, -20.2, -17.8, M.floor, B, false);
+  walkQuad([18.5, 0, -20.2], [10.5, 3, -20.2], [10.5, 3, -17.8], [18.5, 0, -17.8]);
+  walkQuad([8.5, 3, -20.2], [10.5, 3, -20.2], [10.5, 3, -17.8], [8.5, 3, -17.8]);
+  solid(8.3, 18.3, -0.2, 6.2, -20.4, -20.2, M.wall); solid(8.3, 18.3, -0.2, 6.2, -17.8, -17.6, M.wall);
+  solid(8.3, 8.5, -0.2, 6.2, -20.4, -17.6, M.wall);
+  solid(8.3, 18.5, 6, 6.2, -20.4, -17.6, M.ceil, B, false);
+
+  // --- 楼层号牌（走廊 A 起点北墙）
+  world.sign = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshStandardMaterial({ roughness: 1 }));
+  world.sign.position.set(1.6, 1.6, 0.01); B.add(world.sign);
+
+  // --- 吊灯
+  const lampAt = (x, z) => {
+    const g = group(box(0.01, 0.6, 0.01, M.trim, 0, 0.3, 0),
+      new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.18, 6, 1, true), std('#3a3a3a', { side: THREE.DoubleSide })));
+    g.children[1].position.y = -0.05;
+    const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), std('#fff', { emissive: '#ffffff', emissiveIntensity: 1 }));
+    bulb.position.y = -0.12; g.add(bulb); g.position.set(x, H - 0.6, z); B.add(g);
+    const light = new THREE.PointLight('#fff', 3, 9, 1.6); light.position.set(x, H - 0.8, z); B.add(light);
+    world.lamps.push({ light, bulb });
+  };
+  [[3, 1.5], [9, 1.5], [15, 1.5], [22.5, 1.5], [22.5, -5], [22.5, -11], [22.5, -19]].forEach(([x, z]) => lampAt(x, z));
+
+  // --- 墙上开关（关灯谜题用；随时可按）
+  const sw = group(box(0.08, 0.14, 0.03, M.trim, 0, 0, 0), box(0.03, 0.05, 0.02, M.white, 0, 0, 0.02));
+  sw.position.set(21.02, 1.3, -1.5); sw.rotation.y = FACE.W; B.add(sw); world.switchObj = sw;
+  sw.userData.interact = { label: () => state.lightsOn ? 'E　关灯' : 'E　开灯', act: () => setLights(!state.lightsOn) };
+  permTargets.push(sw);
+
+  // --- 8 个摆放点的家具（每层、每次循环都一样，异常才显眼）
+  for (const a of ANCHORS) world.anchors.push(buildFurniture(a));
+
+  // --- 海（从窗户看出去）
+  world.sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), M.sea);
+  world.sea.rotation.x = -Math.PI / 2; world.sea.position.set(12, -6, 0); B.add(world.sea);
+
+  buildGreenery();
 }
 
-function addLamp(x, y, z) {
-  const o = part('lamp', x, y, z);
-  o.traverse(m => { if (m.isMesh) m.material = m.material.clone(); });
-  const light = new THREE.PointLight('#f0d2a0', 6, 9, 1.6); light.position.set(x, y + 0.1, z); scene.add(light);
-  world.lamps.push({ obj: o, light });
-}
-function setLamp(l, on) {
-  l.light.visible = on;
-  l.obj.traverse(m => { if (m.isMesh && m.material.emissive && m.material.emissiveIntensity !== undefined) m.material.emissiveIntensity = on ? 1 : 0; });
-}
-
-function addProp(name, label, x, y, z, rotY, tilt = 0) {
-  const o = part(name, x, y, z, rotY);
-  if (tilt) o.rotation.x = tilt; // 相框靠墙
-  o.userData.pickup = { id: name, label };
-  // 放大的不可见拾取判定球，小物件也容易瞄准
-  const hit = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 4), proxyMat);
-  hit.visible = false; hit.position.y = 0.1; o.add(hit);
-  const sprout = new THREE.Group(); sprout.position.set(x, 0, z);
-  const rng = mulberry32(name.length * 97);
-  for (let k = 0; k < 2; k++) {
-    const a = rng() * Math.PI * 2, d = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
-    sprout.add(taperedTube([0, 0.3, 0.7, 1].map((t, i) => d.clone().multiplyScalar(0.5 * t).setY([-0.05, 0.25, 0.2, -0.05][i])), 0.04, 0.02, 8, 5));
+// 摆放点家具：返回 { a, group, top(表面高度), cabinet(可开门的柜子) }
+function buildFurniture(a) {
+  const g = new THREE.Group(); g.position.set(a.x, 0, a.z); g.rotation.y = a.rot; building.add(g);
+  const res = { a, group: g, top: 0.9, cabinet: null };
+  const deco = (w, h, d, x, y, z, mat = M.trim) => box(w, h, d, mat, x, y, z, g);
+  const cab = (w, h, d) => { // 带门柜子，门在正面（+z）
+    deco(w, h, d, 0, h / 2, 0, M.furn);
+    const leaf = new THREE.Group(); leaf.position.set(-w / 2 + 0.02, 0, d / 2 + 0.015); g.add(leaf);
+    box(w - 0.04, h - 0.1, 0.03, M.trim, (w - 0.04) / 2, h / 2, 0, leaf);
+    res.cabinet = { leaf, open: false, w, h, d }; res.top = h;
+  };
+  switch (a.furn) {
+    case 'shoeCabinet': cab(1.0, 0.9, 0.4); deco(0.12, 0.05, 0.28, -0.2, 0.025, 0.45); deco(0.12, 0.05, 0.28, -0.05, 0.025, 0.45); break;
+    case 'sideTable': deco(0.6, 0.7, 0.4, 0, 0.35, 0, M.furn); deco(0.08, 0.25, 0.08, -0.15, 0.825, 0); deco(0.2, 0.12, 0.2, -0.15, 1.0, 0, M.white); res.top = 0.7; break;
+    case 'shelf': deco(1.1, 0.04, 0.3, 0, 1.3, 0, M.furn); for (let i = 0; i < 5; i++) deco(0.06, 0.24, 0.2, -0.45 + i * 0.07, 1.44, 0, i % 2 ? M.trim : M.furn); res.top = 1.32; break;
+    case 'cabinet': cab(0.8, 0.9, 0.45); break;
+    case 'boxes': deco(0.6, 0.45, 0.5, 0, 0.225, 0, M.furn); deco(0.5, 0.35, 0.45, 0.02, 0.625, 0, M.furn); res.top = 0.8; break;
+    case 'phoneTable': deco(0.5, 0.75, 0.4, 0, 0.375, 0, M.furn); deco(0.2, 0.08, 0.15, -0.12, 0.79, 0, M.trim); res.top = 0.75; break;
+    case 'bench': deco(1.2, 0.45, 0.35, 0, 0.225, 0, M.furn); res.top = 0.45; break;
+    case 'lowCabinet': cab(0.9, 0.7, 0.4); break;
   }
-  sprout.visible = false; scene.add(sprout);
-  world.props[name] = o; world.sprouts[name] = sprout;
+  // 家具碰撞（按朝向旋转后的包围盒）
+  const bb = new THREE.Box3().setFromObject(g);
+  if (a.furn !== 'shelf') collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, bb.max.y);
+  return res;
+}
+// 摆放点上方的世界坐标（台面上，稍偏一侧）
+function anchorTop(res, dx = 0.2) {
+  const p = new THREE.Vector3(dx, res.top, 0.02); res.group.localToWorld(p); return p;
 }
 
-function textPlane(text) {
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96;
-  const g = cv.getContext('2d');
-  g.fillStyle = C.ink; g.globalAlpha = 0.85; g.font = '56px "Songti SC","Noto Serif SC",serif'; g.textBaseline = 'middle';
-  let x = 16; for (const ch of text) { g.save(); g.translate(x, 48 + (Math.random() - .5) * 6); g.rotate((Math.random() - .5) * 0.08); g.fillText(ch, 0, 0); g.restore(); x += g.measureText(ch).width + 4; }
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }));
+// 逐层增多的绿植：树根、植物团、树枝穿窗
+function buildGreenery() {
+  const rng = mulberry32(7);
+  for (let i = 0; i < 16; i++) { // 树根沿墙脚蔓延
+    const inB = i >= 10, s = rng();
+    const base = inB ? V(rng() < 0.5 ? 21.2 : 23.8, 0, -1 - s * 14) : V(1 + s * 20, 0, rng() < 0.5 ? 0.2 : 2.8);
+    const pts = []; let p = base.clone();
+    for (let k = 0; k < 6; k++) { pts.push(V(p.x, 0.04 + Math.sin(k) * 0.03, p.z)); p = p.clone().add(inB ? V((rng() - 0.5) * 0.4, 0, -0.5) : V(0.5, 0, (rng() - 0.5) * 0.4)); }
+    const m = taperedTube(pts, 0.05 + rng() * 0.04, 0.01, M.root, 14, 5); building.add(m); world.roots.push(m);
+  }
+  for (let i = 0; i < 44; i++) { // 植物团（4 楼有花）
+    const inB = i % 3 === 2, s = rng();
+    const pos = inB ? V(rng() < 0.5 ? 21.25 : 23.75, 0, -0.5 - s * 15) : V(0.8 + s * 22, 0, rng() < 0.5 ? 0.25 : 2.75);
+    const up = rng() < 0.25; // 一部分长在墙上
+    const g = new THREE.Group(); g.position.copy(pos); if (up) g.position.y = 0.8 + rng() * 1.6;
+    for (let k = 0; k < 3; k++) {
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12 + rng() * 0.16, 0), M.plant);
+      m.position.set((rng() - 0.5) * 0.3, 0.1 + rng() * 0.2, (rng() - 0.5) * 0.3); g.add(m);
+    }
+    if (i > 28) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), M.flower[i % 4]); f.position.set(0, 0.36, 0); g.add(f); }
+    building.add(g); world.plants.push(g);
+  }
+  // 树枝从窗外伸进来（3 楼起）
+  for (const [x, z, dir] of [[6.75, 3.1, 'S'], [13.75, 3.1, 'S'], [24.1, -5.75, 'E'], [24.1, -11.75, 'E']]) {
+    const out = dir === 'S' ? V(x + 1, 2.6, z + 4) : V(x + 4, 2.6, z - 1), mid = dir === 'S' ? V(x, 1.6, z + 0.2) : V(x + 0.2, 1.6, z);
+    const tip = dir === 'S' ? V(x - 0.4, 1.9, z - 1.4) : V(x - 1.4, 1.9, z + 0.3);
+    const g = new THREE.Group(); g.add(taperedTube([out, mid, tip], 0.09, 0.02, M.root, 10, 5));
+    for (let k = 0; k < 3; k++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), M.plant); l.position.copy(tip).add(V((k - 1) * 0.25, -0.1 * k, 0.1 * k)); g.add(l); }
+    building.add(g); world.branches.push(g);
+  }
+}
+
+// 天台：海中央的楼顶、天井里长出的巨树、远处长着树的歪楼、传送门
+function buildRoof() {
+  const R = roof, Z = ROOF_DZ, deckMat = std('#b9ad98'), wallMat = std('#cfc3a8'), trunkMat = std('#6b5238'), leafMat = std('#6fa24c');
+  // 入口楼梯（与楼内入口楼梯相同，偏移到天台）
+  stairsVisual(ENTRY.x0, ENTRY.y0, +1, ENTRY.zc + Z, 2.4, R);
+  walkQuad([-8, -3, Z + 0.3], [0, 0, Z + 0.3], [0, 0, Z + 2.7], [-8, -3, Z + 2.7], R);
+  walkQuad([-10, -3, Z + 0.3], [-8, -3, Z + 0.3], [-8, -3, Z + 2.7], [-10, -3, Z + 2.7], R);
+  solid(-10, -8, -3.1, -3, Z + 0.3, Z + 2.7, M.floor, R, false);
+  solid(-10, 0, -3.2, H, Z + 0.1, Z + 0.3, wallMat, R); solid(-10, 0, -3.2, H, Z + 2.7, Z + 2.9, wallMat, R);
+  solid(-10.2, -10, -3.2, H, Z + 0.1, Z + 2.9, wallMat, R); solid(-10.2, 0.2, H, H + 0.2, Z - 0.1, Z + 3.1, wallMat, R, false);
+  // 平台（中间天井 x 11–19，z 98–106）
+  const deck = [[0, 30, 88, 98], [0, 30, 106, 116], [0, 11, 98, 106], [19, 30, 98, 106]];
+  for (const [x0, x1, z0, z1] of deck) { solid(x0, x1, -0.4, 0, z0, z1, deckMat, R, false); walkQuad([x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1], R); }
+  // 女儿墙（西侧留出楼梯口）
+  solid(0, 30, 0, 1.1, 87.8, 88, wallMat, R); solid(0, 30, 0, 1.1, 116, 116.2, wallMat, R);
+  solid(30, 30.2, 0, 1.1, 87.8, 116.2, wallMat, R);
+  solid(-0.2, 0, 0, 1.1, 87.8, Z + 0.1, wallMat, R); solid(-0.2, 0, 0, 1.1, Z + 2.9, 116.2, wallMat, R);
+  // 天井：栏杆 + 向下的井壁
+  for (const [x0, x1, z0, z1] of [[11, 19, 97.9, 98], [11, 19, 106, 106.1], [10.9, 11, 98, 106], [19, 19.1, 98, 106]]) {
+    solid(x0, x1, 0, 1.0, z0, z1, std('#8a7a62'), R); solid(x0, x1, -14, -0.4, z0, z1, wallMat, R, false);
+  }
+  // 巨树
+  R.add(taperedTube([V(15, -14, 102), V(15.4, 0, 101.6), V(14.8, 8, 102.3), V(15.2, 14, 102)], 1.4, 0.6, trunkMat, 12, 8));
+  const rng = mulberry32(11);
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2, tip = V(15 + Math.cos(a) * 6, 14 + rng() * 4, 102 + Math.sin(a) * 6);
+    R.add(taperedTube([V(15, 10 + rng() * 3, 102), V(15 + Math.cos(a) * 3, 13, 102 + Math.sin(a) * 3), tip], 0.4, 0.12, trunkMat, 8, 6));
+    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(2.6 + rng() * 1.4, 1), leafMat); c.position.copy(tip); R.add(c);
+  }
+  // 海、云、远处的歪楼
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), std('#3f93b8')); sea.rotation.x = -Math.PI / 2; sea.position.set(15, -26, 102); R.add(sea);
+  const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+  for (let i = 0; i < 14; i++) {
+    const a = rng() * Math.PI * 2, d = 60 + rng() * 260, c = new THREE.Group();
+    for (let k = 0; k < 3; k++) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 6, 1), cloudMat); s.position.set(k * 8, rng() * 2, rng() * 4); s.scale.y = 0.45; c.add(s); }
+    c.position.set(15 + Math.cos(a) * d, 45 + rng() * 30, 102 + Math.sin(a) * d); R.add(c);
+  }
+  for (let i = 0; i < 7; i++) {
+    const a = i / 7 * Math.PI * 2 + 0.4, d = 110 + rng() * 70, h = 26 + rng() * 22, g = new THREE.Group();
+    box(14, h, 14, std('#9a9486'), 0, h / 2, 0, g);
+    const t = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 4, 1), leafMat); t.position.y = h + 3; g.add(t);
+    g.position.set(15 + Math.cos(a) * d, -26, 102 + Math.sin(a) * d); g.rotation.set((rng() - 0.5) * 0.3, rng() * 3, (rng() - 0.5) * 0.3); R.add(g);
+  }
+  // 传送门
+  const portal = new THREE.Group(); portal.position.set(26.5, 1.35, 102); portal.rotation.y = Math.PI / 2;
+  portal.add(new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.08, 8, 32), std('#ffffff', { emissive: '#dff4ff', emissiveIntensity: 2 })));
+  portal.add(new THREE.Mesh(new THREE.CircleGeometry(1.05, 32), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, side: THREE.DoubleSide })));
+  R.add(portal); world.portal = portal;
+  R.visible = false;
 }
 
 /* =====================================================================
- * 8. 楼层 / 循环系统
- *    楼层 = 原设计的"循环 1-5"。解开本层谜题 → 楼梯顶的门打开 → 下一层；
- *    没解开 → 走到楼梯顶就回到本层起点，并随机出现一处细微异常。
+ * 7. 楼层外观
  * ===================================================================*/
-const FLOORS = {
-  1: { lampsOff: [],    sky: 'dusk', texts: 0, blockedDoor: false, sprouts: false, railRoots: false, windowBranches: false, layoutShift: false },
-  2: { lampsOff: [2],   sky: 'dusk', texts: 1, blockedDoor: true,  sprouts: false, railRoots: true,  windowBranches: false, layoutShift: false },
-  3: { lampsOff: [2],   sky: 'noon', texts: 2, blockedDoor: true,  sprouts: true,  railRoots: true,  windowBranches: true,  layoutShift: false },
-  4: { lampsOff: 'all', sky: 'noon', texts: 3, blockedDoor: true,  sprouts: true,  railRoots: true,  windowBranches: true,  layoutShift: true },
-  5: { lampsOff: 'all', sky: 'noon', texts: 3, blockedDoor: true,  sprouts: true,  railRoots: true,  windowBranches: true,  layoutShift: true, final: true },
-};
-// 每层谜题：canOpen() 为真时楼梯顶的门可以打开
-const PUZZLES = {
-  1: { canOpen: () => state.picked.has('key'), openLabel: 'E　用钥匙开门' },
-  2: { canOpen: () => state.potPlaced,         openLabel: 'E　开门' },
-  3: { canOpen: () => true,                    openLabel: 'E　开门' },  // TODO: 3 楼谜题待设计
-  4: { canOpen: () => true,                    openLabel: 'E　开门' },  // TODO: 4 楼谜题待设计
-};
-// 重复同一层时的细微异常（每次随机一个）
-const ANOMALIES = {
-  chairTurned:  () => { world.chair.rotation.y += Math.PI; },
-  curtainMoved: () => { world.curtain.position.z = -(12 * M + M / 2) + 0.45; },
-  extraRoot:    () => { world.extraRoot.visible = true; },
-};
 const state = {
-  floor: 1, repeat: 0, anomaly: null,
-  picked: new Set(),   // 背包里的
-  gone: new Set(),     // 已从原位拿走的（捡起过就不再刷新）
-  potPlaced: false, doorOpen: false, busy: false, ended: false,
+  floor: 1, repeat: 0, keysGot: new Set(), wrong: false, lightsOn: true,
+  roomDone: false, pendingNext: false, busy: false, ended: false,
+  puzzles: [], experienced: 0, solved: 0, t0: 0, forceTpl: [],
 };
-const puzzle = () => PUZZLES[state.floor];
 
 function applyFloor(n) {
-  const L = FLOORS[n];
-  world.lamps.forEach((l, i) => setLamp(l, !(L.lampsOff === 'all' || L.lampsOff.includes(i))));
-  const s = SKY[L.sky];
-  world.sky.material.color.set(s.sky); world.sun.color.set(s.light); world.sunPatch.material.color.set(s.light);
-  world.windowLights.forEach(l => { l.color.set(s.light); l.intensity = s.intensity * (L.lampsOff === 'all' ? 1.3 : 1); });
-  hemi.intensity = L.lampsOff === 'all' ? 0.2 : 0.35;
-  world.texts.forEach((t, i) => t.visible = i < L.texts);
-  world.blockedDoorRoots.visible = L.blockedDoor;
-  world.railRoots.visible = L.railRoots;
-  world.windowBranches.visible = L.windowBranches;
-  world.placedPot.visible = state.potPlaced;
-  for (const id in world.props) {
-    world.props[id].visible = !state.gone.has(id) && (id !== 'key' || state.gone.has('cup'));
-    world.sprouts[id].visible = L.sprouts && state.gone.has(id);
+  const onRoof = n === 5;
+  building.visible = !onRoof; roof.visible = onRoof;
+  if (onRoof) {
+    applyPalette(1);
+    scene.background.set('#9fd0ea'); scene.fog.color.set('#c4e2ee'); scene.fog.near = 80; scene.fog.far = 700;
+    hemi.intensity = 1.0; sun.intensity = 2.2; updateInv(); return;
   }
-  // 树又长了一点
-  const grow = 1 + 0.12 * (n - 1);
-  world.roots.forEach(g => g.scale.setScalar(grow));
-  world.trunk.scale.set(1 + 0.05 * (n - 1), 1, 1 + 0.05 * (n - 1));
-  // 布局微变
-  world.swapDoor.visible = !L.layoutShift; world.swapWall.visible = L.layoutShift;
-  if (L.layoutShift) { world.chair.position.set(0, 0, -14); world.chair.rotation.y = 0; }
-  else { world.chair.position.set(-1.0, 0, -6); world.chair.rotation.y = 0.4; }
-  // 门重新锁上
-  state.doorOpen = false;
-  world.landingDoor.visible = true; world.landingDoorOpen.visible = false; world.doorCollider.enabled = true;
-  setFloorSign(n);
-  // 异常：先复位，重复时再随机挑一个
-  world.curtain.position.z = -(4 * M + M / 2) + 0.45; world.extraRoot.visible = false;
-  state.anomaly = null;
-  if (state.repeat > 0) {
-    const names = Object.keys(ANOMALIES);
-    state.anomaly = names[Math.floor(Math.random() * names.length)];
-    ANOMALIES[state.anomaly]();
-  }
+  const L = LOOK[n];
+  applyPalette(L.f);
+  scene.background.copy(M.sky.color); scene.fog.color.copy(M.sky.color);
+  [scene.fog.near, scene.fog.far] = L.fog;
+  sun.intensity = L.sun; setLights(true);
+  world.roots.forEach((r, i) => r.visible = i < [4, 8, 12, 16][n - 1]);
+  world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
+  world.branches.forEach(b => b.visible = n >= 3);
+  world.sea.visible = n >= 2;
+  world.notes.forEach((m, i) => m.visible = i < n - 1);
+  const s = world.sign.material; s.map?.dispose(); s.map = textTexture([String(n)], { w: 64, h: 64, font: 40, color: '#b9b2a2', bg: '#3a352f' }); s.needsUpdate = true;
   updateInv();
 }
-
-function setFloorSign(n) {
-  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
-  const g = cv.getContext('2d');
-  g.fillStyle = '#3d3832'; g.fillRect(0, 0, 64, 64);
-  g.fillStyle = '#b9b2a2'; g.font = '40px Georgia,serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(n >= 5 ? '?' : String(n), 32, 34);
-  const m = world.floorSign.material; m.map?.dispose(); m.map = new THREE.CanvasTexture(cv); m.map.colorSpace = THREE.SRGBColorSpace; m.needsUpdate = true;
-}
-
-function doorLabel() {
-  const pz = puzzle();
-  if (!pz || state.doorOpen) return '';
-  return pz.canOpen() ? pz.openLabel : '锁着';
-}
-function tryOpenDoor() {
-  const pz = puzzle();
-  if (!pz || state.doorOpen || !pz.canOpen()) return;
-  state.doorOpen = true;
-  world.landingDoor.visible = false; world.landingDoorOpen.visible = true; world.doorCollider.enabled = false;
-  Platform.emit('use', { target: 'door', floor: state.floor, item: state.floor === 1 ? 'key' : null });
-}
-function placePot() {
-  if (state.floor !== 2 || !state.picked.has('pot') || state.potPlaced) return;
-  state.picked.delete('pot'); state.potPlaced = true; world.placedPot.visible = true;
-  Platform.emit('use', { target: 'sunPatch', floor: state.floor, item: 'pot' });
-  updateInv();
-}
-
-const $ = id => document.getElementById(id);
-const wait = ms => new Promise(r => setTimeout(r, ms));
-async function transition(fn, white = false) {
-  state.busy = true;
-  $('fade').classList.toggle('white', white); $('fade').style.opacity = 1; await wait(1300);
-  fn(); resetPlayer();
-  await wait(400); $('fade').style.opacity = 0; state.busy = false;
-}
-function repeatFloor() {
-  if (state.busy || state.ended) return;
-  transition(() => { state.repeat++; applyFloor(state.floor); Platform.emit('repeat', { floor: state.floor, repeat: state.repeat }); });
-}
-function nextFloor() {
-  if (state.busy || state.ended) return;
-  transition(() => { state.floor++; state.repeat = 0; applyFloor(state.floor); Platform.emit('floor', { floor: state.floor }); });
-}
-async function endGame() {
-  // TODO: 顶层树冠区 + 爬主干到树顶。当前占位：到楼梯顶直接结束
-  if (state.busy || state.ended) return;
-  state.busy = state.ended = true;
-  Platform.emit('end', { floor: state.floor, endingItem: state.gone.has(ENDING_ITEM) });
-  $('fade').classList.add('white'); $('fade').style.opacity = 1;
-  await wait(1400); $('end').style.display = 'flex'; document.exitPointerLock?.();
+function setLights(on) {
+  state.lightsOn = on;
+  const L = LOOK[state.floor] || LOOK[4];
+  for (const l of world.lamps) { l.light.visible = on; l.light.color.set(L.lampColor); l.light.intensity = L.lamp; l.bulb.material.emissiveIntensity = on ? 1 : 0; }
+  hemi.intensity = on ? L.hemi : Math.min(L.hemi, 0.08);
+  for (const p of state.puzzles) p.onLights?.(on);
 }
 
 /* =====================================================================
- * 9. 第一人称控制
+ * 8. 谜题系统：每把「钥匙」随机抽一个模板 + 摆放点
+ * ===================================================================*/
+const permTargets = [];   // 常驻交互物（开关）
+let puzzleTargets = [];   // 当前循环的交互物
+function interactable(obj, label, act) { obj.userData.interact = { label, act }; puzzleTargets.push(obj); return obj; }
+function hitSphere(obj, r = 0.25, y = 0.1) { const h = new THREE.Mesh(new THREE.SphereGeometry(r, 6, 4), proxyMat); h.visible = false; h.position.y = y; obj.add(h); }
+
+// 灰盒「钥匙」外形（之后换成 Meshy 模型）
+function makeKey(id, mat = M.key) {
+  const g = new THREE.Group(), b = (w, h, d, x = 0, y = 0, z = 0, m = mat) => box(w, h, d, m, x, y, z, g);
+  switch (id) {
+    case 'photo': { const f = b(0.34, 0.44, 0.03, 0, 0.22, 0); f.rotation.x = -0.18; const p = b(0.26, 0.34, 0.01, 0, 0.22, 0.02, M.dark); p.rotation.x = -0.18; break; }
+    case 'cup': { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.11, 8), mat); c.position.y = 0.055; g.add(c); b(0.015, 0.06, 0.03, 0.06, 0.055, 0); break; }
+    case 'radio': b(0.3, 0.18, 0.1, 0, 0.09, 0); b(0.01, 0.25, 0.01, 0.1, 0.3, 0); b(0.08, 0.08, 0.01, -0.07, 0.1, 0.055, M.dark); break;
+    case 'poster': b(0.34, 0.02, 0.46, 0, 0.01, 0, M.white); b(0.12, 0.022, 0.14, 0, 0.012, -0.08, M.dark); break;
+    case 'tickets': for (let i = 0; i < 4; i++) { const t = b(0.14, 0.012, 0.07, 0.01 * i, 0.006 + i * 0.012, 0); t.rotation.y = i * 0.2; } break;
+    case 'machine': b(0.24, 0.07, 0.17, 0, 0.035, 0); { const led = b(0.02, 0.01, 0.02, 0.08, 0.075, 0.05, std('#f33', { emissive: '#f22', emissiveIntensity: 2 })); } break;
+    case 'housekey': { const r = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 4, 8), mat); r.rotation.x = Math.PI / 2; r.position.set(-0.04, 0.008, 0); g.add(r); b(0.08, 0.01, 0.012, 0.02, 0.008, 0); break; }
+    case 'can': { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.2, 8), mat); c.position.y = 0.1; g.add(c); const s = b(0.02, 0.02, 0.2, 0, 0.14, 0.12); s.rotation.x = -0.6; break; }
+    case 'tool': b(0.16, 0.03, 0.03, 0, 0.015, 0, M.trim); b(0.03, 0.03, 0.08, 0.07, 0.015, 0.03, M.trim); break;
+  }
+  hitSphere(g, 0.28, 0.12);
+  return g;
+}
+function takeKey(obj, id) {
+  obj.visible = false; state.keysGot.add(id); state.solved++;
+  say(KEYS[id].text, 3800); Platform.emit('pickup', { id, floor: state.floor });
+  updateInv();
+}
+function takeLabel(id) { return () => `E　拿起　${KEYS[id].name}`; }
+function wrongPick(obj) {
+  obj.visible = false; state.wrong = true; Platform.emit('wrong', { floor: state.floor });
+  // 灯闪一下
+  let n = 0; const t = setInterval(() => { world.lamps.forEach(l => l.light.visible = state.lightsOn && n % 2 === 1); if (++n > 5) { clearInterval(t); setLights(state.lightsOn); } }, 90);
+}
+function placeAt(obj, res, dx) { obj.position.copy(anchorTop(res, dx)); obj.rotation.y = res.a.rot; puzzleGroup.add(obj); return obj; }
+
+const TEMPLATES = {
+  // 错位：出现在够得到、看起来自然但不合常理的地方
+  misplaced: { anchors: 1, build(id, [r]) {
+    const o = placeAt(makeKey(id), r, 0.22); interactable(o, takeLabel(id), () => takeKey(o, id)); return { obj: o };
+  } },
+  // 真假：两份，只有反着放、颜色略不同的那份是真的；拿错会迷茫
+  twin: { anchors: 2, build(id, [r1, r2]) {
+    const real = placeAt(makeKey(id, std('#b9a27a')), r1, 0.2); real.rotation.y += Math.PI; real.scale.setScalar(1.06);
+    const fake = placeAt(makeKey(id), r2, 0.2);
+    interactable(real, takeLabel(id), () => takeKey(real, id));
+    interactable(fake, takeLabel(id), () => wrongPick(fake));
+    return { obj: real, fake };
+  } },
+  // 回头：只在玩家背对它时跟在身后，看到它之后才停下
+  behind: { anchors: 0, build(id) {
+    const o = makeKey(id); o.visible = false; puzzleGroup.add(o); let seen = false;
+    interactable(o, takeLabel(id), () => takeKey(o, id));
+    return { obj: o, update() {
+      if (seen || state.keysGot.has(id)) return;
+      const s = pathS(player.pos); if (s < 6 || s > 38) return;
+      if (o.visible && inView(o.position)) { seen = true; return; }
+      const p = pathPoint(Math.max(1, s - 3.2)); if (inView(p)) return;
+      o.position.copy(p); o.rotation.y = Math.random() * 6; o.visible = true;
+    } };
+  } },
+  // 关灯：灯亮时看不见，关灯后发光
+  dark: { anchors: 1, build(id, [r]) {
+    const o = placeAt(makeKey(id, M.glowKey), r, 0.22); o.visible = !state.lightsOn;
+    interactable(o, takeLabel(id), () => takeKey(o, id));
+    return { obj: o, onLights(on) { if (!state.keysGot.has(id)) o.visible = !on; } };
+  } },
+  // 循声：藏在关着的柜子里，柜子发出声音
+  sound: { anchors: 1, needsCabinet: true, build(id, [r]) {
+    const cab = r.cabinet, o = makeKey(id); o.visible = false;
+    o.position.set(0.1, 0.25, 0); r.group.add(o);
+    const body = r.group.children[0];
+    interactable(body, () => cab.open ? '' : 'E　打开柜子', () => { cab.open = true; cab.leaf.rotation.y = -1.6; o.visible = true; stopSound(); });
+    interactable(o, takeLabel(id), () => takeKey(o, id));
+    const snd = startSound(anchorTop(r, 0));
+    return { obj: o, cab: body, cleanup() { stopSound(snd); cab.open = false; cab.leaf.rotation.y = 0; r.group.remove(o); body.userData.interact = null; } };
+  } },
+  // 组合：一处放着把手，另一处是锁着的小箱子，「钥匙」在箱子里
+  combo: { anchors: 2, build(id, [r1, r2]) {
+    const tool = placeAt(makeKey('tool'), r1, 0.25); let hasTool = false;
+    const chest = placeAt(group(box(0.44, 0.26, 0.3, M.furn, 0, 0.13, 0)), r2, 0.2);
+    const lid = box(0.44, 0.04, 0.3, M.trim, 0, 0.28, 0, chest); hitSphere(chest, 0.3, 0.15);
+    const o = makeKey(id); o.visible = false; o.position.set(0, 0.26, 0); chest.add(o);
+    interactable(tool, () => 'E　拿起　把手', () => { tool.visible = false; hasTool = true; say('一只旧把手。', 2000); });
+    interactable(chest, () => lid.userData.open ? '' : hasTool ? 'E　用把手打开箱子' : '箱子锁着', () => {
+      if (!hasTool || lid.userData.open) return; lid.userData.open = true; lid.rotation.x = -1.2; lid.position.set(0, 0.36, -0.15); o.visible = true;
+    });
+    interactable(o, takeLabel(id), () => takeKey(o, id));
+    return { obj: o, tool, chest };
+  } },
+};
+
+// 走廊中心线参数化（用于「回头」模板）
+function pathS(p) { return (p.z < 0.2 && p.x > 20.5) ? 22.5 + (1.5 - p.z) : Math.min(p.x, 22.5); }
+function pathPoint(s) { return s <= 22.5 ? V(s, 0, 1.5 + (Math.random() - 0.5) * 1.2) : V(22.5 + (Math.random() - 0.5) * 1.2, 0, 1.5 - (s - 22.5)); }
+const _frustum = new THREE.Frustum(), _m4 = new THREE.Matrix4();
+function inView(p) {
+  camera.updateMatrixWorld(); _m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  _frustum.setFromProjectionMatrix(_m4); return _frustum.containsPoint(V(p.x, p.y + 0.1, p.z)) && camera.position.distanceTo(p) < 12;
+}
+
+function clearPuzzles() {
+  for (const p of state.puzzles) p.cleanup?.();
+  state.puzzles = []; puzzleTargets = []; puzzleGroup.clear();
+}
+function genPuzzles() {
+  clearPuzzles();
+  const F = FLOORS[state.floor]; if (!F.keys) return;
+  const free = shuffle(world.anchors.slice());
+  const take = (n, cab) => {
+    const out = [];
+    for (let i = 0; i < free.length && out.length < n; i++) if (!cab || free[i].cabinet) out.push(free.splice(i--, 1)[0]);
+    return out.length === n ? out : null;
+  };
+  for (const id of F.keys.filter(k => !state.keysGot.has(k))) {
+    let tpl = state.forceTpl.shift() || pick(F.pool), T = TEMPLATES[tpl], rs = take(T.anchors, T.needsCabinet);
+    if (!rs) { tpl = 'misplaced'; T = TEMPLATES.misplaced; rs = take(1); }
+    const inst = T.build(id, rs); state.puzzles.push({ id, tpl, anchors: rs.map(r => r.a.id), ...inst });
+    state.experienced++;
+  }
+  Platform.emit('puzzles', { floor: state.floor, list: state.puzzles.map(p => p.tpl) });
+}
+
+/* =====================================================================
+ * 9. 声音（循声谜题；Web Audio 定位声源）
+ * ===================================================================*/
+let audio = null; const sounds = new Set();
+function initAudio() { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch { audio = null; } }
+function startSound(pos) {
+  const s = { pos, timer: null };
+  s.timer = setInterval(() => {
+    if (!audio || !building.visible) return;
+    const pan = new PannerNode(audio, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 1.5, rolloffFactor: 1.2, positionX: pos.x, positionY: pos.y, positionZ: pos.z });
+    const osc = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+    osc.frequency.setValueAtTime(880, t); osc.frequency.exponentialRampToValueAtTime(620, t + 0.18);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    osc.connect(g).connect(pan).connect(audio.destination); osc.start(t); osc.stop(t + 0.3);
+  }, 1500);
+  sounds.add(s); return s;
+}
+function stopSound(s) { const list = s ? [s] : [...sounds]; for (const x of list) { clearInterval(x.timer); sounds.delete(x); } }
+function updateListener() {
+  if (!audio) return; const L = audio.listener, f = V(0, 0, -1).applyQuaternion(camera.quaternion);
+  if (L.positionX) { L.positionX.value = camera.position.x; L.positionY.value = camera.position.y; L.positionZ.value = camera.position.z;
+    L.forwardX.value = f.x; L.forwardY.value = f.y; L.forwardZ.value = f.z; L.upX.value = 0; L.upY.value = 1; L.upZ.value = 0; }
+  else { L.setPosition(camera.position.x, camera.position.y, camera.position.z); L.setOrientation(f.x, f.y, f.z, 0, 1, 0); }
+}
+
+/* =====================================================================
+ * 10. 过渡房间、楼梯传送、结局
+ * ===================================================================*/
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let sayToken = 0;
+async function say(text, ms = 4000) {
+  const t = ++sayToken, el = $('subtitle'); el.textContent = text; el.style.opacity = 1;
+  await wait(ms); if (t === sayToken) el.style.opacity = 0; await wait(600);
+}
+function setDoor(leaf, col, open) { leaf.visible = !open; col.enabled = !open; }
+
+async function enterRoom() {
+  state.roomDone = true;
+  setDoor(world.entranceLeaf, world.entranceCol, false);          // 身后的门关上
+  const F = FLOORS[state.floor], all = F.keys.every(k => state.keysGot.has(k));
+  state.pendingNext = all;
+  const line = all ? LINES.success[state.floor] : state.wrong ? pick(LINES.confused) : pick(LINES.hint[state.floor]);
+  Platform.emit('room', { floor: state.floor, result: all ? 'success' : state.wrong ? 'confused' : 'hint' });
+  await wait(700); await say(line, 4200);
+  setDoor(world.farLeaf, world.farCol, true);                     // 尽头的门打开
+}
+
+// 出口楼梯走到一半 → 黑一下 → 入口楼梯（或天台楼梯）的同一位置
+async function stairWarp() {
+  state.busy = true;
+  const fade = $('fade'); fade.classList.remove('slow', 'white'); fade.style.opacity = 1; await wait(320);
+  const p = player.pos, t = (EXIT.x0 - p.x) / EXIT.run, lateral = -(p.z - EXIT.zc);
+  if (state.pendingNext) { state.floor++; state.repeat = 0; state.keysGot.clear(); Platform.emit('floor', { floor: state.floor }); }
+  else { state.repeat++; Platform.emit('repeat', { floor: state.floor, repeat: state.repeat }); }
+  state.wrong = false; state.roomDone = false; state.pendingNext = false;
+  setDoor(world.entranceLeaf, world.entranceCol, true); setDoor(world.farLeaf, world.farCol, false);
+  applyFloor(state.floor); genPuzzles();
+  const dz = state.floor === 5 ? ROOF_DZ : 0;
+  p.set(ENTRY.x0 + EXIT.run * t, ENTRY.y0 + EXIT.rise * t, ENTRY.zc + lateral + dz);
+  player.yaw += Math.PI; player.vy = 0;
+  await wait(80); fade.style.opacity = 0; state.busy = false;
+}
+
+async function endGame() {
+  if (state.ended) return; state.ended = true; state.busy = true;
+  const secs = Math.round((performance.now() - state.t0) / 1000), mm = String(Math.floor(secs / 60)).padStart(2, '0'), ss = String(secs % 60).padStart(2, '0');
+  Platform.emit('end', { seconds: secs, puzzles: state.experienced, solved: state.solved });
+  const fade = $('fade'); fade.classList.add('slow', 'white'); fade.style.opacity = 1; await wait(1800);
+  $('stats').textContent = `用时 ${mm}:${ss}　·　体验过 ${state.experienced} 个谜题`;
+  $('end').style.display = 'flex'; document.exitPointerLock?.();
+}
+
+/* =====================================================================
+ * 11. 第一人称控制
  * ===================================================================*/
 const player = { pos: new THREE.Vector3(), vy: 0, yaw: 0, pitch: 0, onGround: true };
-function resetPlayer() { player.pos.set(0, 0, -1.2); player.vy = 0; player.yaw = 0; player.pitch = 0; }
+function spawn() { player.pos.set(0.8, 0, 1.5); player.vy = 0; player.yaw = -Math.PI / 2; player.pitch = 0; } // 面朝 +x
 
 const keys = {};
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'KeyE') tryInteract();
-  if (DEBUG && /^Digit[1-5]$/.test(e.code)) { state.floor = +e.code.slice(5); state.repeat = 0; applyFloor(state.floor); resetPlayer(); }
+  if (DEBUG && /^Digit[1-5]$/.test(e.code)) debugJump(+e.code.slice(5));
+  if (DEBUG && e.code === 'KeyK') debugCollectAll();
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
-let playing = false, dragLook = false, dragging = false;
+let playing = false, dragLook = false, dragging = false, started = false, ready = false;
 const canvas = renderer.domElement;
-function look(dx, dy) {
-  player.yaw -= dx * CFG.lookSens;
-  player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch - dy * CFG.lookSens));
-}
-addEventListener('mousemove', e => {
-  if (document.pointerLockElement === canvas || (dragLook && dragging)) look(e.movementX, e.movementY);
-});
+function look(dx, dy) { player.yaw -= dx * CFG.lookSens; player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch - dy * CFG.lookSens)); }
+addEventListener('mousemove', e => { if (document.pointerLockElement === canvas || (dragLook && dragging)) look(e.movementX, e.movementY); });
 canvas.addEventListener('mousedown', e => { if (dragLook) dragging = true; if (playing && e.button === 0) tryInteract(); });
 addEventListener('mouseup', () => { dragging = false; });
-
 $('start').addEventListener('click', () => {
   if (!ready || state.ended) return;
+  initAudio();
   try { const p = canvas.requestPointerLock(); if (p?.catch) p.catch(() => enableDragLook()); } catch { enableDragLook(); }
   startPlaying();
 });
 function startPlaying() {
   playing = true; $('start').style.display = 'none';
-  if (!started) { started = true; $('fade').style.opacity = 0; Platform.emit('start', { floor: state.floor }); }
+  if (!started) { started = true; state.t0 = performance.now(); Platform.emit('start', { floor: state.floor }); }
 }
 function enableDragLook() { dragLook = true; startPlaying(); } // iframe 不允许 pointer lock 时，按住拖拽转视角
 document.addEventListener('pointerlockerror', enableDragLook);
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement !== canvas && !dragLook && !state.ended) {
-    playing = false; $('start').style.display = 'flex'; $('startText').textContent = '点击继续';
-  }
+  if (document.pointerLockElement !== canvas && !dragLook && !state.ended) { playing = false; $('start').style.display = 'flex'; $('startText').textContent = '点击继续'; }
 });
 
-const down = new THREE.Vector3(0, -1, 0), ray = new THREE.Raycaster();
+const DOWN = V(0, -1, 0), ray = new THREE.Raycaster();
 function groundAt(x, y, z) {
-  ray.set(new THREE.Vector3(x, y + CFG.stepHeight, z), down); ray.far = 50;
-  const hit = ray.intersectObjects(walkables, false)[0];
-  return hit ? hit.point.y : -Infinity;
+  ray.set(V(x, y + CFG.stepHeight, z), DOWN); ray.far = 60;
+  const hit = ray.intersectObjects(walkables.filter(w => w.parent.visible), false)[0]; return hit ? hit.point.y : -Infinity;
 }
 function collide(p) {
   const r = CFG.radius, y0 = p.y + 0.2, y1 = p.y + 1.7;
@@ -761,100 +755,99 @@ function collide(p) {
     const dx = p.x - cx, dz = p.z - cz, d2 = dx * dx + dz * dz;
     if (d2 >= r * r) continue;
     if (d2 > 1e-8) { const d = Math.sqrt(d2), k = (r - d) / d; p.x += dx * k; p.z += dz * k; }
-    else { // 中心已进入盒内：沿最短轴推出
-      const opts = [[c.minX - r - p.x, 0], [c.maxX + r - p.x, 0], [0, c.minZ - r - p.z], [0, c.maxZ + r - p.z]];
-      opts.sort((a, b) => Math.abs(a[0] + a[1]) - Math.abs(b[0] + b[1])); p.x += opts[0][0]; p.z += opts[0][1];
-    }
+    else { const o = [[c.minX - r - p.x, 0], [c.maxX + r - p.x, 0], [0, c.minZ - r - p.z], [0, c.maxZ + r - p.z]].sort((a, b) => Math.abs(a[0] + a[1]) - Math.abs(b[0] + b[1]))[0]; p.x += o[0]; p.z += o[1]; }
   }
 }
-
+let bob = 0;
 function updatePlayer(dt) {
   const p = player.pos;
-  if (playing && !state.busy) {
+  if (playing && !state.ended) {
     const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
     const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
     if (f || s) {
       const sp = (keys.ShiftLeft || keys.ShiftRight ? CFG.runSpeed : CFG.walkSpeed) * dt / Math.hypot(f, s);
       const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
-      p.x += (-sy * f + cy * s) * sp; p.z += (-cy * f - sy * s) * sp;
-      collide(p);
+      p.x += (-sy * f + cy * s) * sp; p.z += (-cy * f - sy * s) * sp; collide(p); bob += dt * 7;
     }
   }
   const gy = groundAt(p.x, p.y, p.z);
   if (p.y <= gy || (player.onGround && p.y - gy < CFG.stepHeight)) { p.y = gy; player.vy = 0; player.onGround = true; }
-  else {
-    player.vy -= CFG.gravity * dt; p.y += player.vy * dt; player.onGround = false;
-    if (p.y < gy) { p.y = gy; player.vy = 0; player.onGround = true; }
-  }
-  if (p.y < -10) resetPlayer();
-  // 轻微步伐起伏
-  const moving = playing && (keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD);
-  bob += moving ? dt * 7 : 0;
-  camera.position.set(p.x, p.y + CFG.eyeHeight + Math.sin(bob) * 0.025, p.z);
+  else { player.vy -= CFG.gravity * dt; p.y += player.vy * dt; player.onGround = false; if (p.y < gy) { p.y = gy; player.vy = 0; player.onGround = true; } }
+  if (p.y < -40) spawn();
+  camera.position.set(p.x, p.y + CFG.eyeHeight + Math.sin(bob) * 0.022, p.z);
   camera.rotation.set(player.pitch, player.yaw, 0);
 
-  // 楼梯顶：顶层 → 结局；门开着走进去 → 下一层；谜题没解开 → 回到本层起点
-  if (p.y > H - 0.3) {
-    if (FLOORS[state.floor].final) { if (p.z < -35.8) endGame(); }
-    else if (state.doorOpen && p.z < Z_END - 0.4) nextFloor();
-    else if (!puzzle().canOpen() && p.z < -35.8) repeatFloor();
+  if (state.busy || state.ended) return;
+  if (state.floor === 5) { // 天台：走进传送门
+    if (Math.abs(p.x - world.portal.position.x) < 0.45 && Math.abs(p.z - world.portal.position.z) < 1.0) endGame();
+    return;
   }
+  if (!state.roomDone && p.z < -16.9 && p.x > 18.5) enterRoom();
+  if (p.x < EXIT.x0 - EXIT.run / 2 && p.z < -17.6 && p.z > -20.4 && p.y > 0.5) stairWarp();
 }
-let bob = 0;
 
 /* =====================================================================
- * 10. 拾取
+ * 12. 交互
  * ===================================================================*/
-const center = new THREE.Vector2(0, 0);
+const CENTER = new THREE.Vector2(0, 0);
 let focused = null;
+function shown(o) { for (; o; o = o.parent) if (!o.visible) return false; return true; }
 function findFocus() {
-  ray.setFromCamera(center, camera); ray.far = CFG.reach;
-  const targets = [...Object.values(world.props), ...interactables].filter(o => o.visible);
-  const hit = ray.intersectObjects(targets, true)[0];
-  let o = hit?.object; while (o && !o.userData.pickup && !o.userData.interact) o = o.parent;
-  const label = !o ? '' : o.userData.pickup ? `E　拾取　${o.userData.pickup.label}` : o.userData.interact.label();
-  focused = label ? o : null;
-  const el = $('prompt');
-  if (label) el.textContent = label;
-  el.style.opacity = label && playing ? 0.85 : 0;
+  ray.setFromCamera(CENTER, camera); ray.far = CFG.reach;
+  const targets = [...permTargets, ...puzzleTargets].filter(o => o.userData.interact && shown(o));
+  let label = ''; focused = null;
+  for (const h of ray.intersectObjects(targets, true)) { // 取第一个有可用交互的物体（开着的柜子后面还有钥匙）
+    let o = h.object; while (o && !o.userData.interact) o = o.parent;
+    if (!o || !shown(o)) continue;
+    label = o.userData.interact.label(); if (label) { focused = o; break; }
+  }
+  const el = $('prompt'); if (label) el.textContent = label; el.style.opacity = label && playing ? 0.85 : 0;
 }
-function tryInteract() {
-  if (!playing || !focused || state.busy) return;
-  if (!focused.userData.pickup) { focused.userData.interact.act(); focused = null; return; }
-  const { id, label } = focused.userData.pickup;
-  focused.visible = false; state.gone.add(id); state.picked.add(id); focused = null;
-  if (id === 'cup' && !state.gone.has('key')) world.props.key.visible = true; // 杯子下面露出钥匙
-  Platform.emit('pickup', { id, label, floor: state.floor });
-  updateInv();
-}
+function tryInteract() { if (!playing || !focused || state.busy) return; const f = focused; focused = null; f.userData.interact.act(); }
 function updateInv() {
-  $('inv').innerHTML = [...state.picked].map(id => world.props[id].userData.pickup.label).join('<br>');
+  const F = FLOORS[state.floor];
+  $('inv').textContent = F.keys ? `「钥匙」 ${F.keys.filter(k => state.keysGot.has(k)).length} / ${F.keys.length}` : '';
 }
 
 /* =====================================================================
- * 11. 主循环
+ * 13. 调试（?debug）：1–5 跳楼层，K 拿齐本层钥匙
  * ===================================================================*/
-let ready = false, started = false;
+function debugJump(n) {
+  state.floor = n; state.repeat = 0; state.keysGot.clear(); state.wrong = false; state.roomDone = false; state.pendingNext = false;
+  setDoor(world.entranceLeaf, world.entranceCol, true); setDoor(world.farLeaf, world.farCol, false);
+  applyFloor(n); genPuzzles(); spawn(); if (n === 5) player.pos.z += ROOF_DZ;
+}
+function debugCollectAll() { (FLOORS[state.floor].keys || []).forEach(k => state.keysGot.add(k)); updateInv(); }
+
+/* =====================================================================
+ * 14. 主循环
+ * ===================================================================*/
 const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   updatePlayer(dt);
+  for (const p of state.puzzles) p.update?.(dt);
   if (playing) findFocus();
-  // 灯微微闪（3 楼起）
-  if (state.floor >= 3) world.lamps.forEach(l => { if (l.light.visible) l.light.intensity = 6 * (0.9 + Math.random() * 0.1); });
+  if (LOOK[state.floor]?.flicker && state.lightsOn) world.lamps.forEach(l => l.light.intensity = LOOK[1].lamp * (Math.random() < 0.02 ? 0.3 : 1));
+  updateListener();
   renderer.render(scene, camera);
   if (DEBUG) {
     const p = player.pos;
-    $('hud').textContent = `floor ${state.floor}  repeat ${state.repeat}  anomaly ${state.anomaly}  door ${state.doorOpen ? 'open' : puzzle()?.canOpen() ? 'unlocked' : 'locked'}\n` +
-      `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  picked [${[...state.picked]}]  calls ${renderer.info.render.calls}  [1-5] 跳楼层`;
+    $('hud').textContent = `floor ${state.floor}  repeat ${state.repeat}  keys ${[...state.keysGot]}  wrong ${state.wrong}  lights ${state.lightsOn}\n` +
+      `puzzles ${state.puzzles.map(q => `${q.id}:${q.tpl}@${q.anchors}`).join('  ')}\n` +
+      `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  calls ${renderer.info.render.calls}  [1-5] 跳楼层 [K] 拿齐钥匙`;
   }
   requestAnimationFrame(tick);
 }
 
-(async () => {
-  if (DEBUG) { $('hud').style.display = 'block'; window.__game = { player, state, world, applyFloor }; }
-  await loadAssets();
-  buildLevel(); applyFloor(1); resetPlayer();
+(() => {
+  buildBuilding(); buildRoof();
+  setDoor(world.entranceLeaf, world.entranceCol, true); setDoor(world.farLeaf, world.farCol, false);
+  applyFloor(1); genPuzzles(); spawn();
+  if (DEBUG) {
+    $('hud').style.display = 'block';
+    window.__game = { player, state, world, camera, debugJump, debugCollectAll, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
+  }
   ready = true; $('startText').textContent = '点 击 进 入';
   Platform.emit('ready');
   tick();

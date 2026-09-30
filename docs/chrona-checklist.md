@@ -21,12 +21,14 @@
 
 | 事件 | detail | 含义 |
 |---|---|---|
-| `ready` | — | 资源载入完成 |
+| `ready` | — | 场景搭好 |
 | `start` | `{ floor }` | 玩家点击进入 |
-| `pickup` | `{ id, label, floor }` | 拾取道具 |
-| `use` | `{ target, floor, item }` | 对物体使用道具（钥匙开门、花盆放进光斑） |
-| `repeat` | `{ floor, repeat }` | 没解开谜题，回到本层起点 |
-| `floor` | `{ floor }` | 进入新一层 |
-| `end` | `{ floor, endingItem }` | 结局 |
+| `puzzles` | `{ floor, list }` | 本次循环抽到的谜题模板 |
+| `pickup` | `{ id, floor }` | 拿到一把「钥匙」 |
+| `wrong` | `{ floor }` | 交互错了（真假题拿了假的） |
+| `room` | `{ floor, result }` | 进入过渡房间，result = success / hint / confused |
+| `floor` | `{ floor }` | 上到新一层（5 = 天台） |
+| `repeat` | `{ floor, repeat }` | 回到本层起点 |
+| `end` | `{ seconds, puzzles, solved }` | 走进传送门 |
 
-确认 Chrona API 后只需要改 `Platform` 对象。如果平台自己接管拾取和触发，就把 `tryInteract()`、`repeatFloor()`、`nextFloor()` 的触发条件换成平台回调。
+确认 Chrona API 后只需要改 `Platform` 对象；台词如果要走平台的对话接口，改 `say()`。
