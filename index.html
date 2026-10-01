@@ -249,6 +249,7 @@ function solid(ctx, x0, x1, y0, y1, z0, z1, mat, collide = true) {
 /* =====================================================================
  * 6. 关卡（单位：米）
  *   走廊 A：x 0→24，z 0→3；转角后走廊 B：x 21→24，z 0→-16；过渡房间 x 18.5→26.5，z -16→-22
+ *   走廊走在内圈，围着天井（x 3→20.8，z -15→-0.2，正中是大树）；外侧是邻居家的门，转角两扇窗朝海
  *   入口楼梯（局部坐标）：从 z=-10 的门（关着）起，沿 +z 升 3 米，从北墙开口进入走廊 A 起点
  *   出口楼梯 = 入口楼梯经 T 变换，从房间西门起沿 -x 升 3 米；顶端是 T 变换后的"下一层起点"复制品
  *   玩家爬到出口楼梯一半时，被移到入口楼梯的同一位置 —— 看到的东西完全一样，所以没有切换感
@@ -322,6 +323,18 @@ function buildStart(ctx, isStub) {
   }
 }
 
+// 一面墙，开若干门窗洞 [a, b, 洞底, 洞顶]；alongX：墙沿 x 走、厚度在 z 的 [w0, w1]，否则反过来
+function wallRun(alongX, w0, w1, s0, s1, holes) {
+  const seg = (a, b, y0, y1, col) => alongX ? solid(ctxA, a, b, y0, y1, w0, w1, M.wall, col) : solid(ctxA, w0, w1, y0, y1, a, b, M.wall, col);
+  let s = s0;
+  for (const [a, b, lo, hi] of holes) {
+    if (a > s) seg(s, a, -0.2, H, true);
+    if (lo > 0) seg(a, b, -0.2, lo, true);   // 窗台
+    seg(a, b, hi, H, false); s = b;
+  }
+  if (s1 > s) seg(s, s1, -0.2, H, true);
+}
+
 function buildBuilding() {
   const B = building, c = ctxA;
   world.signMat = new THREE.MeshStandardMaterial({ roughness: 1 });
@@ -342,25 +355,11 @@ function buildBuilding() {
   walkQuad(c, [0, 0, 0], [24, 0, 0], [24, 0, 3], [0, 0, 3]);
   walkQuad(c, [21, 0, -16.3], [24, 0, -16.3], [24, 0, 0], [21, 0, 0]);
   walkQuad(c, [18.5, 0, -22], [26.5, 0, -22], [26.5, 0, -16.2], [18.5, 0, -16.2]);
-  // A 北墙，留出两扇邻居门的门洞（x 8→9、16.5→17.5）
-  for (const [a, b] of [[5, 8], [9, 16.5], [17.5, 21]]) solid(c, a, b, -0.2, H, -0.2, 0, M.wall);
-  for (const a of [8, 16.5]) solid(c, a, a + 1, DOOR_H, H, -0.2, 0, M.wall);
-  const winA = [[6, 7.5], [13, 14.5]], winB = [[-12.5, -11], [-6.5, -5]];
-  let xs = 5; for (const [a, b] of [...winA, [24.2, 24.2]]) {
-    solid(c, xs, a, 0, H, 3, 3.2, M.wall, false);
-    if (a < 24) { solid(c, a, b, 0, 0.9, 3, 3.2, M.wall, false); solid(c, a, b, 2.1, H, 3, 3.2, M.wall, false); }
-    xs = b;
-  }
-  collider(5, 24.2, 3, 3.2);
-  let zs = -16; for (const [a, b] of [...winB, [3.2, 3.2]]) {
-    solid(c, 24, 24.2, 0, H, zs, a, M.wall, false);
-    if (a < 3) { solid(c, 24, 24.2, 0, 0.9, a, b, M.wall, false); solid(c, 24, 24.2, 2.1, H, a, b, M.wall, false); }
-    zs = b;
-  }
-  collider(24, 24.2, -16, 3.2);
-  // B 西墙，留出第三扇邻居门的门洞（z -9.5→-8.5）
-  solid(c, 20.8, 21, -0.2, H, -16, -9.5, M.wall); solid(c, 20.8, 21, -0.2, H, -8.5, 0, M.wall);
-  solid(c, 20.8, 21, DOOR_H, H, -9.5, -8.5, M.wall);
+  // 走廊走在内圈：内侧（A 北墙、B 西墙）开窗看天井里的大树；外侧（A 南墙、B 东墙）是邻居家的门；转角两扇窗朝海
+  wallRun(true, -0.2, 0, 5, 21, [[6.6, 8.1, 0.9, 2.1], [9.8, 11.3, 0.9, 2.1], [15.4, 16.9, 0.9, 2.1]]);
+  wallRun(true, 3, 3.2, 5, 24.2, [[5.9, 6.9, 0, DOOR_H], [13.1, 14.1, 0, DOOR_H], [21.75, 23.25, 0.9, 2.1]]);
+  wallRun(false, 20.8, 21, -16, 0, [[-3.9, -2.4, 0.9, 2.1], [-11.5, -10, 0.9, 2.1]]);
+  wallRun(false, 24, 24.2, -16, 3.2, [[-12.7, -11.7, 0, DOOR_H], [0.2, 1.45, 0.9, 2.1]]);
   box(16, 0.1, 0.03, M.trim, 13, 0.05, 0.015, B); box(19, 0.1, 0.03, M.trim, 14.5, 0.05, 2.985, B);
 
   // --- 过渡房间：南墙入口门、西墙出口门（门外就是出口楼梯）
@@ -413,7 +412,7 @@ function buildBuilding() {
   permTargets.push(sw);
 
   for (const a of ANCHORS) world.anchors.push(buildFurniture(a));
-  buildStoryProps(); buildRuins();
+  buildStoryProps(); buildRuins(); buildCourtyard();
   world.sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), M.sea);
   world.sea.rotation.x = -Math.PI / 2; world.sea.position.set(12, -6, 0); scene.add(world.sea);
   buildGreenery();
@@ -445,17 +444,17 @@ function wallPlane(w, h, map, x, y, z, rotY) {
 }
 function buildStoryProps() {
   world.photos = [];
-  for (const [x, z, r] of [[7.5, 0.03, 0], [11, 0.03, 0], [10, 2.97, Math.PI], [16.5, 2.97, Math.PI]]) {
+  for (const [x, z, r] of [[9.0, 0.03, 0], [14.4, 0.03, 0], [10, 2.97, Math.PI], [16.5, 2.97, Math.PI]]) {
     const f = box(0.44, 0.54, 0.03, M.trim, x, 1.65, z + (r ? 0.015 : -0.015), building); f.rotation.y = r;
     world.photos.push(wallPlane(0.34, 0.44, faceTexture(3, false), x, 1.65, z + (r ? -0.01 : 0.01), r));
   }
   world.notices = []; world.doors = [];
-  for (const [x, z, ry] of [[8.5, 0, 0], [17, 0, 0], [21, -9, Math.PI / 2]]) world.doors.push(buildNeighborDoor(x, z, ry));
+  for (const [x, z, ry] of [[6.4, 3, Math.PI], [13.6, 3, Math.PI], [24, -12.2, -Math.PI / 2]]) world.doors.push(buildNeighborDoor(x, z, ry));
   world.posters = [];
-  const P = [[6.3, 1.5, 0.02, 0], [9.7, 1.7, 0.02, 0], [12, 1.4, 0.02, 0], [14.8, 1.6, 0.02, 0], [19.5, 1.5, 0.02, 0],
+  const P = [[6.3, 1.5, 0.02, 0], [18.2, 1.7, 0.02, 0], [12, 1.4, 0.02, 0], [14.95, 1.6, 0.02, 0], [19.5, 1.5, 0.02, 0],
     [8.5, 1.5, 2.98, Math.PI], [12.2, 1.6, 2.98, Math.PI], [15.5, 1.5, 2.98, Math.PI], [19.8, 1.7, 2.98, Math.PI]];
   P.forEach(([x, y, z, r], i) => { const m = wallPlane(0.3, 0.41, posterTexture(i), x, y, z, r); m.rotation.z = (i % 3 - 1) * 0.05; world.posters.push(m); });
-  [[-3, 1.5], [-7.5, 1.7], [-10.5, 1.4]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 9), 21.02, y, z, Math.PI / 2)));
+  [[-6.6, 1.5], [-7.9, 1.7], [-12, 1.4]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 9), 21.02, y, z, Math.PI / 2)));
   [[-3.5, 1.6], [-9.5, 1.5], [-14, 1.7]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 12), 23.98, y, z, -Math.PI / 2)));
   world.slippers = new THREE.Group(); // 4 楼：房间门口两双拖鞋
   for (const [x, c] of [[22.05, '#c98f86'], [22.95, '#8fa7c4']]) for (const dx of [-0.08, 0.08]) box(0.1, 0.04, 0.26, std(c), x + dx, 0.02, -15.4, world.slippers);
@@ -472,11 +471,10 @@ function buildRuins() {
     const t = new THREE.Mesh(new THREE.IcosahedronGeometry(5, 1), std('#5f8f45')); t.position.set(-2, 12, 0); g.add(t);
     g.updateMatrixWorld(); return g;
   };
-  const S = ruin(15.5, 41, 0, 0.04), E = ruin(62, -8.75, Math.PI / 2, -0.03);
-  for (const [g, lx, center, dir, scopeAt, sill] of [
-    [S, -2.8, V(13.75, 1.5, 3.1), V(0, 0, 1), V(13.75, 0, 2.5), V(14.25, 0.9, 3.1)],
-    [E, -2.8, V(24.1, 1.5, -5.75), V(1, 0, 0), V(23.4, 0, -5.75), V(24.1, 0.9, -5.3)],
-    [E, 2.8, V(24.1, 1.5, -11.75), V(1, 0, 0), V(23.4, 0, -11.75), V(24.1, 0.9, -11.3)],
+  const S = ruin(25.3, 41, 0, 0.04), E = ruin(62, -1.975, Math.PI / 2, -0.03);
+  for (const [g, lx, center, dir, scopeAt, sill] of [   // 转角朝海的两扇窗
+    [S, -2.8, V(22.5, 1.5, 3.1), V(0, 0, 1), V(22.5, 0, 2.4), V(23.0, 0.9, 3.1)],
+    [E, -2.8, V(24.1, 1.5, 0.825), V(1, 0, 0), V(23.35, 0, 0.825), V(24.1, 0.9, 1.25)],
   ]) {
     const lit = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), litMat); lit.position.set(lx, 4.2, -5.12); lit.rotation.y = Math.PI; g.add(lit);
     lit.visible = false; g.updateMatrixWorld();
@@ -506,7 +504,8 @@ function buildNeighborDoor(x, z, ry) {
   const ctx = { parent: g, T: g.matrixWorld.clone(), collide: true };
   solid(ctx, -1.3, 1.3, -0.1, 0, -2.6, -0.2, M.floor, false); solid(ctx, -1.3, 1.3, H, H + 0.2, -2.6, -0.2, M.ceil, false);
   walkQuad(ctx, [-1.1, 0, -2.4], [1.1, 0, -2.4], [1.1, 0, 0], [-1.1, 0, 0]);
-  solid(ctx, -1.3, 1.3, 0, H, -2.6, -2.4, M.wall); solid(ctx, -1.3, -1.1, 0, H, -2.4, -0.2, M.wall); solid(ctx, 1.1, 1.3, 0, H, -2.4, -0.2, M.wall);
+  solid(ctx, -1.3, -0.9, 0, H, -2.6, -2.4, M.wall); solid(ctx, 0.1, 1.3, 0, H, -2.6, -2.4, M.wall);   // 后墙开一扇朝海的小窗
+  solid(ctx, -0.9, 0.1, 0, 1.1, -2.6, -2.4, M.wall); solid(ctx, -0.9, 0.1, 2.0, H, -2.6, -2.4, M.wall, false); solid(ctx, -1.3, -1.1, 0, H, -2.4, -0.2, M.wall); solid(ctx, 1.1, 1.3, 0, H, -2.4, -0.2, M.wall);
   // 门框（走廊一侧）
   box(0.06, DOOR_H + 0.06, 0.05, M.trim, -0.53, (DOOR_H + 0.06) / 2, 0.02, g); box(0.06, DOOR_H + 0.06, 0.05, M.trim, 0.53, (DOOR_H + 0.06) / 2, 0.02, g);
   box(1.12, 0.06, 0.05, M.trim, 0, DOOR_H + 0.03, 0.02, g);
@@ -578,36 +577,58 @@ function buildGreenery() {
     if (i > 28) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), M.flower[i % 4]); f.position.set(0, 0.36, 0); g.add(f); }
     building.add(g); world.plants.push(g);
   }
-  for (const [x, z, dir] of [[6.75, 3.1, 'S'], [13.75, 3.1, 'S'], [24.1, -5.75, 'E'], [24.1, -11.75, 'E']]) {
-    const out = dir === 'S' ? V(x + 1, 2.6, z + 4) : V(x + 4, 2.6, z - 1), mid = dir === 'S' ? V(x, 1.6, z + 0.2) : V(x + 0.2, 1.6, z);
-    const tip = dir === 'S' ? V(x - 0.4, 1.9, z - 1.4) : V(x - 1.4, 1.9, z + 0.3);
-    const g = new THREE.Group(); g.add(taperedTube([out, mid, tip], 0.09, 0.02, M.root, 10, 5));
-    for (let k = 0; k < 3; k++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), M.plant); l.position.copy(tip).add(V((k - 1) * 0.25, -0.1 * k, 0.1 * k)); g.add(l); }
+  // 天井里大树的枝条，从内侧的窗伸进走廊（3 楼起）
+  for (const [x, z, n] of [[10.55, -0.1, V(0, 0, 1)], [16.15, -0.1, V(0, 0, 1)], [20.9, -10.75, V(1, 0, 0)]]) {
+    const w = V(x, 1.6, z), from = w.clone().sub(TREE).setY(0).normalize(), start = TREE.clone().addScaledVector(from, 1.2).setY(2.9);
+    const tip = w.clone().addScaledVector(n, 1.4).add(V(n.z * 0.3, 0.3, n.x * 0.3));
+    const g = new THREE.Group(); g.add(taperedTube([start, start.clone().lerp(w, 0.5).setY(2.6), w, tip], 0.2, 0.02, M.root, 14, 5));
+    for (let k = 0; k < 4; k++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.24, 0), M.plant); l.position.copy(k < 3 ? tip : start.clone().lerp(w, 0.6)).add(V((k - 1) * 0.25, -0.1 * k + 0.2, 0.1 * k)); g.add(l); }
     building.add(g); world.branches.push(g);
+  }
+}
+
+// 天井（x 3→20.8，z -15→-0.2）：四面是楼的立面，正中长着大树。楼层不同，看到的树段和上方剩下的楼层数也不同
+const TREE = V(12, 0, -7.6), COURT = { x0: 3.0, x1: 20.8, z0: -15, z1: -0.2 };
+function buildCourtyard() {
+  const tex = canvasTex(128, 204, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a3d40'; g.fillRect(32, 70, 64, 76); g.fillStyle = '#d9d9d9'; g.fillRect(0, h - 10, w, 10); });
+  tex.wrapS = THREE.RepeatWrapping;
+  const C = COURT, sides = [ // [中心 x, 中心 z, 宽, 朝向, 本层这一段是否已是真墙]
+    [(C.x0 + C.x1) / 2, C.z1 - 0.01, C.x1 - C.x0, Math.PI, true], [C.x1 - 0.01, (C.z0 + C.z1) / 2, C.z1 - C.z0, -Math.PI / 2, true],
+    [C.x0, (C.z0 + C.z1) / 2, C.z1 - C.z0, Math.PI / 2, false], [(C.x0 + C.x1) / 2, C.z0, C.x1 - C.x0, 0, false]];
+  world.bands = [];
+  for (const [x, z, w, ry, real] of sides) for (let k = -2; k <= 3; k++) {
+    if (k === 0 && real) continue;
+    const t = tex.clone(); t.needsUpdate = true; t.repeat.set(w / 2.2, 1);
+    const mat = new THREE.MeshStandardMaterial({ map: t, roughness: 1, flatShading: true }); mat.color = M.wall.color;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 3.2), mat); m.position.set(x, k * 3.2 + 1.6, z); m.rotation.y = ry;
+    m.userData.k = k; building.add(m); world.bands.push(m);
+  }
+  // 大树：从水下长上来，高过楼顶；整棵树按楼层上下移动（站在 n 楼，看到的是这一段）
+  const tree = world.tree = new THREE.Group(); building.add(tree);
+  const T0 = TREE;
+  tree.add(taperedTube([V(T0.x, -24, T0.z), V(T0.x + 0.4, -8, T0.z - 0.4), V(T0.x - 0.2, 4, T0.z + 0.3), V(T0.x + 0.2, 12, T0.z - 0.2), V(T0.x, 18, T0.z)], 1.7, 0.55, M.root, 16, 9));
+  const rng = mulberry32(11);
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2, tip = V(T0.x + Math.cos(a) * 6, 18 + rng() * 4, T0.z + Math.sin(a) * 6);
+    tree.add(taperedTube([V(T0.x, 14 + rng() * 3, T0.z), V(T0.x + Math.cos(a) * 3, 17, T0.z + Math.sin(a) * 3), tip], 0.4, 0.12, M.root, 8, 6));
+    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(2.6 + rng() * 1.4, 1), M.plant); c.position.copy(tip); tree.add(c);
   }
 }
 
 // 天台 = 这栋楼的楼顶（y=3.2）：4 楼的出口楼梯直接通上来
 function buildRoof() {
   const R = roof, ctx = { parent: R, T: I4, collide: true, owner: R }, Y = 3.25;
-  const deckMat = std('#b9ad98'), wallMat = std('#cfc3a8'), trunkMat = std('#6b5238'), leafMat = std('#6fa24c');
-  const deck = [[-0.4, 27, -22.4, -20.4], [-0.4, 8.3, -20.4, -17.6], [18.5, 27, -20.4, -17.6], [-0.4, 27, -17.6, -13],
-    [-0.4, 7, -13, -5], [15, 27, -13, -5], [-0.4, 27, -5, 3.4]];
+  const deckMat = std('#b9ad98'), wallMat = std('#cfc3a8'), leafMat = std('#6fa24c');
+  const C = COURT, deck = [[-0.4, 27, -22.4, -20.4], [-0.4, 8.3, -20.4, -17.6], [18.5, 27, -20.4, -17.6], [-0.4, 27, -17.6, C.z0],
+    [-0.4, C.x0, C.z0, C.z1], [C.x1, 27, C.z0, C.z1], [-0.4, 27, C.z1, 5.8]];
   for (const [x0, x1, z0, z1] of deck) { solid(ctx, x0, x1, 3.0, Y, z0, z1, deckMat, false); walkQuad(ctx, [x0, Y, z0], [x1, Y, z0], [x1, Y, z1], [x0, Y, z1]); }
   const P = Y + 1.1; // 女儿墙
-  solid(ctx, -0.6, 27.2, Y, P, -22.6, -22.4, wallMat); solid(ctx, -0.6, 27.2, Y, P, 3.4, 3.6, wallMat);
-  solid(ctx, -0.6, -0.4, Y, P, -22.6, 3.6, wallMat); solid(ctx, 27, 27.2, Y, P, -22.6, 3.6, wallMat);
-  for (const [x0, x1, z0, z1] of [[7, 15, -13.1, -13], [7, 15, -5, -4.9], [6.9, 7, -13, -5], [15, 15.1, -13, -5]]) {
-    solid(ctx, x0, x1, Y, Y + 1.0, z0, z1, std('#8a7a62')); solid(ctx, x0, x1, -6, Y, z0, z1, wallMat, false);
-  }
-  // 巨树：从天井长出，高过楼顶，不遮住整片天
-  R.add(taperedTube([V(11, -6, -9), V(11.4, 4, -9.4), V(10.8, 12, -8.7), V(11.2, 18, -9)], 1.3, 0.55, trunkMat, 12, 8));
+  solid(ctx, -0.6, 27.2, Y, P, -22.6, -22.4, wallMat); solid(ctx, -0.6, 27.2, Y, P, 5.8, 6.0, wallMat);
+  solid(ctx, -0.6, -0.4, Y, P, -22.6, 6.0, wallMat); solid(ctx, 27, 27.2, Y, P, -22.6, 6.0, wallMat);
+  // 天井边沿的矮墙（大树在 buildCourtyard 里，属于楼本身）
+  for (const [x0, x1, z0, z1] of [[C.x0, C.x1, C.z0 - 0.1, C.z0], [C.x0, C.x1, C.z1, C.z1 + 0.1], [C.x0 - 0.1, C.x0, C.z0, C.z1], [C.x1, C.x1 + 0.1, C.z0, C.z1]])
+    solid(ctx, x0, x1, Y, Y + 1.0, z0, z1, std('#8a7a62'));
   const rng = mulberry32(11);
-  for (let i = 0; i < 6; i++) {
-    const a = i / 6 * Math.PI * 2, tip = V(11 + Math.cos(a) * 5.5, 18 + rng() * 4, -9 + Math.sin(a) * 5.5);
-    R.add(taperedTube([V(11, 14 + rng() * 3, -9), V(11 + Math.cos(a) * 3, 17, -9 + Math.sin(a) * 3), tip], 0.4, 0.12, trunkMat, 8, 6));
-    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(2.4 + rng() * 1.4, 1), leafMat); c.position.copy(tip); R.add(c);
-  }
   const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
   for (let i = 0; i < 14; i++) {
     const a = rng() * Math.PI * 2, d = 60 + rng() * 260, c = new THREE.Group();
@@ -638,6 +659,9 @@ const state = {
 
 // 楼层里的"内容"：植物、树枝、海、号牌（在玩家看不到走廊时切换）
 function applyContent(n) {
+  const f = Math.min(n, 4);
+  world.tree.position.y = -(4 - f) * 3.2;                          // 楼层越低，看到的树段越低
+  world.bands.forEach(m => m.visible = m.userData.k <= 4 - f);     // 头顶还剩几层楼
   if (n === 5) return;
   world.roots.forEach((r, i) => r.visible = i < [4, 8, 12, 16][n - 1]);
   world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
