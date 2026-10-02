@@ -649,6 +649,14 @@ function buildRoof() {
   light.position.set(0, 1.075, 0.02); portal.add(light);
   const leaf = new THREE.Group(); leaf.position.set(-0.5, 0, -0.05); leaf.rotation.y = 0.9; portal.add(leaf);  // 朝玩家开了一道缝
   box(1.0, 2.13, 0.05, doorMat, 0.5, 1.065, 0, leaf); box(0.04, 0.12, 0.06, std('#d9d2c0'), 0.88, 1.05, 0.04, leaf);
+  // 门旁被撑裂的空花盆：母亲种下种子的那一盆，一条细根从里面爬过天井矮墙，连到大树
+  const potMat = std('#b8684a');
+  for (const [dx, rz] of [[-0.09, 0.35], [0.09, -0.3]]) {
+    const half = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.14, 0.32, 8, 1, true, dx < 0 ? 0 : Math.PI, Math.PI), std('#b8684a', { side: THREE.DoubleSide }));
+    half.position.set(2.2 + dx, Y + 0.15, -9.7); half.rotation.set(0, Math.PI / 2, rz); R.add(half);
+  }
+  box(0.3, 0.03, 0.3, potMat, 2.2, Y + 0.015, -9.7, R);
+  R.add(taperedTube([V(2.2, Y + 0.08, -9.7), V(2.6, Y + 0.03, -9.3), V(2.95, Y + 1.05, -8.8), V(3.6, Y + 0.6, -8.4), V(6, Y - 1, -7.6), V(10.6, Y - 2, -7.6)], 0.035, 0.12, std('#6b4b30'), 20, 5));
   R.visible = false;
 }
 
