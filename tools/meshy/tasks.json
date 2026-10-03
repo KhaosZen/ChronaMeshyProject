@@ -89,15 +89,33 @@
     "done": true
   },
   "phoneTable": {
-    "image": "01a0ffe0-6e82-7788-8f7f-3ea4e4836ba5"
+    "image": "01a0ffe0-6e82-7788-8f7f-3ea4e4836ba5",
+    "done": true
   },
   "bench": {
-    "image": "01a0ffe0-71cf-73e2-aad5-496686efd217"
+    "image": "01a0ffe0-71cf-73e2-aad5-496686efd217",
+    "done": true
   },
   "lowCabinet": {
-    "image": "01a0ffe0-c411-72e8-8488-7fe77b3097c0"
+    "image": "01a0ffe0-c411-72e8-8488-7fe77b3097c0",
+    "done": true
   },
   "slippers": {
-    "image": "01a0ffe0-e227-7676-a647-48e65d313dcb"
+    "image": "01a0ffe0-e227-7676-a647-48e65d313dcb",
+    "done": true
+  },
+  "treeCrown": {
+    "image": "01a0ffe1-4301-729c-a951-4d8cd7afcf64",
+    "done": true
+  },
+  "treeTrunk": {
+    "preview": "01a0ffe1-b925-7191-b634-77053ea7b976",
+    "refine": "01a0ffe2-8e9f-728c-99ed-4c141cb26a85",
+    "done": true
+  },
+  "treeBranch": {
+    "preview": "01a0ffe1-bf18-71d4-b592-4890450e660d",
+    "refine": "01a0ffe2-6b5c-7632-89c8-705f6764d6c7",
+    "done": true
   }
 }
