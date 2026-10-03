@@ -157,6 +157,18 @@
       "prompt": "a single long thick tree branch reaching forward horizontally, brown bark, a few side twigs, three rounded clumps of green leaves near the tip",
       "target_polycount": 2500,
       "note": "大树：穿窗伸进走廊的枝条"
+    },
+    {
+      "key": "mother",
+      "prompt": "a full body woman in her late thirties, 1980s Dutch fashion, curly brown shoulder-length hair, white blouse with a small floral print, high-waisted light blue jeans, white sneakers, standing straight, arms relaxed at her sides, gentle face, game character",
+      "target_polycount": 4000,
+      "note": "联机：母亲（第二个玩家），游戏里渲染成发暖光的半透明人形"
+    },
+    {
+      "key": "child",
+      "prompt": "a full body teenager about sixteen years old, short messy brown hair, white t-shirt with red and blue stripes, navy jacket, blue jeans, white sneakers, a backpack on one shoulder, standing straight, arms relaxed at sides, game character",
+      "target_polycount": 4000,
+      "note": "联机：母亲那边看到的孩子（主角）"
     }
   ]
 }

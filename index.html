@@ -24,6 +24,12 @@
   #end .t { font-size: 26px; letter-spacing: .8em; }
   #end #stats { font-size: 15px; letter-spacing: .2em; opacity: .75; }
   #scope { background: radial-gradient(circle at 50% 50%, transparent 0 33vmin, #000 34vmin); opacity: 0; transition: opacity .5s; }
+  #mp { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; opacity: .8; }
+  #mp button { font: inherit; color: inherit; background: none; border: 1px solid rgba(214,208,194,.35); padding: 6px 14px; cursor: pointer; letter-spacing: .08em; }
+  #mp button:hover { border-color: rgba(214,208,194,.8); }
+  #mp input { font: inherit; width: 6em; text-align: center; letter-spacing: .3em; text-transform: uppercase; background: rgba(0,0,0,.3); color: inherit; border: 1px solid rgba(214,208,194,.5); padding: 5px; }
+  #mpPanel { max-width: 30em; line-height: 1.7; text-align: center; }
+  #mpPanel b { font-size: 20px; letter-spacing: .3em; }
   #hud { inset: 8px auto auto 8px; font: 12px/1.5 ui-monospace, monospace; color: #9f9; white-space: pre; display: none; }
 </style>
 <!-- Three.js 走 CDN；npm run pack 打包时会换成 ZIP 内的本地文件 -->
@@ -39,6 +45,7 @@
   <h1>ROOT</h1>
   <p>WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause</p>
   <p class="go" id="startText">Loading…</p>
+  <div id="mp"><button id="mpHost">Invite someone to play as the mother</button><button id="mpJoin">Join as the mother</button><div id="mpPanel"></div></div>
 </div>
 <div id="crosshair"></div>
 <div id="prompt" class="layer"></div>
@@ -176,8 +183,9 @@ function mulberry32(a) {
   return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
-const pick = a => a[Math.floor(Math.random() * a.length)];
-function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+let rand = Math.random;   // 抽谜题时换成带种子的随机数，联机时两边抽到的一样
+const pick = a => a[Math.floor(rand() * a.length)];
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // 锥形管（树根/树枝）
@@ -351,7 +359,7 @@ function buildBuilding() {
   const sd = new THREE.Group(); B.add(sd); const sctx = { parent: sd, T: I4, collide: false };
   solid(sctx, 0.3, 0.9, 0, H, -0.2, 0, M.wall); solid(sctx, 2.1, 2.7, 0, H, -0.2, 0, M.wall); solid(sctx, 0.9, 2.1, 2.2, H, -0.2, 0, M.wall);
   box(1.2, 2.2, 0.06, M.trim, 1.5, 1.1, -0.05, sd); box(0.04, 0.12, 0.05, M.white, 1.95, 1.05, 0, sd);
-  sd.userData.col = collider(0.3, 2.7, -0.2, 0, -0.2, H); world.startDoor = sd;
+  sd.userData.col = collider(0.3, 2.7, -0.2, 0, -0.2, H); sd.userData.col.door = true; world.startDoor = sd;
   world.replicaLight = pointLight(B, 1.5, -0.8, -14.2);   // = T⁻¹(过渡房间的灯)：出口楼梯底部被房间灯照到，入口楼梯底部也要一样
   // --- 走廊 A 其余部分（x 5→24）
   solid(c, 5, 24, -0.1, 0, 0, 3, M.floor, false); solid(c, 21, 24, -0.1, 0, -16.3, 0, M.floor, false);
@@ -375,9 +383,9 @@ function buildBuilding() {
   solid(c, 18.3, 18.5, -0.2, H + 3.2, -22.2, -19.6, M.wall); solid(c, 18.3, 18.5, -0.2, H + 3.2, -18.4, -16, M.wall);
   solid(c, 18.3, 18.5, 2.2, H + 3.2, -19.6, -18.4, M.wall, false);
   world.entranceLeaf = box(1.2, 2.2, 0.06, M.trim, 22.5, 1.1, -16.1, B);
-  world.entranceLeaf.userData.col = collider(21.9, 23.1, -16.25, -15.95, 0, H);
+  world.entranceLeaf.userData.col = collider(21.9, 23.1, -16.25, -15.95, 0, H); world.entranceLeaf.userData.col.door = true;
   world.farLeaf = box(0.06, 2.2, 1.2, M.trim, 18.4, 1.1, -19, B);
-  world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H);
+  world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H); world.farLeaf.userData.col.door = true;
   world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? 'E   Open' : '', act: openFarDoor };
   permTargets.push(world.farLeaf);
   // 过渡房间逐层"恢复"：1 楼空着，2 楼有桌子，3 楼有椅子，4 楼两把椅子和一瓶花
@@ -430,7 +438,7 @@ const IMG = {};
 function loadImages() {
   const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4'];
   return Promise.all(names.map(n => new Promise(res => {
-    const im = new Image(); im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res(); im.src = `assets/tex/${n}.jpg`;
+    const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res(); im.src = `assets/tex/${n}.jpg`;
   })));
 }
 function imgTexture(name, { blur = 0, gray = false } = {}) {
@@ -551,7 +559,7 @@ function buildNeighborDoor(x, z, ry) {
     map: textTexture(['EVACUATION', 'NOTICE'], { w: 128, h: 160, font: 18, bg: '#e9e4d6' }) }));
   notice.position.set(0.62, 1.5, 0.03); leaf.add(notice); world.notices.push(notice);
   const bb = new THREE.Box3(V(-0.5, 0, -0.2), V(0.5, DOOR_H, 0)).applyMatrix4(ctx.T);
-  const d = { g, leaf, bulb, open: false, col: collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, DOOR_H),
+  const d = { g, leaf, bulb, open: false, col: Object.assign(collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, DOOR_H), { door: true }),
     keySpot: V(0.45, 0.6, -2.0).applyMatrix4(ctx.T), keyRot: ry };
   leaf.children[0].userData.interact = { label: () => d.open ? '' : 'Locked', act() {} }; permTargets.push(leaf.children[0]);
   return d;
@@ -878,7 +886,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   housekey: { h: 0.2 }, can: { h: 0.24 }, pendant: { h: 0.62 }, homeDoor: { h: 2.3 }, potCracked: { h: 0.34 }, telescope: { h: 1.35 },
   farHouseA: { h: 16 }, farHouseB: { h: 15 }, farHouseC: { h: 12 }, farChurch: { h: 34 }, farMill: { h: 20 },
   shoeCabinet: { w: 1.0 }, sideTable: { w: 0.55 }, shelf: { w: 1.1 }, boxes: { w: 0.6 }, phoneTable: { w: 0.5 }, bench: { w: 1.2 },
-  lowCabinet: { w: 0.9 }, slippers: { w: 0.32 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 } };
+  lowCabinet: { w: 0.9 }, slippers: { w: 0.32 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 } };
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
@@ -1130,7 +1138,12 @@ function inView(p) {
 }
 
 function clearPuzzles() { for (const p of state.puzzles) { p.cleanup?.(); stopSound(p.obj?.userData.snd); } state.puzzles = []; puzzleTargets = []; puzzleGroup.clear(); }
-function genPuzzles(n) {
+function genPuzzles(n, seed = Math.floor(Math.random() * 2 ** 31)) {
+  state.puzzleSeed = seed; rand = mulberry32(seed);
+  try { genPuzzlesSeeded(n); } finally { rand = Math.random; }
+  if (net.role === 'mother') for (const p of state.puzzles) { if (p.obj) p.obj.visible = false; }   // 母亲看到的是发光的标记，不是物件本身
+}
+function genPuzzlesSeeded(n) {
   clearPuzzles();
   const F = FLOORS[n]; if (!F.keys) return;
   const free = shuffle(world.anchors.slice());
@@ -1145,7 +1158,8 @@ function genPuzzles(n) {
   };
   const used = new Set();   // 数门、顺序、窗外每层最多一次
   for (const id of F.keys) {
-    let tpl = state.forceTpl.shift() || pick(F.pool.filter(t => !(TEMPLATES[t].once && used.has(t)))), Tp = TEMPLATES[tpl], rs = take(Tp, id);
+    let tpl = pick(F.pool.filter(t => !(TEMPLATES[t].once && used.has(t))));   // 指定了模板也照常抽一次，保证随机数序列不变
+    tpl = state.forceTpl.shift() || tpl; let Tp = TEMPLATES[tpl], rs = take(Tp, id);
     used.add(tpl);
     if (!rs) { tpl = 'misplaced'; Tp = TEMPLATES.misplaced; rs = take(Tp, id); }
     const inst = { id, tpl, anchors: rs.map(r => r.a.id), ...Tp.build(id, rs) };
@@ -1218,6 +1232,7 @@ const $ = id => document.getElementById(id);
 const wait = ms => new Promise(r => setTimeout(r, ms));
 let sayToken = 0;
 async function say(text, ms = 4000) {
+  if (net.role === 'child') net.send({ t: 'say', text, ms });
   const t = ++sayToken, el = $('subtitle'); el.textContent = text; el.style.opacity = 1;
   await wait(ms); if (t === sayToken) el.style.opacity = 0; await wait(600);
 }
@@ -1256,11 +1271,12 @@ function stairWarp() {
   setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, false);
   applyRoomNotes(state.floor);
   Platform.emit(state.floor === state.prevFloor ? 'repeat' : 'floor', { floor: state.floor });
-  state.prevFloor = state.floor;
+  state.prevFloor = state.floor; net.sendFloor();
 }
 
 async function endGame() {
   if (state.ended) return; state.ended = true; state.busy = true;
+  if (net.role === 'child') net.send({ t: 'end' });
   const secs = Math.round((performance.now() - state.t0) / 1000), mm = String(Math.floor(secs / 60)).padStart(2, '0'), ss = String(secs % 60).padStart(2, '0');
   Platform.emit('end', { seconds: secs, puzzles: state.experienced, solved: state.solved });
   $('fade').style.opacity = 1; await wait(1800);
@@ -1290,14 +1306,15 @@ function look2(dx, dy) { player.yaw -= dx * CFG.lookSens; player.pitch = Math.ma
 addEventListener('mousemove', e => { if (document.pointerLockElement === canvas || (dragLook && dragging)) look2(e.movementX, e.movementY); });
 canvas.addEventListener('mousedown', e => { if (dragLook) dragging = true; if (playing && e.button === 0) tryInteract(); });
 addEventListener('mouseup', () => { dragging = false; });
-$('start').addEventListener('click', () => {
-  if (!ready || state.ended) return;
+$('start').addEventListener('click', e => {
+  if (!ready || state.ended || e.target.closest('#mp button, #mp input') || (net.role === 'mother' && !net.synced)) return;
   initAudio();
   try { const p = canvas.requestPointerLock(); if (p?.catch) p.catch(() => enableDragLook()); } catch { enableDragLook(); }
   startPlaying();
 });
 function startPlaying() {
-  playing = true; $('start').style.display = 'none';
+  playing = true; $('start').style.display = 'none'; $('mp').style.display = 'none';
+  if (net.role === 'mother' && !net.toldRole) { net.toldRole = true; say('You are their mother. You can see what they have lost. Look at it and press E to show them.', 6000); }
   if (!started) { started = true; state.t0 = performance.now(); Platform.emit('start', { floor: state.floor }); }
 }
 function enableDragLook() { dragLook = true; startPlaying(); }
@@ -1314,7 +1331,7 @@ function groundAt(x, y, z) {
 function collide(p) {
   const r = CFG.radius, y0 = p.y + 0.2, y1 = p.y + 1.7;
   for (const c of colliders) {
-    if (!c.enabled || y1 < c.minY || y0 > c.maxY) continue;
+    if (!c.enabled || (c.door && net.role === 'mother') || y1 < c.minY || y0 > c.maxY) continue;   // 母亲穿门而过
     const cx = Math.max(c.minX, Math.min(p.x, c.maxX)), cz = Math.max(c.minZ, Math.min(p.z, c.maxZ));
     const dx = p.x - cx, dz = p.z - cz, d2 = dx * dx + dz * dz;
     if (d2 >= r * r) continue;
@@ -1342,14 +1359,14 @@ function updatePlayer(dt) {
   camera.rotation.set(player.pitch, player.yaw, 0);
   if (state.scope) { camera.position.copy(state.scope.pos); camera.lookAt(state.scope.target); }
 
-  if (state.ended) return;
+  if (state.ended || net.role === 'mother') return;   // 母亲不触发房间、楼梯和结局，跟着孩子走
   const onExitStair = p.x < 18.3 && p.x > 8 && p.z > -20.2 && p.z < -17.8;
   if (state.phase === 'corridor' && p.z < -16.9 && p.x > 18.5) enterRoom();
   if (state.phase === 'stairs' && onExitStair) {
     if (world.farLeaf.userData.col.enabled === false && p.x < 17.6) setDoor(world.farLeaf, false);  // 身后的门关上
     if (!state.roofMode && world.farLeaf.visible && p.x < 12.7) stairWarp();
   }
-  if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sun.position.set(30, 40, 20); Platform.emit('floor', { floor: 5 }); }
+  if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sun.position.set(30, 40, 20); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }
   if (state.phase === 'roof' && p.z > world.portal.position.z - 0.9 && p.z < world.portal.position.z + 0.3 && Math.abs(p.x - world.portal.position.x) < 0.6) endGame();  // 走到门前就被白光吞没
 }
 
@@ -1361,7 +1378,8 @@ let focused = null;
 function shown(o) { for (; o; o = o.parent) if (!o.visible) return false; return true; }
 function findFocus() {
   ray.setFromCamera(CENTER, camera); ray.far = CFG.reach;
-  const targets = [...permTargets, ...puzzleTargets].filter(o => o.userData.interact && shown(o));
+  if (net.role === 'mother') ray.far = 4;
+  const targets = (net.role === 'mother' ? Object.values(net.markers) : [...permTargets, ...puzzleTargets]).filter(o => o.userData.interact && shown(o));
   let label = ''; focused = null;
   for (const h of ray.intersectObjects(targets, true)) { // 取第一个有可用交互的物体（开着的柜子后面还有钥匙）
     let o = h.object; while (o && !o.userData.interact) o = o.parent;
@@ -1371,6 +1389,174 @@ function findFocus() {
   const el = $('prompt'); if (label) el.textContent = label; el.style.opacity = label && playing ? 0.85 : 0;
 }
 function tryInteract() { if (!playing || !focused || state.busy) return; const f = focused; focused = null; f.userData.interact.act(); }
+
+
+/* =====================================================================
+ * 15. 联机（可选）：第二个人以「母亲」加入
+ *   孩子开房间拿到 4 位房间码；母亲输入房间码加入。两边 WebRTC 直连（Chrona 的沙盒挡 WebSocket，
+ *   只放行 https 请求），握手消息借 ntfy.sh 中转（?signal=local 时用 BroadcastChannel，测试用）。
+ *   孩子说了算：楼层和谜题由孩子同步给母亲（同一个随机种子）；母亲看得见所有「钥匙」，但拿不起来，
+ *   对着它按 E，孩子那边就会亮起一束暖光。
+ * ===================================================================*/
+const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
+const SIGNAL = new URLSearchParams(location.search).get('signal');
+const net = {
+  role: null, code: null, id: Math.random().toString(36).slice(2, 10), sig: null, pc: null, dc: null, synced: false,
+  markers: {}, avatar: null, target: null, sendT: 0, beams: [], told: {},
+  send(m) { if (this.dc?.readyState === 'open') try { this.dc.send(JSON.stringify(m)); } catch {} },
+  sendFloor() {
+    if (this.role !== 'child') return;
+    this.send({ t: 'floor', floor: state.floor, seed: state.puzzleSeed, tpls: state.puzzles.map(p => p.tpl), roof: state.roofMode,
+      recovered: [...state.recovered], startDoor: world.startDoor.visible, pos: player.pos.toArray() });
+  },
+  update(dt) {
+    if (!this.dc) return;
+    const now0 = performance.now();
+    if (now0 - this.sendT > 100) { // 10 次/秒互发位置；孩子顺带发「钥匙」在哪、拿了没有
+      this.sendT = now0; const P = player.pos, m = { t: 'p', x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), yaw: +player.yaw.toFixed(2) };
+      if (this.role === 'child') {
+        m.lights = state.lightsOn;
+        m.keys = state.puzzles.filter(p => p.obj).map(p => { const v = p.obj.getWorldPosition(V(0, 0, 0));
+          return [p.id, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2), p.tpl === 'behind' && !p.obj.visible ? 0 : 1, state.keysGot.has(p.id) ? 1 : 0]; });
+      }
+      this.send(m);
+    }
+    const a = this.avatar, t = this.target;
+    if (a && t) { a.position.lerp(V(t.x, t.y, t.z), Math.min(1, dt * 8)); a.rotation.y += (((t.yaw + Math.PI - a.rotation.y) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) * Math.min(1, dt * 8); }
+    const now = performance.now();
+    for (const id in this.markers) { const mk = this.markers[id]; mk.position.y = mk.userData.y + Math.sin(now / 400) * 0.03; mk.rotation.y += dt * 0.6; }
+    this.beams = this.beams.filter(b => { const k = (now - b.t0) / 9000; b.m.material.opacity = 0.32 * (1 - k) * (0.75 + 0.25 * Math.sin(now / 160));
+      if (k >= 1) { building.remove(b.m); return false; } return true; });
+  },
+};
+function makeCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; return Array.from({ length: 4 }, () => A[Math.floor(Math.random() * A.length)]).join(''); }
+function signal(code, onMsg) {
+  const topic = `root-chrona-world-${code}`;
+  if (SIGNAL === 'local') { const bc = new BroadcastChannel(topic); bc.onmessage = e => onMsg(e.data); return { send: m => bc.postMessage(m), close: () => bc.close() }; }
+  const es = new EventSource(`https://ntfy.sh/${topic}/sse`);
+  es.onmessage = e => { try { const d = JSON.parse(e.data); if (d.event === 'message') onMsg(JSON.parse(d.message)); } catch {} };
+  return { send: m => fetch(`https://ntfy.sh/${topic}`, { method: 'POST', body: JSON.stringify(m) }).catch(() => {}), close: () => es.close() };
+}
+function iceDone(pc) {
+  return new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, 3000);
+    pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }); });
+}
+function setupChannel(dc) {
+  net.dc = dc;
+  dc.onopen = () => onNetOpen();
+  dc.onclose = () => onNetClose();
+  dc.onmessage = e => { try { onNetMsg(JSON.parse(e.data)); } catch {} };
+}
+function hostRoom() { // 孩子：开房间，等母亲来敲门
+  net.role = 'child'; net.code = makeCode();
+  net.sig = signal(net.code, async m => {
+    if (m.from === net.id) return;
+    if (m.t === 'hello' && !net.pc) {
+      const pc = net.pc = new RTCPeerConnection({ iceServers: ICE });
+      setupChannel(pc.createDataChannel('root'));
+      await pc.setLocalDescription(await pc.createOffer()); await iceDone(pc);
+      net.sig.send({ t: 'offer', from: net.id, to: m.from, sdp: pc.localDescription.sdp });
+    }
+    if (m.t === 'answer' && m.to === net.id && net.pc && !net.pc.remoteDescription) await net.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp });
+  });
+  return net.code;
+}
+function joinRoom(code, status) { // 母亲：用房间码找到孩子
+  net.role = 'mother'; net.code = code; status('Connecting…');
+  net.sig = signal(code, async m => {
+    if (m.t !== 'offer' || m.to !== net.id || net.pc) return;
+    clearInterval(net.hello);
+    const pc = net.pc = new RTCPeerConnection({ iceServers: ICE });
+    pc.ondatachannel = e => setupChannel(e.channel);
+    await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp });
+    await pc.setLocalDescription(await pc.createAnswer()); await iceDone(pc);
+    net.sig.send({ t: 'answer', from: net.id, to: m.from, sdp: pc.localDescription.sdp });
+  });
+  const hello = () => net.sig.send({ t: 'hello', from: net.id }); hello(); net.hello = setInterval(hello, 2500);
+  setTimeout(() => { if (!net.synced) status("Couldn't connect. Check the code — or play on your own."); }, 30000);
+}
+function ghostify(o, color, opacity) { // 母亲在孩子眼里：发暖光的半透明人形
+  o.traverse(m => { if (!m.isMesh) return; const mt = m.material; mt.transparent = true; mt.opacity = opacity; mt.depthWrite = false;
+    mt.emissive = new THREE.Color(color); mt.emissiveMap = mt.map; mt.emissiveIntensity = 0.9; });
+  return o;
+}
+function onNetOpen() {
+  if (net.role === 'child') {
+    const m = model('mother'); net.avatar = m ? ghostify(m, '#ffcf8a', 0.5) : group(new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), new THREE.MeshBasicMaterial({ color: '#ffd9a0', transparent: true, opacity: 0.4 })));
+    building.add(net.avatar); net.avatar.visible = false; net.sendFloor();
+    $('mpPanel').textContent = 'The mother has joined.';
+    say('…I\'m not alone in here.', 3500);
+  } else {
+    net.avatar = model('child') || group(new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), std('#5a6c86')));
+    building.add(net.avatar); net.avatar.visible = false;
+  }
+}
+function onNetClose() {
+  if (net.avatar) { building.remove(net.avatar); net.avatar = null; } net.target = null;
+  if (net.role === 'child') { net.pc = null; net.dc = null; say('…The warmth is gone again.', 3000); }   // 母亲可以重新加入
+  else { net.dc = null; say('The connection was lost.', 4000); }
+}
+function onNetMsg(m) {
+  if (m.t === 'p') { net.target = m; if (net.avatar) net.avatar.visible = true;
+    if (net.role === 'mother') {
+      if (m.lights !== undefined && m.lights !== state.lightsOn) setLights(m.lights);
+      for (const [id, x, y, z, known, taken] of m.keys || []) { const mk = net.markers[id]; if (!mk) continue; mk.position.set(x, y, z); mk.userData.y = y; mk.visible = !!known && !taken; }
+    }
+  }
+  if (m.t === 'floor' && net.role === 'mother') mirrorFloor(m);
+  if (m.t === 'say' && net.role === 'mother') say(m.text, m.ms);
+  if (m.t === 'end' && net.role === 'mother') endGame();
+  if (m.t === 'point' && net.role === 'child') showBeam(m.id);
+}
+// 母亲：按孩子发来的楼层状态重建同一层（同一个随机种子 → 同样的谜题和摆放）
+function mirrorFloor(m) {
+  const n = m.floor; state.floor = state.next = n; state.phase = n === 5 ? 'roof' : 'corridor';
+  state.roofMode = m.roof; world.stub.visible = !m.roof; roof.visible = m.roof;
+  m.recovered.forEach(k => state.recovered.add(k));
+  world.startDoor.visible = m.startDoor; world.startDoor.userData.col.enabled = m.startDoor;
+  setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, true);
+  if (n < 5) { applyContent(n); state.forceTpl = (m.tpls || []).slice(); genPuzzles(n, m.seed); state.forceTpl = []; }
+  else clearPuzzles();
+  applyRoomNotes(Math.min(n, 4)); setLook(n, !net.synced);
+  sun.position.set(...(n === 5 ? [30, 40, 20] : [0, 50, 0]));
+  for (const id in net.markers) building.remove(net.markers[id]);
+  net.markers = {};
+  for (const id of FLOORS[n]?.keys || []) {
+    const mk = makeKey(id, 'real', M.glowKey); mk.visible = false; mk.userData.y = 0;
+    mk.userData.interact = { label: () => 'E   Show them this', act: () => pointAt(id) };
+    building.add(mk); net.markers[id] = mk;
+  }
+  if (m.pos) { player.pos.set(m.pos[0] + 0.7, m.pos[1], m.pos[2] + 0.3); player.vy = 0; }
+  if (!net.synced) { net.synced = true; $('mpPanel').textContent = 'Connected.'; $('startText').textContent = 'Click to enter as the mother'; }
+}
+function pointAt(id) {
+  net.send({ t: 'point', id });
+  if (audio) sfx.chime(net.markers[id].getWorldPosition(V(0, 0, 0)));
+}
+// 孩子：母亲指着的那把「钥匙」上亮起一束暖光
+function showBeam(id) {
+  const p = state.puzzles.find(q => q.id === id); if (!p?.obj || state.keysGot.has(id)) return;
+  const v = p.obj.getWorldPosition(V(0, 0, 0));
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.3, 3.2, 12, 1, true),
+    new THREE.MeshBasicMaterial({ color: '#ffd890', transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  m.position.set(v.x, 1.5, v.z); building.add(m); net.beams.push({ m, t0: performance.now() });
+  if (audio) sfx.chime(v);
+  if (!net.told.beam) { net.told.beam = true; say('A warm light… like someone is showing me the way.', 3500); }
+}
+$('mpHost').addEventListener('click', e => {
+  e.stopPropagation(); if (net.role) return;
+  const code = hostRoom();
+  $('mpJoin').style.display = 'none'; $('mpHost').style.display = 'none';
+  $('mpPanel').innerHTML = `Room code <b>${code}</b><br>The other player opens this world, chooses “Join as the mother” and types this code. You can start now — they can join any time.`;
+});
+$('mpJoin').addEventListener('click', e => {
+  e.stopPropagation(); if (net.role) return;
+  $('mpHost').style.display = 'none'; $('mpJoin').style.display = 'none';
+  $('mpPanel').innerHTML = 'Room code <input id="mpCode" maxlength="4" autocomplete="off"> <button id="mpGo">Join</button>';
+  const go = () => { const c = $('mpCode').value.trim().toUpperCase(); if (c.length !== 4) return; joinRoom(c, t => { $('mpPanel').textContent = t; }); };
+  $('mpGo').addEventListener('click', go); $('mpCode').addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') go(); });
+  $('mpCode').focus();
+});
 
 /* =====================================================================
  * 13. 调试（?debug）：1–5 跳楼层，K 拿齐本层钥匙
@@ -1384,6 +1570,7 @@ function debugJump(n) {
   applyContent(n); applyRoomNotes(n); genPuzzles(n); setLook(n, true);
   if (n === 5) { state.phase = 'roof'; sun.position.set(30, 40, 20); player.pos.set(6, 3.2, -19); player.yaw = Math.PI / 2; }
   else { state.phase = 'corridor'; sun.position.set(0, 50, 0); spawn(); }
+  net.sendFloor();
 }
 function debugCollectAll() { (FLOORS[state.floor].keys || []).forEach(k => state.keysGot.add(k)); }
 
@@ -1394,7 +1581,8 @@ const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   updatePlayer(dt);
-  for (const p of state.puzzles) { p.update?.(dt); const led = p.obj?.userData.blink; if (led) led.material.emissiveIntensity = Math.sin(performance.now() / 180) > 0 ? 2.5 : 0; }
+  net.update(dt);
+  for (const p of state.puzzles) { if (net.role !== 'mother') p.update?.(dt); const led = p.obj?.userData.blink; if (led) led.material.emissiveIntensity = Math.sin(performance.now() / 180) > 0 ? 2.5 : 0; }
   ambience(dt); updateReveals();
   if (playing) findFocus();
   updateLook(dt);
@@ -1417,7 +1605,7 @@ function tick() {
   applyContent(1); applyRoomNotes(1); genPuzzles(1); setLook(1, true); spawn();
   if (DEBUG) {
     $('hud').style.display = 'block';
-    window.__game = { player, state, world, camera, T, Tinv, debugJump, debugCollectAll, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
+    window.__game = { player, state, world, camera, T, Tinv, net, debugJump, debugCollectAll, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
   }
   ready = true; $('startText').textContent = 'Click to enter';
   Platform.emit('ready');
