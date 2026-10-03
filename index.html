@@ -50,6 +50,7 @@
 
 <script type="module">
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
 
@@ -419,7 +420,20 @@ function buildBuilding() {
 }
 
 // 环境叙事：墙上的全家福、邻居门和搬迁通知、寻人启事、门口的拖鞋
+// 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
+const IMG = {};
+function loadImages() {
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4'];
+  return Promise.all(names.map(n => new Promise(res => {
+    const im = new Image(); im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res(); im.src = `assets/tex/${n}.jpg`;
+  })));
+}
+function imgTexture(name, { blur = 0, gray = false } = {}) {
+  const im = IMG[name]; if (!im) return null;
+  return canvasTex(256, 320, g => { g.filter = [blur && `blur(${blur}px)`, gray && 'grayscale(1)'].filter(Boolean).join(' ') || 'none'; g.drawImage(im, 0, 0, 256, 320); });
+}
 function faceTexture(faces, clear) {
+  const t = imgTexture(faces < 3 ? 'family_missing' : 'family', { blur: clear ? 0 : 6 }); if (t) return t;
   return canvasTex(128, 160, (g, w, h) => {
     g.fillStyle = '#6d6356'; g.fillRect(0, 0, w, h); g.fillStyle = '#8f8575'; g.fillRect(8, 96, w - 16, h - 104);
     [34, 64, 94].forEach((x, i) => {
@@ -433,6 +447,13 @@ function faceTexture(faces, clear) {
 function posterTexture(i) {
   return canvasTex(128, 176, (g, w, h) => {
     g.fillStyle = i % 2 ? '#e4dcc6' : '#d8cfb6'; g.fillRect(0, 0, w, h);
+    const im = IMG.age_teen;
+    if (im) { // MISSING 传单：16 岁那张照片，黑白、模糊，名字被水泡糊
+      g.fillStyle = '#3a312b'; g.font = 'bold 24px Georgia, serif'; g.textAlign = 'center'; g.fillText('MISSING', w / 2, 30);
+      g.filter = 'grayscale(1) contrast(1.15) blur(1px)'; g.drawImage(im, im.width * 0.22, im.height * 0.06, im.width * 0.56, im.height * 0.42, 24, 40, 80, 76); g.filter = 'none';
+      g.fillStyle = 'rgba(58,49,43,.55)'; for (let k = 0; k < 4; k++) g.fillRect(18, 128 + k * 11, w - 36 - (k % 2) * 18, 5);
+      return;
+    }
     g.fillStyle = '#3a312b'; g.font = 'bold 26px \'Georgia\',\'Times New Roman\',serif'; g.textAlign = 'center'; g.fillText('MISSING', w / 2, 36);
     g.filter = 'blur(2px)'; g.beginPath(); g.arc(w / 2, 78, 16, 0, 7); g.fill(); g.fillRect(w / 2 - 20, 94, 40, 30); g.filter = 'none';
     g.fillStyle = 'rgba(58,49,43,.5)'; for (let k = 0; k < 3; k++) g.fillRect(20, 136 + k * 12, w - 40 - k * 14, 5);
@@ -818,8 +839,50 @@ function interactable(obj, label, act) { obj.userData.interact = { label, act };
 function hitSphere(obj, r = 0.25, y = 0.1) { const h = new THREE.Mesh(new THREE.SphereGeometry(r, 6, 4), proxyMat); h.visible = false; h.position.y = y; obj.add(h); }
 
 // 「钥匙」外形。variant = 'real'（和母亲的痕迹对得上）/ 'fake'（真假谜题里的假货）
+// Meshy 模型（assets/*.glb）：载入后按目标尺寸缩放，底部中心对齐原点；载不到就退回灰盒形状
+const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, tickets: { w: 0.16 }, machine: { w: 0.26 },
+  housekey: { h: 0.2 }, can: { h: 0.24 } };
+const MODELS = {};
+function loadModels() {
+  const loader = new GLTFLoader();
+  return Promise.all(Object.keys(MODEL_SIZE).map(k => new Promise(res => loader.load(`assets/${k}.glb`, gl => {
+    const o = gl.scene, s = MODEL_SIZE[k], bb = new THREE.Box3().setFromObject(o), sz = bb.getSize(V(0, 0, 0)), c = bb.getCenter(V(0, 0, 0));
+    const f = s.h ? s.h / sz.y : s.w / Math.max(sz.x, sz.z);
+    o.scale.setScalar(f); o.position.set(-c.x * f, -bb.min.y * f, -c.z * f);
+    o.traverse(m => { if (m.isMesh) { m.material.roughness = 1; m.material.metalness = 0; } });
+    MODELS[k] = { obj: group(o), size: sz.multiplyScalar(f) }; res();
+  }, undefined, () => res()))));
+}
+// 复制一份模型（材质也复制，方便单独改发光）；glow：让整件东西微微发光（真货的台灯、关灯谜题里的「钥匙」）
+function model(id, glow = 0, color = '#ffd9a0') {
+  const t = MODELS[id]; if (!t) return null;
+  const o = t.obj.clone(true);
+  o.traverse(m => { if (!m.isMesh) return; m.material = m.material.clone();
+    if (glow) { m.material.emissive = new THREE.Color(color); m.material.emissiveMap = m.material.map; m.material.emissiveIntensity = glow; } });
+  return o;
+}
+
 function makeKey(id, variant = 'real', mat = M.key) {
   const real = variant === 'real', g = new THREE.Group(), b = (w, h, d, x = 0, y = 0, z = 0, m = mat) => box(w, h, d, m, x, y, z, g);
+  const glowing = mat === M.glowKey, S = MODELS[id]?.size;
+  const glb = id === 'poster' || (id === 'tickets' && !real) ? null : model(id, glowing ? 1.3 : id === 'lamp' && real ? 0.9 : 0, glowing ? '#fff4d0' : '#ffcf70');
+  if (glb) {
+    g.add(glb);
+    if (id === 'photo') { // 相框里的画面换成游戏自己的贴图：真的缺一张脸
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(S.x * 0.62, S.y * 0.62), new THREE.MeshStandardMaterial({ map: faceTexture(real ? 2 : 3, true), roughness: 1 }));
+      pic.position.set(0, S.y * 0.53, S.z * 0.5 + 0.004); pic.rotation.x = -0.12; g.add(pic);
+    }
+    if (id === 'lamp' && real) { const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.03, 0), std('#fff', { emissive: '#ffe0a0', emissiveIntensity: 2.5 })); bulb.position.y = S.y * 0.62; g.add(bulb); }
+    if (id === 'machine') { const led = b(0.016, 0.008, 0.016, S.x * 0.32, S.y + 0.002, S.z * 0.3, real ? std('#f33', { emissive: '#f22', emissiveIntensity: 2 }) : M.dark); if (real) g.userData.blink = led; }
+    if (id === 'lamp' && !real) glb.traverse(m => { if (m.isMesh) m.material.color.multiplyScalar(0.55); });   // 灭着：灯罩发灰
+    if (id === 'radio') g.userData.crackle = real;
+    if (id === 'housekey' && real) { b(0.13, 0.035, 0.02, 0, S.y + 0.01, -0.01, std('#b8913a', { metalness: 0.3 })); }   // 系在信箱口的黄铜盖板后面
+    if (id === 'housekey' && !real) { glb.rotation.x = -Math.PI / 2; glb.position.y = 0.01; }   // 假的：随手扔在台面
+    if (id === 'can' && real) { const w = std('#7cc3e6', { emissive: '#2a6f93', emissiveIntensity: 0.4 }); for (let i = 0; i < 3; i++) { const d = new THREE.Mesh(new THREE.IcosahedronGeometry(0.012, 0), w); d.position.set(-S.x * 0.5, S.y * 0.6 - i * 0.05, 0); g.add(d); } }
+    if (id === 'can' && !real) glb.traverse(m => { if (m.isMesh) m.material.color.multiplyScalar(0.8); });   // 空的：颜色发干
+    hitSphere(g, 0.28, 0.12);
+    return g;
+  }
   switch (id) {
     case 'photo': { // 真：缺一张脸；假：三个人都在
       const f = b(0.34, 0.44, 0.03, 0, 0.22, 0); f.rotation.x = -0.18;
@@ -996,6 +1059,7 @@ const TEMPLATES = {
 };
 // 顺序谜题的画：孩子画的种子→发芽→小树→大树；或照片：婴儿→小孩→少年→空着（离家了）
 function storyTexture(kind, step) {
+  const t = imgTexture(kind === 'tree' ? `tree_${step + 1}` : ['age_baby', 'age_kid', 'age_teen', 'age_empty'][step]); if (t) return t;
   return canvasTex(128, 160, (g, w, h) => {
     if (kind === 'tree') {
       g.fillStyle = '#efe6cf'; g.fillRect(0, 0, w, h); g.lineCap = 'round';
@@ -1305,7 +1369,8 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
-(() => {
+(async () => {
+  await Promise.all([loadModels(), loadImages()]);
   buildBuilding(); buildRoof();
   state.prevFloor = 1;
   setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, false);

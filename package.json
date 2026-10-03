@@ -7,6 +7,8 @@
     "meshy": "node tools/meshy/generate.mjs"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
+    "sharp": "^0.35.5",
     "three": "0.169.0"
   }
 }
