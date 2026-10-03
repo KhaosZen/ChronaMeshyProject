@@ -280,6 +280,11 @@ const ANCHORS = [
 const bulbMats = [];
 function lampVisual(parent, x, z, idx) {
   bulbMats[idx] = bulbMats[idx] || std('#fff', { emissive: '#ffffff', emissiveIntensity: 1 });
+  const pend = model('pendant');
+  if (pend) { // 金属罩吊灯；灯泡用自己的发光材质，开关灯时跟着变
+    pend.position.y = -0.02; const g = group(pend), bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), bulbMats[idx]);
+    bulb.position.y = 0.02; g.add(bulb); g.position.set(x, H - 0.6, z); parent.add(g); return;
+  }
   const g = group(box(0.01, 0.6, 0.01, M.trim, 0, 0.3, 0),
     new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.18, 6, 1, true), std('#3a3a3a', { side: THREE.DoubleSide })));
   g.children[1].position.y = -0.05;
@@ -505,6 +510,8 @@ function buildRuins() {
   const sc = world.telescope = new THREE.Group(), dark = std('#2b2b2b');
   for (let i = 0; i < 3; i++) { const l = box(0.03, 1.3, 0.03, dark, Math.sin(i * 2.1) * 0.22, 0.62, Math.cos(i * 2.1) * 0.22, sc); l.rotation.set(-Math.cos(i * 2.1) * 0.17, 0, Math.sin(i * 2.1) * 0.17); }
   const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, 0.6, 8), std('#9a8a6a')); tube.rotation.x = Math.PI / 2 - 0.12; tube.position.set(0, 1.32, 0.05); sc.add(tube);
+  const tm = model('telescope');
+  if (tm) { sc.clear(); tm.rotation.y = Math.PI / 2; sc.add(tm); }   // 模型的镜筒朝 -x，转到朝 +z（窗外）
   hitSphere(sc, 0.4, 1.2); sc.visible = false; building.add(sc); permTargets.push(sc);
 }
 async function lookThroughScope(w) {
@@ -656,27 +663,38 @@ function buildRoof() {
     for (let k = 0; k < 3; k++) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 6, 1), cloudMat); s.position.set(k * 8, rng() * 2, rng() * 4); s.scale.y = 0.45; c.add(s); }
     c.position.set(12 + Math.cos(a) * d, 45 + rng() * 30, -9 + Math.sin(a) * d); R.add(c);
   }
-  for (let i = 0; i < 7; i++) { // 远处歪斜的废楼，楼顶也长出了树
-    const a = i / 7 * Math.PI * 2 + 0.4, d = 110 + rng() * 70, h = 26 + rng() * 22, g = new THREE.Group();
+  const far = ['farHouseA', 'farChurch', 'farHouseB', 'farMill', 'farHouseC', 'farHouseA', 'farHouseB', 'farHouseC', 'farHouseA', 'farHouseB', 'farMill', 'farHouseC'];
+  for (let i = 0; i < far.length; i++) { // 远处半淹在海里的街屋、教堂尖塔、风车
+    const a = i / far.length * Math.PI * 2 + 0.4, d = 90 + rng() * 90, fm = model(far[i]);
+    if (fm) { fm.position.set(12 + Math.cos(a) * d, -6 - MODEL_SIZE[far[i]].h * (0.2 + rng() * 0.2), -9 + Math.sin(a) * d); fm.rotation.set((rng() - 0.5) * 0.12, rng() * 6.3, (rng() - 0.5) * 0.12); R.add(fm); continue; }
+    const h = 26 + rng() * 22, g = new THREE.Group();
     box(14, h, 14, std('#9a9486'), 0, h / 2, 0, g);
     const t = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 4, 1), leafMat); t.position.y = h + 3; g.add(t);
     g.position.set(12 + Math.cos(a) * d, -26, -9 + Math.sin(a) * d); g.rotation.set((rng() - 0.5) * 0.3, rng() * 3, (rng() - 0.5) * 0.3); R.add(g);
   }
   // 结局：天台上孤零零立着一扇自家的门，虚掩着，门缝里透出白光；穿过去就是回家
   const portal = new THREE.Group(); portal.position.set(1.3, Y, -9); R.add(portal); world.portal = portal;
+  const hd = model('homeDoor');
+  if (hd) { // 模型是关着的门：门后放一块更大的白光板，光从门框四周漏出来
+    hd.rotation.y = Math.PI; portal.add(hd);
+    const S = MODELS.homeDoor.size, glow = new THREE.Mesh(new THREE.PlaneGeometry(S.x + 0.18, S.y + 0.12), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide }));
+    glow.position.set(0, S.y / 2, S.z / 2 + 0.03); portal.add(glow);
+  } else {
   const frameMat = std('#8a6a4a'), doorMat = std('#a8794c');
   box(0.1, 2.25, 0.16, frameMat, -0.55, 1.125, 0, portal); box(0.1, 2.25, 0.16, frameMat, 0.55, 1.125, 0, portal); box(1.2, 0.1, 0.16, frameMat, 0, 2.2, 0, portal);
   const light = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.15), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide }));
   light.position.set(0, 1.075, 0.02); portal.add(light);
   const leaf = new THREE.Group(); leaf.position.set(-0.5, 0, -0.05); leaf.rotation.y = 0.9; portal.add(leaf);  // 朝玩家开了一道缝
   box(1.0, 2.13, 0.05, doorMat, 0.5, 1.065, 0, leaf); box(0.04, 0.12, 0.06, std('#d9d2c0'), 0.88, 1.05, 0.04, leaf);
+  }
   // 门旁被撑裂的空花盆：母亲种下种子的那一盆，一条细根从里面爬过天井矮墙，连到大树
-  const potMat = std('#b8684a');
-  for (const [dx, rz] of [[-0.09, 0.35], [0.09, -0.3]]) {
+  const potMat = std('#b8684a'), pm = model('potCracked');
+  if (pm) { pm.position.set(2.2, Y, -9.7); pm.rotation.y = 2.4; R.add(pm); }
+  else for (const [dx, rz] of [[-0.09, 0.35], [0.09, -0.3]]) {
     const half = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.14, 0.32, 8, 1, true, dx < 0 ? 0 : Math.PI, Math.PI), std('#b8684a', { side: THREE.DoubleSide }));
     half.position.set(2.2 + dx, Y + 0.15, -9.7); half.rotation.set(0, Math.PI / 2, rz); R.add(half);
   }
-  box(0.3, 0.03, 0.3, potMat, 2.2, Y + 0.015, -9.7, R);
+  if (!pm) box(0.3, 0.03, 0.3, potMat, 2.2, Y + 0.015, -9.7, R);
   R.add(taperedTube([V(2.2, Y + 0.08, -9.7), V(2.6, Y + 0.03, -9.3), V(2.95, Y + 1.05, -8.8), V(3.6, Y + 0.6, -8.4), V(6, Y - 1, -7.6), V(10.6, Y - 2, -7.6)], 0.035, 0.12, std('#6b4b30'), 20, 5));
   R.visible = false;
 }
@@ -841,7 +859,8 @@ function hitSphere(obj, r = 0.25, y = 0.1) { const h = new THREE.Mesh(new THREE.
 // 「钥匙」外形。variant = 'real'（和母亲的痕迹对得上）/ 'fake'（真假谜题里的假货）
 // Meshy 模型（assets/*.glb）：载入后按目标尺寸缩放，底部中心对齐原点；载不到就退回灰盒形状
 const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, tickets: { w: 0.16 }, machine: { w: 0.26 },
-  housekey: { h: 0.2 }, can: { h: 0.24 } };
+  housekey: { h: 0.2 }, can: { h: 0.24 }, pendant: { h: 0.62 }, homeDoor: { h: 2.3 }, potCracked: { h: 0.34 }, telescope: { h: 1.35 },
+  farHouseA: { h: 16 }, farHouseB: { h: 15 }, farHouseC: { h: 12 }, farChurch: { h: 34 }, farMill: { h: 20 } };
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
