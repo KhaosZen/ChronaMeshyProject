@@ -29,8 +29,7 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
 for (const f of ['build/three.module.min.js', 'examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/utils/BufferGeometryUtils.js'])
   copy(path.join(THREE, f), path.join(OUT, 'vendor/three', f));
-for (const f of fs.readdirSync(path.join(ROOT, 'assets')).filter(f => !f.startsWith('.')))
-  copy(path.join(ROOT, 'assets', f), path.join(OUT, 'assets', f));
+fs.cpSync(path.join(ROOT, 'assets'), path.join(OUT, 'assets'), { recursive: true, filter: f => !path.basename(f).startsWith('.') });
 
 execFileSync('zip', ['-qr', ZIP, '.'], { cwd: OUT });
 console.log(`✓ ${path.relative(ROOT, ZIP)}  ${(fs.statSync(ZIP).size / 1024 / 1024).toFixed(2)} MiB`);
