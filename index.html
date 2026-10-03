@@ -483,7 +483,10 @@ function buildStoryProps() {
   [[-6.6, 1.5], [-7.9, 1.7], [-12, 1.4]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 9), 21.02, y, z, Math.PI / 2)));
   [[-3.5, 1.6], [-9.5, 1.5], [-14, 1.7]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 12), 23.98, y, z, -Math.PI / 2)));
   world.slippers = new THREE.Group(); // 4 楼：房间门口两双拖鞋
-  for (const [x, c] of [[22.05, '#c98f86'], [22.95, '#8fa7c4']]) for (const dx of [-0.08, 0.08]) box(0.1, 0.04, 0.26, std(c), x + dx, 0.02, -15.4, world.slippers);
+  for (const [x, c] of [[22.05, '#c98f86'], [22.95, '#8fa7c4']]) {
+    const sm = model('slippers'); if (sm) { sm.position.set(x, 0, -15.4); sm.rotation.y = Math.PI; world.slippers.add(sm); continue; }
+    for (const dx of [-0.08, 0.08]) box(0.1, 0.04, 0.26, std(c), x + dx, 0.02, -15.4, world.slippers);
+  }
   building.add(world.slippers);
 }
 // 窗外雾里的废楼（3 楼起看得见）+「窗外」谜题用的窗、望远镜
@@ -578,6 +581,14 @@ function buildFurniture(a) {
     case 'bench': deco(1.2, 0.45, 0.35, 0, 0.225, 0, M.furn); res.top = 0.45; break;
     case 'lowCabinet': cab(0.9, 0.7, 0.4); break;
   }
+  // 有 Meshy 模型就换掉灰盒形状；res.top = 放「钥匙」的台面高度
+  const fm = model(a.furn === 'cabinet' ? 'lowCabinet' : a.furn);
+  if (fm) {
+    g.clear(); const S = MODELS[a.furn === 'cabinet' ? 'lowCabinet' : a.furn].size;
+    if (a.furn === 'shelf') { fm.position.y = 1.0; res.top = 1.0 + S.y * 0.42; } else res.top = S.y;
+    if (a.furn === 'cabinet') fm.scale.setScalar(0.8 / 0.9);
+    g.add(fm);
+  }
   const bb = new THREE.Box3().setFromObject(g);
   if (a.furn !== 'shelf') collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, bb.max.y);
   return res;
@@ -634,6 +645,11 @@ function buildCourtyard() {
   // 大树：从水下长上来，高过楼顶；整棵树按楼层上下移动（站在 n 楼，看到的是这一段）
   const tree = world.tree = new THREE.Group(); building.add(tree);
   const T0 = TREE;
+  if (MODELS.treeTrunk && MODELS.treeCrown) { // Meshy：几段树干从水下接到楼顶以上，顶上是树冠
+    for (let i = 0; i < 6; i++) { const seg = model('treeTrunk'); seg.position.set(T0.x, -24 + i * 6.2, T0.z); seg.rotation.y = i * 1.7; tree.add(seg); }
+    const crown = model('treeCrown'); crown.position.set(T0.x, 8.5, T0.z); tree.add(crown);
+    return;
+  }
   tree.add(taperedTube([V(T0.x, -24, T0.z), V(T0.x + 0.4, -8, T0.z - 0.4), V(T0.x - 0.2, 4, T0.z + 0.3), V(T0.x + 0.2, 12, T0.z - 0.2), V(T0.x, 18, T0.z)], 1.7, 0.55, M.root, 16, 9));
   const rng = mulberry32(11);
   for (let i = 0; i < 6; i++) {
@@ -860,7 +876,9 @@ function hitSphere(obj, r = 0.25, y = 0.1) { const h = new THREE.Mesh(new THREE.
 // Meshy 模型（assets/*.glb）：载入后按目标尺寸缩放，底部中心对齐原点；载不到就退回灰盒形状
 const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, tickets: { w: 0.16 }, machine: { w: 0.26 },
   housekey: { h: 0.2 }, can: { h: 0.24 }, pendant: { h: 0.62 }, homeDoor: { h: 2.3 }, potCracked: { h: 0.34 }, telescope: { h: 1.35 },
-  farHouseA: { h: 16 }, farHouseB: { h: 15 }, farHouseC: { h: 12 }, farChurch: { h: 34 }, farMill: { h: 20 } };
+  farHouseA: { h: 16 }, farHouseB: { h: 15 }, farHouseC: { h: 12 }, farChurch: { h: 34 }, farMill: { h: 20 },
+  shoeCabinet: { w: 1.0 }, sideTable: { w: 0.55 }, shelf: { w: 1.1 }, boxes: { w: 0.6 }, phoneTable: { w: 0.5 }, bench: { w: 1.2 },
+  lowCabinet: { w: 0.9 }, slippers: { w: 0.32 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 } };
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
@@ -1005,14 +1023,17 @@ const TEMPLATES = {
     interactable(o, takeLabel(id), () => takeKey(o, id));
     return { obj: o, onLights(on) { if (!state.keysGot.has(id)) o.visible = !on; } };
   } },
-  sound: { anchors: 1, needsCabinet: true, build(id, [r]) {
-    const cab = r.cabinet, o = makeKey(id); o.visible = false;
-    o.position.set(0.1, 0.25, 0); r.group.add(o);
-    const body = r.group.children[0];
-    interactable(body, () => cab.open ? '' : 'E   Open the cabinet', () => { cab.open = true; cab.leaf.rotation.y = -1.6; o.visible = true; stopSound(snd); });
+  // 循声：听得见提示音，声源是家具上一只盖着的小铁盒；打开盖子，「钥匙」在里面
+  sound: { anchors: 1, build(id, [r]) {
+    const tin = placeAt(group(box(0.36, 0.16, 0.26, std('#6d7f8a'), 0, 0.08, 0)), r, -0.05);
+    const lid = box(0.38, 0.03, 0.28, std('#8a9ba5'), 0, 0.175, 0, tin); hitSphere(tin, 0.28, 0.1);
+    const o = makeKey(id); o.visible = false; o.scale.setScalar(0.7); o.position.set(0, 0.17, 0); tin.add(o);
+    interactable(tin, () => lid.userData.open ? '' : 'E   Open the tin', () => {
+      lid.userData.open = true; lid.rotation.x = -1.3; lid.position.set(0, 0.26, -0.14); o.visible = true; stopSound(snd);
+    });
     interactable(o, takeLabel(id), () => takeKey(o, id));
-    const snd = startSound(anchorTop(r, 0));
-    return { obj: o, cab: body, cleanup() { stopSound(snd); cab.open = false; cab.leaf.rotation.y = 0; r.group.remove(o); body.userData.interact = null; } };
+    const snd = startSound(anchorTop(r, -0.05));
+    return { obj: o, cab: tin, cleanup() { stopSound(snd); } };
   } },
   combo: { anchors: 2, keyAt: 1, build(id, [r1, r2]) {
     const tool = placeAt(makeKey('tool'), r1, 0.25); let hasTool = false;
@@ -1116,7 +1137,7 @@ function genPuzzles(n) {
   // 放「钥匙」的那个点优先选跟它有关的摆放点；其余（假货、把手）随便放
   const take = (Tp, id) => {
     if (!Tp.anchors) return [];
-    const ok = r => !Tp.needsCabinet || r.cabinet;
+    const ok = () => true;
     let i = free.findIndex(r => ok(r) && KEY_SPOTS[id].includes(r.a.id)); if (i < 0) i = free.findIndex(ok); if (i < 0) return null;
     const main = free.splice(i, 1)[0], rest = free.splice(0, Tp.anchors - 1);
     if (rest.length < Tp.anchors - 1) return null;

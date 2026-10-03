@@ -71,5 +71,33 @@
     "preview": "01a0ffcf-4e49-7268-9076-4f19a2fd0de6",
     "refine": "01a0ffd0-20ec-7751-a6a2-48b2c1882ce1",
     "done": true
+  },
+  "shoeCabinet": {
+    "image": "01a0ffdf-751f-72c4-8c11-b0c342031479",
+    "done": true
+  },
+  "sideTable": {
+    "image": "01a0ffdf-7559-7766-ab95-2660775a3214",
+    "done": true
+  },
+  "shelf": {
+    "image": "01a0ffdf-7590-702c-a3d2-e610a91d09a7",
+    "done": true
+  },
+  "boxes": {
+    "image": "01a0ffdf-751c-756b-a068-4ed4b05ccbfa",
+    "done": true
+  },
+  "phoneTable": {
+    "image": "01a0ffe0-6e82-7788-8f7f-3ea4e4836ba5"
+  },
+  "bench": {
+    "image": "01a0ffe0-71cf-73e2-aad5-496686efd217"
+  },
+  "lowCabinet": {
+    "image": "01a0ffe0-c411-72e8-8488-7fe77b3097c0"
+  },
+  "slippers": {
+    "image": "01a0ffe0-e227-7676-a647-48e65d313dcb"
   }
 }
