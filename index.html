@@ -23,6 +23,7 @@
   #end { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 22px; color: #3a3530; }
   #end .t { font-size: 26px; letter-spacing: .8em; }
   #end #stats { font-size: 15px; letter-spacing: .2em; opacity: .75; }
+  #scope { background: radial-gradient(circle at 50% 50%, transparent 0 33vmin, #000 34vmin); opacity: 0; transition: opacity .5s; }
   #hud { inset: 8px auto auto 8px; font: 12px/1.5 ui-monospace, monospace; color: #9f9; white-space: pre; display: none; }
 </style>
 <!-- Three.js 走 CDN；npm run pack 打包时会换成 ZIP 内的本地文件 -->
@@ -42,6 +43,7 @@
 <div id="crosshair"></div>
 <div id="prompt" class="layer"></div>
 <div id="subtitle" class="layer"></div>
+<div id="scope" class="layer"></div>
 <div id="fade" class="layer"></div>
 <div id="end" class="layer"><div class="t">回 家</div><div id="stats"></div></div>
 <div id="hud" class="layer"></div>
@@ -59,12 +61,12 @@ const CFG = {
   gravity: 20, stepHeight: 0.45, lookSens: 0.0022, reach: 2.3,
 };
 
-// 每层要找的「钥匙」和可用的谜题模板（数门、顺序、窗外尚未实现）
+// 每层要找的「钥匙」和可用的谜题模板
 const FLOORS = {
   1: { keys: ['photo'], pool: ['misplaced'] },
   2: { keys: ['cup', 'radio'], pool: ['misplaced', 'twin', 'behind', 'dark'] },
-  3: { keys: ['poster', 'tickets', 'machine'], pool: ['twin', 'behind', 'dark', 'sound', 'combo'] },
-  4: { keys: ['housekey', 'can'], pool: ['sound', 'combo'] },
+  3: { keys: ['poster', 'tickets', 'machine'], pool: ['twin', 'behind', 'dark', 'sound', 'doors', 'combo', 'window'] },
+  4: { keys: ['housekey', 'can'], pool: ['sound', 'doors', 'combo', 'order', 'window'] },
   5: { rooftop: true },
 };
 // name：交互提示；text：拿到时的字幕；note：过渡房间墙上对应的便条（没拿到时字迹模糊）
@@ -247,6 +249,7 @@ function solid(ctx, x0, x1, y0, y1, z0, z1, mat, collide = true) {
 /* =====================================================================
  * 6. 关卡（单位：米）
  *   走廊 A：x 0→24，z 0→3；转角后走廊 B：x 21→24，z 0→-16；过渡房间 x 18.5→26.5，z -16→-22
+ *   走廊走在内圈，围着天井（x 3→20.8，z -15→-0.2，正中是大树）；外侧是邻居家的门，转角两扇窗朝海
  *   入口楼梯（局部坐标）：从 z=-10 的门（关着）起，沿 +z 升 3 米，从北墙开口进入走廊 A 起点
  *   出口楼梯 = 入口楼梯经 T 变换，从房间西门起沿 -x 升 3 米；顶端是 T 变换后的"下一层起点"复制品
  *   玩家爬到出口楼梯一半时，被移到入口楼梯的同一位置 —— 看到的东西完全一样，所以没有切换感
@@ -320,6 +323,18 @@ function buildStart(ctx, isStub) {
   }
 }
 
+// 一面墙，开若干门窗洞 [a, b, 洞底, 洞顶]；alongX：墙沿 x 走、厚度在 z 的 [w0, w1]，否则反过来
+function wallRun(alongX, w0, w1, s0, s1, holes) {
+  const seg = (a, b, y0, y1, col) => alongX ? solid(ctxA, a, b, y0, y1, w0, w1, M.wall, col) : solid(ctxA, w0, w1, y0, y1, a, b, M.wall, col);
+  let s = s0;
+  for (const [a, b, lo, hi] of holes) {
+    if (a > s) seg(s, a, -0.2, H, true);
+    if (lo > 0) seg(a, b, -0.2, lo, true);   // 窗台
+    seg(a, b, hi, H, false); s = b;
+  }
+  if (s1 > s) seg(s, s1, -0.2, H, true);
+}
+
 function buildBuilding() {
   const B = building, c = ctxA;
   world.signMat = new THREE.MeshStandardMaterial({ roughness: 1 });
@@ -340,21 +355,11 @@ function buildBuilding() {
   walkQuad(c, [0, 0, 0], [24, 0, 0], [24, 0, 3], [0, 0, 3]);
   walkQuad(c, [21, 0, -16.3], [24, 0, -16.3], [24, 0, 0], [21, 0, 0]);
   walkQuad(c, [18.5, 0, -22], [26.5, 0, -22], [26.5, 0, -16.2], [18.5, 0, -16.2]);
-  solid(c, 5, 21, -0.2, H, -0.2, 0, M.wall);                                  // A 北墙
-  const winA = [[6, 7.5], [13, 14.5]], winB = [[-12.5, -11], [-6.5, -5]];
-  let xs = 5; for (const [a, b] of [...winA, [24.2, 24.2]]) {
-    solid(c, xs, a, 0, H, 3, 3.2, M.wall, false);
-    if (a < 24) { solid(c, a, b, 0, 0.9, 3, 3.2, M.wall, false); solid(c, a, b, 2.1, H, 3, 3.2, M.wall, false); }
-    xs = b;
-  }
-  collider(5, 24.2, 3, 3.2);
-  let zs = -16; for (const [a, b] of [...winB, [3.2, 3.2]]) {
-    solid(c, 24, 24.2, 0, H, zs, a, M.wall, false);
-    if (a < 3) { solid(c, 24, 24.2, 0, 0.9, a, b, M.wall, false); solid(c, 24, 24.2, 2.1, H, a, b, M.wall, false); }
-    zs = b;
-  }
-  collider(24, 24.2, -16, 3.2);
-  solid(c, 20.8, 21, -0.2, H, -16, 0, M.wall);
+  // 走廊走在内圈：内侧（A 北墙、B 西墙）开窗看天井里的大树；外侧（A 南墙、B 东墙）是邻居家的门；转角两扇窗朝海
+  wallRun(true, -0.2, 0, 5, 21, [[6.6, 8.1, 0.9, 2.1], [9.8, 11.3, 0.9, 2.1], [15.4, 16.9, 0.9, 2.1]]);
+  wallRun(true, 3, 3.2, 5, 24.2, [[5.9, 6.9, 0, DOOR_H], [13.1, 14.1, 0, DOOR_H], [21.75, 23.25, 0.9, 2.1]]);
+  wallRun(false, 20.8, 21, -16, 0, [[-3.9, -2.4, 0.9, 2.1], [-11.5, -10, 0.9, 2.1]]);
+  wallRun(false, 24, 24.2, -16, 3.2, [[-12.7, -11.7, 0, DOOR_H], [0.2, 1.45, 0.9, 2.1]]);
   box(16, 0.1, 0.03, M.trim, 13, 0.05, 0.015, B); box(19, 0.1, 0.03, M.trim, 14.5, 0.05, 2.985, B);
 
   // --- 过渡房间：南墙入口门、西墙出口门（门外就是出口楼梯）
@@ -367,6 +372,8 @@ function buildBuilding() {
   world.entranceLeaf.userData.col = collider(21.9, 23.1, -16.25, -15.95, 0, H);
   world.farLeaf = box(0.06, 2.2, 1.2, M.trim, 18.4, 1.1, -19, B);
   world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H);
+  world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? 'E　开门' : '', act: openFarDoor };
+  permTargets.push(world.farLeaf);
   // 过渡房间逐层"恢复"：1 楼空着，2 楼有桌子，3 楼有椅子，4 楼两把椅子和一瓶花
   const rf = world.roomFurn = {
     table: box(1.4, 0.75, 0.8, M.furn, 24.6, 0.375, -20.4, B), chair: box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B),
@@ -405,7 +412,7 @@ function buildBuilding() {
   permTargets.push(sw);
 
   for (const a of ANCHORS) world.anchors.push(buildFurniture(a));
-  buildStoryProps();
+  buildStoryProps(); buildRuins(); buildCourtyard();
   world.sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), M.sea);
   world.sea.rotation.x = -Math.PI / 2; world.sea.position.set(12, -6, 0); scene.add(world.sea);
   buildGreenery();
@@ -437,24 +444,89 @@ function wallPlane(w, h, map, x, y, z, rotY) {
 }
 function buildStoryProps() {
   world.photos = [];
-  for (const [x, z, r] of [[7.5, 0.03, 0], [11, 0.03, 0], [10, 2.97, Math.PI], [16.5, 2.97, Math.PI]]) {
+  for (const [x, z, r] of [[9.0, 0.03, 0], [14.4, 0.03, 0], [10, 2.97, Math.PI], [16.5, 2.97, Math.PI]]) {
     const f = box(0.44, 0.54, 0.03, M.trim, x, 1.65, z + (r ? 0.015 : -0.015), building); f.rotation.y = r;
     world.photos.push(wallPlane(0.34, 0.44, faceTexture(3, false), x, 1.65, z + (r ? -0.01 : 0.01), r));
   }
-  world.notices = [];
-  for (const x of [8.5, 17]) { // 邻居家的门（摆设），2 楼起贴着搬迁通知
-    box(1.1, 2.3, 0.04, M.trim, x, 1.15, 0.02, building); box(0.96, 2.16, 0.02, M.furn, x, 1.1, 0.05, building);
-    world.notices.push(wallPlane(0.3, 0.38, textTexture(['搬 迁', '通 知'], { w: 128, h: 160, font: 34, bg: '#e9e4d6' }), x + 0.15, 1.5, 0.065, 0));
-  }
+  world.notices = []; world.doors = [];
+  for (const [x, z, ry] of [[6.4, 3, Math.PI], [13.6, 3, Math.PI], [24, -12.2, -Math.PI / 2]]) world.doors.push(buildNeighborDoor(x, z, ry));
   world.posters = [];
-  const P = [[6.3, 1.5, 0.02, 0], [9.7, 1.7, 0.02, 0], [12, 1.4, 0.02, 0], [14.8, 1.6, 0.02, 0], [19.5, 1.5, 0.02, 0],
+  const P = [[6.3, 1.5, 0.02, 0], [18.2, 1.7, 0.02, 0], [12, 1.4, 0.02, 0], [14.95, 1.6, 0.02, 0], [19.5, 1.5, 0.02, 0],
     [8.5, 1.5, 2.98, Math.PI], [12.2, 1.6, 2.98, Math.PI], [15.5, 1.5, 2.98, Math.PI], [19.8, 1.7, 2.98, Math.PI]];
   P.forEach(([x, y, z, r], i) => { const m = wallPlane(0.3, 0.41, posterTexture(i), x, y, z, r); m.rotation.z = (i % 3 - 1) * 0.05; world.posters.push(m); });
-  [[-3, 1.5], [-7.5, 1.7], [-10.5, 1.4]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 9), 21.02, y, z, Math.PI / 2)));
+  [[-6.6, 1.5], [-7.9, 1.7], [-12, 1.4]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 9), 21.02, y, z, Math.PI / 2)));
   [[-3.5, 1.6], [-9.5, 1.5], [-14, 1.7]].forEach(([z, y], i) => world.posters.push(wallPlane(0.3, 0.41, posterTexture(i + 12), 23.98, y, z, -Math.PI / 2)));
   world.slippers = new THREE.Group(); // 4 楼：房间门口两双拖鞋
   for (const [x, c] of [[22.05, '#c98f86'], [22.95, '#8fa7c4']]) for (const dx of [-0.08, 0.08]) box(0.1, 0.04, 0.26, std(c), x + dx, 0.02, -15.4, world.slippers);
   building.add(world.slippers);
+}
+// 窗外雾里的废楼（3 楼起看得见）+「窗外」谜题用的窗、望远镜
+function buildRuins() {
+  world.ruins = []; world.windows = [];
+  const body = std('#8f8a7e', { emissive: '#2c2924' }), holeMat = std('#2a2c2e'), litMat = new THREE.MeshBasicMaterial({ color: '#ffd98a', fog: false });
+  const ruin = (x, z, ry, tilt) => {
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.set(0, ry, tilt); building.add(g); world.ruins.push(g);
+    box(14, 40, 10, body, 0, -10, 0, g);
+    for (let i = -2; i <= 2; i++) for (let k = 0; k < 4; k++) box(1.4, 1.2, 0.1, holeMat, i * 2.8, -2.2 + k * 3.2, -5.02, g);
+    const t = new THREE.Mesh(new THREE.IcosahedronGeometry(5, 1), std('#5f8f45')); t.position.set(-2, 12, 0); g.add(t);
+    g.updateMatrixWorld(); return g;
+  };
+  const S = ruin(25.3, 41, 0, 0.04), E = ruin(62, -1.975, Math.PI / 2, -0.03);
+  for (const [g, lx, center, dir, scopeAt, sill] of [   // 转角朝海的两扇窗
+    [S, -2.8, V(22.5, 1.5, 3.1), V(0, 0, 1), V(22.5, 0, 2.4), V(23.0, 0.9, 3.1)],
+    [E, -2.8, V(24.1, 1.5, 0.825), V(1, 0, 0), V(23.35, 0, 0.825), V(24.1, 0.9, 1.25)],
+  ]) {
+    const lit = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), litMat); lit.position.set(lx, 4.2, -5.12); lit.rotation.y = Math.PI; g.add(lit);
+    lit.visible = false; g.updateMatrixWorld();
+    world.windows.push({ lit, litPos: lit.getWorldPosition(V(0, 0, 0)), center, dir, scopeAt, sill });
+  }
+  // 望远镜：三脚架 + 镜筒，朝 +z
+  const sc = world.telescope = new THREE.Group(), dark = std('#2b2b2b');
+  for (let i = 0; i < 3; i++) { const l = box(0.03, 1.3, 0.03, dark, Math.sin(i * 2.1) * 0.22, 0.62, Math.cos(i * 2.1) * 0.22, sc); l.rotation.set(-Math.cos(i * 2.1) * 0.17, 0, Math.sin(i * 2.1) * 0.17); }
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, 0.6, 8), std('#9a8a6a')); tube.rotation.x = Math.PI / 2 - 0.12; tube.position.set(0, 1.32, 0.05); sc.add(tube);
+  hitSphere(sc, 0.4, 1.2); sc.visible = false; building.add(sc); permTargets.push(sc);
+}
+async function lookThroughScope(w) {
+  state.busy = true; state.scope = { pos: w.center.clone(), target: w.litPos.clone() };
+  camera.fov = 14; camera.updateProjectionMatrix(); $('scope').style.opacity = 1; $('crosshair').style.opacity = 0;
+  const hidden = world.branches.filter(b => b.visible); hidden.forEach(b => b.visible = false); // 穿窗的树枝会挡住镜头
+  await wait(3400);
+  $('scope').style.opacity = 0; await wait(300);
+  state.scope = null; camera.fov = 70; camera.updateProjectionMatrix(); $('crosshair').style.opacity = ''; hidden.forEach(b => b.visible = true);
+  state.busy = false;
+}
+
+// 邻居家的门：平时锁着；「数门」谜题时其中一扇虚掩着，门后的小储物间里放着「钥匙」
+// 局部坐标：门洞中心在原点，+z 朝走廊，-z 是储物间（x -1.1→1.1，z -2.4→-0.2）
+const DOOR_H = 2.15;
+function buildNeighborDoor(x, z, ry) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; building.add(g); g.updateMatrixWorld();
+  const ctx = { parent: g, T: g.matrixWorld.clone(), collide: true };
+  solid(ctx, -1.3, 1.3, -0.1, 0, -2.6, -0.2, M.floor, false); solid(ctx, -1.3, 1.3, H, H + 0.2, -2.6, -0.2, M.ceil, false);
+  walkQuad(ctx, [-1.1, 0, -2.4], [1.1, 0, -2.4], [1.1, 0, 0], [-1.1, 0, 0]);
+  solid(ctx, -1.3, -0.9, 0, H, -2.6, -2.4, M.wall); solid(ctx, 0.1, 1.3, 0, H, -2.6, -2.4, M.wall);   // 后墙开一扇朝海的小窗
+  solid(ctx, -0.9, 0.1, 0, 1.1, -2.6, -2.4, M.wall); solid(ctx, -0.9, 0.1, 2.0, H, -2.6, -2.4, M.wall, false); solid(ctx, -1.3, -1.1, 0, H, -2.4, -0.2, M.wall); solid(ctx, 1.1, 1.3, 0, H, -2.4, -0.2, M.wall);
+  // 门框（走廊一侧）
+  box(0.06, DOOR_H + 0.06, 0.05, M.trim, -0.53, (DOOR_H + 0.06) / 2, 0.02, g); box(0.06, DOOR_H + 0.06, 0.05, M.trim, 0.53, (DOOR_H + 0.06) / 2, 0.02, g);
+  box(1.12, 0.06, 0.05, M.trim, 0, DOOR_H + 0.03, 0.02, g);
+  // 储物间里的杂物；放「钥匙」的木箱
+  box(0.5, 0.6, 0.45, M.furn, 0.45, 0.3, -2.0, g); box(0.4, 0.35, 0.4, M.furn, -0.6, 0.175, -2.05, g); box(0.35, 0.3, 0.35, M.trim, -0.6, 0.5, -2.05, g);
+  const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), std('#fff', { emissive: '#ffd59a', emissiveIntensity: 0 })); bulb.position.set(0, H - 0.15, -1.3); g.add(bulb);
+  // 门扇：铰链在 x=-0.5，向储物间里开
+  const leaf = new THREE.Group(); leaf.position.set(-0.5, 0, -0.03); g.add(leaf);
+  box(1.0, DOOR_H - 0.02, 0.05, M.furn, 0.5, (DOOR_H - 0.02) / 2, 0, leaf);
+  box(0.04, 0.12, 0.05, M.white, 0.88, 1.05, 0.04, leaf);
+  const notice = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.38), new THREE.MeshStandardMaterial({ roughness: 1,
+    map: textTexture(['搬 迁', '通 知'], { w: 128, h: 160, font: 34, bg: '#e9e4d6' }) }));
+  notice.position.set(0.62, 1.5, 0.03); leaf.add(notice); world.notices.push(notice);
+  const bb = new THREE.Box3(V(-0.5, 0, -0.2), V(0.5, DOOR_H, 0)).applyMatrix4(ctx.T);
+  const d = { g, leaf, bulb, open: false, col: collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, DOOR_H),
+    keySpot: V(0.45, 0.6, -2.0).applyMatrix4(ctx.T), keyRot: ry };
+  leaf.children[0].userData.interact = { label: () => d.open ? '' : '门锁着', act() {} }; permTargets.push(leaf.children[0]);
+  return d;
+}
+function setNeighborDoor(d, open) {
+  d.open = open; d.leaf.rotation.y = open ? 1.15 : 0; d.col.enabled = !open; d.bulb.material.emissiveIntensity = open ? 2 : 0;
 }
 function setPhotosClear(clear) { world.photos.forEach(m => { m.material.map?.dispose(); m.material.map = faceTexture(3, clear); m.material.needsUpdate = true; }); }
 
@@ -505,36 +577,58 @@ function buildGreenery() {
     if (i > 28) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), M.flower[i % 4]); f.position.set(0, 0.36, 0); g.add(f); }
     building.add(g); world.plants.push(g);
   }
-  for (const [x, z, dir] of [[6.75, 3.1, 'S'], [13.75, 3.1, 'S'], [24.1, -5.75, 'E'], [24.1, -11.75, 'E']]) {
-    const out = dir === 'S' ? V(x + 1, 2.6, z + 4) : V(x + 4, 2.6, z - 1), mid = dir === 'S' ? V(x, 1.6, z + 0.2) : V(x + 0.2, 1.6, z);
-    const tip = dir === 'S' ? V(x - 0.4, 1.9, z - 1.4) : V(x - 1.4, 1.9, z + 0.3);
-    const g = new THREE.Group(); g.add(taperedTube([out, mid, tip], 0.09, 0.02, M.root, 10, 5));
-    for (let k = 0; k < 3; k++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), M.plant); l.position.copy(tip).add(V((k - 1) * 0.25, -0.1 * k, 0.1 * k)); g.add(l); }
+  // 天井里大树的枝条，从内侧的窗伸进走廊（3 楼起）
+  for (const [x, z, n] of [[10.55, -0.1, V(0, 0, 1)], [16.15, -0.1, V(0, 0, 1)], [20.9, -10.75, V(1, 0, 0)]]) {
+    const w = V(x, 1.6, z), from = w.clone().sub(TREE).setY(0).normalize(), start = TREE.clone().addScaledVector(from, 1.2).setY(2.9);
+    const tip = w.clone().addScaledVector(n, 1.4).add(V(n.z * 0.3, 0.3, n.x * 0.3));
+    const g = new THREE.Group(); g.add(taperedTube([start, start.clone().lerp(w, 0.5).setY(2.6), w, tip], 0.2, 0.02, M.root, 14, 5));
+    for (let k = 0; k < 4; k++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.24, 0), M.plant); l.position.copy(k < 3 ? tip : start.clone().lerp(w, 0.6)).add(V((k - 1) * 0.25, -0.1 * k + 0.2, 0.1 * k)); g.add(l); }
     building.add(g); world.branches.push(g);
+  }
+}
+
+// 天井（x 3→20.8，z -15→-0.2）：四面是楼的立面，正中长着大树。楼层不同，看到的树段和上方剩下的楼层数也不同
+const TREE = V(12, 0, -7.6), COURT = { x0: 3.0, x1: 20.8, z0: -15, z1: -0.2 };
+function buildCourtyard() {
+  const tex = canvasTex(128, 204, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a3d40'; g.fillRect(32, 70, 64, 76); g.fillStyle = '#d9d9d9'; g.fillRect(0, h - 10, w, 10); });
+  tex.wrapS = THREE.RepeatWrapping;
+  const C = COURT, sides = [ // [中心 x, 中心 z, 宽, 朝向, 本层这一段是否已是真墙]
+    [(C.x0 + C.x1) / 2, C.z1 - 0.01, C.x1 - C.x0, Math.PI, true], [C.x1 - 0.01, (C.z0 + C.z1) / 2, C.z1 - C.z0, -Math.PI / 2, true],
+    [C.x0, (C.z0 + C.z1) / 2, C.z1 - C.z0, Math.PI / 2, false], [(C.x0 + C.x1) / 2, C.z0, C.x1 - C.x0, 0, false]];
+  world.bands = [];
+  for (const [x, z, w, ry, real] of sides) for (let k = -2; k <= 3; k++) {
+    if (k === 0 && real) continue;
+    const t = tex.clone(); t.needsUpdate = true; t.repeat.set(w / 2.2, 1);
+    const mat = new THREE.MeshStandardMaterial({ map: t, roughness: 1, flatShading: true }); mat.color = M.wall.color;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 3.2), mat); m.position.set(x, k * 3.2 + 1.6, z); m.rotation.y = ry;
+    m.userData.k = k; building.add(m); world.bands.push(m);
+  }
+  // 大树：从水下长上来，高过楼顶；整棵树按楼层上下移动（站在 n 楼，看到的是这一段）
+  const tree = world.tree = new THREE.Group(); building.add(tree);
+  const T0 = TREE;
+  tree.add(taperedTube([V(T0.x, -24, T0.z), V(T0.x + 0.4, -8, T0.z - 0.4), V(T0.x - 0.2, 4, T0.z + 0.3), V(T0.x + 0.2, 12, T0.z - 0.2), V(T0.x, 18, T0.z)], 1.7, 0.55, M.root, 16, 9));
+  const rng = mulberry32(11);
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2, tip = V(T0.x + Math.cos(a) * 6, 18 + rng() * 4, T0.z + Math.sin(a) * 6);
+    tree.add(taperedTube([V(T0.x, 14 + rng() * 3, T0.z), V(T0.x + Math.cos(a) * 3, 17, T0.z + Math.sin(a) * 3), tip], 0.4, 0.12, M.root, 8, 6));
+    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(2.6 + rng() * 1.4, 1), M.plant); c.position.copy(tip); tree.add(c);
   }
 }
 
 // 天台 = 这栋楼的楼顶（y=3.2）：4 楼的出口楼梯直接通上来
 function buildRoof() {
   const R = roof, ctx = { parent: R, T: I4, collide: true, owner: R }, Y = 3.25;
-  const deckMat = std('#b9ad98'), wallMat = std('#cfc3a8'), trunkMat = std('#6b5238'), leafMat = std('#6fa24c');
-  const deck = [[-0.4, 27, -22.4, -20.4], [-0.4, 8.3, -20.4, -17.6], [18.5, 27, -20.4, -17.6], [-0.4, 27, -17.6, -13],
-    [-0.4, 7, -13, -5], [15, 27, -13, -5], [-0.4, 27, -5, 3.4]];
+  const deckMat = std('#b9ad98'), wallMat = std('#cfc3a8'), leafMat = std('#6fa24c');
+  const C = COURT, deck = [[-0.4, 27, -22.4, -20.4], [-0.4, 8.3, -20.4, -17.6], [18.5, 27, -20.4, -17.6], [-0.4, 27, -17.6, C.z0],
+    [-0.4, C.x0, C.z0, C.z1], [C.x1, 27, C.z0, C.z1], [-0.4, 27, C.z1, 5.8]];
   for (const [x0, x1, z0, z1] of deck) { solid(ctx, x0, x1, 3.0, Y, z0, z1, deckMat, false); walkQuad(ctx, [x0, Y, z0], [x1, Y, z0], [x1, Y, z1], [x0, Y, z1]); }
   const P = Y + 1.1; // 女儿墙
-  solid(ctx, -0.6, 27.2, Y, P, -22.6, -22.4, wallMat); solid(ctx, -0.6, 27.2, Y, P, 3.4, 3.6, wallMat);
-  solid(ctx, -0.6, -0.4, Y, P, -22.6, 3.6, wallMat); solid(ctx, 27, 27.2, Y, P, -22.6, 3.6, wallMat);
-  for (const [x0, x1, z0, z1] of [[7, 15, -13.1, -13], [7, 15, -5, -4.9], [6.9, 7, -13, -5], [15, 15.1, -13, -5]]) {
-    solid(ctx, x0, x1, Y, Y + 1.0, z0, z1, std('#8a7a62')); solid(ctx, x0, x1, -6, Y, z0, z1, wallMat, false);
-  }
-  // 巨树：从天井长出，高过楼顶，不遮住整片天
-  R.add(taperedTube([V(11, -6, -9), V(11.4, 4, -9.4), V(10.8, 12, -8.7), V(11.2, 18, -9)], 1.3, 0.55, trunkMat, 12, 8));
+  solid(ctx, -0.6, 27.2, Y, P, -22.6, -22.4, wallMat); solid(ctx, -0.6, 27.2, Y, P, 5.8, 6.0, wallMat);
+  solid(ctx, -0.6, -0.4, Y, P, -22.6, 6.0, wallMat); solid(ctx, 27, 27.2, Y, P, -22.6, 6.0, wallMat);
+  // 天井边沿的矮墙（大树在 buildCourtyard 里，属于楼本身）
+  for (const [x0, x1, z0, z1] of [[C.x0, C.x1, C.z0 - 0.1, C.z0], [C.x0, C.x1, C.z1, C.z1 + 0.1], [C.x0 - 0.1, C.x0, C.z0, C.z1], [C.x1, C.x1 + 0.1, C.z0, C.z1]])
+    solid(ctx, x0, x1, Y, Y + 1.0, z0, z1, std('#8a7a62'));
   const rng = mulberry32(11);
-  for (let i = 0; i < 6; i++) {
-    const a = i / 6 * Math.PI * 2, tip = V(11 + Math.cos(a) * 5.5, 18 + rng() * 4, -9 + Math.sin(a) * 5.5);
-    R.add(taperedTube([V(11, 14 + rng() * 3, -9), V(11 + Math.cos(a) * 3, 17, -9 + Math.sin(a) * 3), tip], 0.4, 0.12, trunkMat, 8, 6));
-    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(2.4 + rng() * 1.4, 1), leafMat); c.position.copy(tip); R.add(c);
-  }
   const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
   for (let i = 0; i < 14; i++) {
     const a = rng() * Math.PI * 2, d = 60 + rng() * 260, c = new THREE.Group();
@@ -547,10 +641,22 @@ function buildRoof() {
     const t = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 4, 1), leafMat); t.position.y = h + 3; g.add(t);
     g.position.set(12 + Math.cos(a) * d, -26, -9 + Math.sin(a) * d); g.rotation.set((rng() - 0.5) * 0.3, rng() * 3, (rng() - 0.5) * 0.3); R.add(g);
   }
-  const portal = new THREE.Group(); portal.position.set(2.5, Y + 1.35, -9);
-  portal.add(new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.08, 8, 32), std('#ffffff', { emissive: '#dff4ff', emissiveIntensity: 2 })));
-  portal.add(new THREE.Mesh(new THREE.CircleGeometry(1.05, 32), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, side: THREE.DoubleSide })));
-  R.add(portal); world.portal = portal;
+  // 结局：天台上孤零零立着一扇自家的门，虚掩着，门缝里透出白光；穿过去就是回家
+  const portal = new THREE.Group(); portal.position.set(1.3, Y, -9); R.add(portal); world.portal = portal;
+  const frameMat = std('#8a6a4a'), doorMat = std('#a8794c');
+  box(0.1, 2.25, 0.16, frameMat, -0.55, 1.125, 0, portal); box(0.1, 2.25, 0.16, frameMat, 0.55, 1.125, 0, portal); box(1.2, 0.1, 0.16, frameMat, 0, 2.2, 0, portal);
+  const light = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.15), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide }));
+  light.position.set(0, 1.075, 0.02); portal.add(light);
+  const leaf = new THREE.Group(); leaf.position.set(-0.5, 0, -0.05); leaf.rotation.y = 0.9; portal.add(leaf);  // 朝玩家开了一道缝
+  box(1.0, 2.13, 0.05, doorMat, 0.5, 1.065, 0, leaf); box(0.04, 0.12, 0.06, std('#d9d2c0'), 0.88, 1.05, 0.04, leaf);
+  // 门旁被撑裂的空花盆：母亲种下种子的那一盆，一条细根从里面爬过天井矮墙，连到大树
+  const potMat = std('#b8684a');
+  for (const [dx, rz] of [[-0.09, 0.35], [0.09, -0.3]]) {
+    const half = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.14, 0.32, 8, 1, true, dx < 0 ? 0 : Math.PI, Math.PI), std('#b8684a', { side: THREE.DoubleSide }));
+    half.position.set(2.2 + dx, Y + 0.15, -9.7); half.rotation.set(0, Math.PI / 2, rz); R.add(half);
+  }
+  box(0.3, 0.03, 0.3, potMat, 2.2, Y + 0.015, -9.7, R);
+  R.add(taperedTube([V(2.2, Y + 0.08, -9.7), V(2.6, Y + 0.03, -9.3), V(2.95, Y + 1.05, -8.8), V(3.6, Y + 0.6, -8.4), V(6, Y - 1, -7.6), V(10.6, Y - 2, -7.6)], 0.035, 0.12, std('#6b4b30'), 20, 5));
   R.visible = false;
 }
 
@@ -559,16 +665,20 @@ function buildRoof() {
  * ===================================================================*/
 const state = {
   floor: 1, next: 1, phase: 'corridor',  // corridor → room → stairs → (传送) corridor；4 楼成功后 → roof
-  keysGot: new Set(), recovered: new Set(), wrong: false, lightsOn: true, roofMode: false, ambT: 0,
+  keysGot: new Set(), placed: new Set(), recovered: new Set(), wrong: false, deciding: false, scope: null, lightsOn: true, roofMode: false, ambT: 0,
   busy: false, ended: false, puzzles: [], experienced: 0, solved: 0, t0: 0, forceTpl: [],
 };
 
 // 楼层里的"内容"：植物、树枝、海、号牌（在玩家看不到走廊时切换）
 function applyContent(n) {
+  const f = Math.min(n, 4);
+  world.tree.position.y = -(4 - f) * 3.2;                          // 楼层越低，看到的树段越低
+  world.bands.forEach(m => m.visible = m.userData.k <= 4 - f);     // 头顶还剩几层楼
   if (n === 5) return;
   world.roots.forEach((r, i) => r.visible = i < [4, 8, 12, 16][n - 1]);
   world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
   world.branches.forEach(b => b.visible = n >= 3);
+  world.ruins.forEach(r => r.visible = n >= 3);
   world.sea.visible = n >= 2 || state.roofMode;
   setPhotosClear(state.recovered.has('photo'));
   world.notices.forEach(m => m.visible = n >= 2);
@@ -621,16 +731,27 @@ const ROOM_SPOTS = {
   housekey: { p: [18.55, 1.15, -17.75], ry: Math.PI / 2 },                     // 出口门边的钩子
   can:      { p: [25.7, 0, -19.3], ry: -0.6 },                                 // 桌边地上
 };
+// 本层还没归位的「钥匙」在归位处留一个淡淡的空位；手里有的走过去按 E 放回
 function buildRoomKeys() {
   box(0.35, 0.03, 0.5, M.furn, 18.68, 1.0, -21.2, building);                 // 放答录机的搁板
-  world.roomKeys = {}; world.reveals = [];
+  world.roomKeys = {}; world.slots = {}; world.reveals = [];
+  const ghost = new THREE.MeshBasicMaterial({ color: '#efe7d2', transparent: true, opacity: 0.16, depthWrite: false });
   for (const id in ROOM_SPOTS) {
-    const s = ROOM_SPOTS[id], o = makeKey(id, 'real'); o.rotation.order = 'YXZ';
-    o.position.set(...s.p); o.rotation.set(s.rx || 0, s.ry, 0); o.visible = false; building.add(o); world.roomKeys[id] = o;
+    const s = ROOM_SPOTS[id];
+    for (const kind of ['key', 'slot']) {
+      const o = makeKey(id, 'real'); o.rotation.order = 'YXZ';
+      o.position.set(...s.p); o.rotation.set(s.rx || 0, s.ry, 0); o.visible = false; building.add(o);
+      if (kind === 'key') { world.roomKeys[id] = o; continue; }
+      o.traverse(m => { if (m.isMesh && m.material !== proxyMat) m.material = ghost; });
+      o.userData.interact = { label: () => state.phase === 'room' && state.keysGot.has(id) && !state.placed.has(id) ? `E　放回　${KEYS[id].name}` : '', act: () => placeKey(id) };
+      permTargets.push(o); world.slots[id] = o;
+    }
   }
 }
-function revealRoomKeys(ids) {
-  ids.forEach((id, i) => { const o = world.roomKeys[id]; o.visible = true; o.scale.setScalar(0.001); world.reveals.push({ o, t0: performance.now() + 900 + i * 800, done: false }); });
+function placeKey(id) {
+  state.placed.add(id); world.slots[id].visible = false;
+  const o = world.roomKeys[id]; o.visible = true; o.scale.setScalar(0.001); world.reveals.push({ o, t0: performance.now(), done: false });
+  Platform.emit('place', { id, floor: state.floor });
 }
 function updateReveals() {
   const now = performance.now();
@@ -645,7 +766,7 @@ function updateReveals() {
 
 function applyRoomNotes(n) {
   world.home.sheets.visible = n === 1;
-  for (const id in world.roomKeys) { const o = world.roomKeys[id]; o.visible = state.recovered.has(id); o.scale.setScalar(1); }
+  for (const id in world.roomKeys) { const o = world.roomKeys[id]; o.visible = state.recovered.has(id); o.scale.setScalar(1); world.slots[id].visible = false; }
   world.notes.forEach((m, i) => m.visible = i < n - 1);
   const rf = world.roomFurn; rf.table.visible = rf.table.userData.col.enabled = n >= 2;
   rf.chair.visible = n >= 3; rf.chair2.visible = rf.vase.visible = n >= 4;
@@ -673,6 +794,7 @@ function updateLook(dt, instant) {
   look.sky.lerp(t.sky, k); look.lampColor.lerp(t.lampColor, k);
   applyPalette(look.f);
   scene.background.copy(look.sky); scene.fog.color.copy(look.sky); scene.fog.near = look.near; scene.fog.far = look.far;
+  if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
@@ -761,8 +883,10 @@ function takeKey(obj, id) {
 }
 function growPlants() { const shown = world.plants.filter(p => p.visible).length; world.plants.forEach((p, i) => { if (i < shown + 10) p.visible = true; }); }
 const takeLabel = id => () => `E　拿起　${KEYS[id].name}`;
-function wrongPick(obj) {
-  obj.visible = false; state.wrong = true; Platform.emit('wrong', { floor: state.floor });
+function wrongPick(obj) { obj.visible = false; wrongBlink(); }
+function wrongBlink() { // 交互错了：灯闪一下
+  state.wrong = true; Platform.emit('wrong', { floor: state.floor });
+  if (state.blink) return;
   let n = 0; state.blink = true;
   const t = setInterval(() => { state.lightsOn = n % 2 === 1 ? state.lightsOnSaved : false; if (++n > 5) { clearInterval(t); state.lightsOn = state.lightsOnSaved; state.blink = false; } }, 90);
   state.lightsOnSaved = state.lightsOn;
@@ -817,7 +941,77 @@ const TEMPLATES = {
     interactable(o, takeLabel(id), () => takeKey(o, id));
     return { obj: o, tool, chest };
   } },
+  // 数门：平时锁着的邻居门，有一扇虚掩着，门后储物间的木箱上放着「钥匙」
+  doors: { anchors: 0, once: true, build(id) {
+    const d = pick(world.doors); setNeighborDoor(d, true);
+    const o = makeKey(id); o.position.copy(d.keySpot); o.rotation.y = d.keyRot; puzzleGroup.add(o);
+    interactable(o, takeLabel(id), () => takeKey(o, id));
+    return { obj: o, cleanup() { setNeighborDoor(d, false); } };
+  } },
+  // 顺序：墙上一排 4 张画（种子→大树）或照片（婴儿→离家），位置打乱；按故事顺序碰，错了重来
+  order: { anchors: 1, once: true, build(id, [r]) {
+    const kind = pick(['tree', 'age']), a = r.a, g = new THREE.Group(); puzzleGroup.add(g);
+    g.position.set(a.x, 0, a.z); g.rotation.y = a.rot;
+    const wall = { [FACE.N]: a.z, [FACE.S]: 3 - a.z, [FACE.E]: 24 - a.x, [FACE.W]: a.x - 21 }[a.rot];
+    const o = placeAt(makeKey(id), r, 0.22); o.visible = false;
+    const pics = shuffle([0, 1, 2, 3]).map((step, j) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.32), new THREE.MeshStandardMaterial({ map: storyTexture(kind, step), roughness: 1, emissive: '#ffe2a8', emissiveIntensity: 0 }));
+      m.position.set((j - 1.5) * 0.34, 1.75 + (j % 2) * 0.05, -wall + 0.025); m.rotation.z = (j % 3 - 1) * 0.04; g.add(m);
+      if (kind === 'age') box(0.32, 0.38, 0.02, M.trim, m.position.x, m.position.y, m.position.z - 0.012, g).rotation.z = m.rotation.z;
+      m.userData.step = step; return m;
+    });
+    let next = 0;
+    const lit = (m, on) => { m.material.emissiveIntensity = on ? 0.45 : 0; m.position.z = -wall + (on ? 0.045 : 0.025); };
+    for (const m of pics) interactable(m, () => next < 4 ? `E　碰一下这张${kind === 'tree' ? '画' : '照片'}` : '', () => {
+      if (m.material.emissiveIntensity > 0 || next >= 4) return;
+      if (m.userData.step !== next) { pics.forEach(p => lit(p, false)); next = 0; wrongBlink(); return; }
+      lit(m, true); if (audio) sfx.click(m.getWorldPosition(V(0, 0, 0)));
+      if (++next === 4) { o.visible = true; if (audio) sfx.chime(o.getWorldPosition(V(0, 0, 0))); }
+    });
+    interactable(o, takeLabel(id), () => takeKey(o, id));
+    return { obj: o, pics, kind };
+  } },
+  // 窗外：远处废楼有一扇窗亮着；窗边的望远镜里，那扇窗里摆着这把「钥匙」；放下望远镜，它已在手边的窗台上
+  window: { anchors: 0, once: true, build(id) {
+    const w = pick(world.windows), far = makeKey(id), o = makeKey(id), scope = world.telescope;
+    // 远处那份放大到刚好填进亮着的窗，背光成剪影
+    const bb = new THREE.Box3(); far.traverse(m => { if (m.isMesh && m.material !== proxyMat) bb.expandByObject(m); });
+    const sz = bb.getSize(V(0, 0, 0)), k = Math.min(1.1 / Math.max(sz.x, sz.z), 0.9 / sz.y);
+    far.scale.setScalar(k); far.rotation.y = Math.atan2(-w.dir.x, -w.dir.z);
+    far.position.copy(w.litPos).addScaledVector(w.dir, -0.4); far.position.y -= sz.y * k / 2 + 0.1; puzzleGroup.add(far);
+    w.lit.visible = true;
+    o.position.copy(w.sill); o.rotation.y = far.rotation.y; o.visible = false; puzzleGroup.add(o);
+    scope.position.copy(w.scopeAt); scope.rotation.y = Math.atan2(w.dir.x, w.dir.z); scope.visible = true;
+    let used = false;
+    scope.userData.interact = { label: () => used ? '' : 'E　用望远镜看', act: async () => {
+      used = true; await lookThroughScope(w);
+      w.lit.visible = false; far.visible = false; o.visible = true; o.scale.setScalar(0.001); world.reveals.push({ o, t0: performance.now(), done: false });
+    } };
+    interactable(o, takeLabel(id), () => takeKey(o, id));
+    return { obj: o, scope, cleanup() { w.lit.visible = false; scope.visible = false; scope.userData.interact = null; } };
+  } },
 };
+// 顺序谜题的画：孩子画的种子→发芽→小树→大树；或照片：婴儿→小孩→少年→空着（离家了）
+function storyTexture(kind, step) {
+  return canvasTex(128, 160, (g, w, h) => {
+    if (kind === 'tree') {
+      g.fillStyle = '#efe6cf'; g.fillRect(0, 0, w, h); g.lineCap = 'round';
+      g.strokeStyle = '#8a5a34'; g.lineWidth = 5; g.beginPath(); g.moveTo(8, 128); g.lineTo(120, 126); g.stroke();
+      g.fillStyle = '#f2b445'; g.beginPath(); g.arc(104, 26, 11, 0, 7); g.fill();
+      const trunk = [0, 14, 40, 70][step], crown = [0, 0, 18, 34][step];
+      if (step === 0) { g.fillStyle = '#7a4e2a'; g.beginPath(); g.ellipse(64, 136, 8, 5, 0.3, 0, 7); g.fill(); }
+      if (step >= 1) { g.strokeStyle = '#7a4e2a'; g.lineWidth = 3 + step * 2; g.beginPath(); g.moveTo(64, 127); g.lineTo(64, 127 - trunk); g.stroke(); }
+      if (step === 1) { g.fillStyle = '#5ea83a'; g.beginPath(); g.ellipse(56, 110, 8, 4, -0.5, 0, 7); g.ellipse(72, 110, 8, 4, 0.5, 0, 7); g.fill(); }
+      if (crown) { g.fillStyle = '#5ea83a'; g.beginPath(); g.arc(64, 127 - trunk - crown * 0.6, crown, 0, 7); g.fill(); }
+    } else {
+      g.fillStyle = '#6d6356'; g.fillRect(0, 0, w, h); g.fillStyle = '#8f8575'; g.fillRect(8, 112, w - 16, h - 120);
+      if (step === 3) { g.fillStyle = '#d8d2c4'; g.fillRect(44, 40, 40, 72); return; } // 只剩一扇门
+      const k = [0.45, 0.7, 0.95][step], top = 112 - 80 * k;
+      g.fillStyle = '#e8cfb0'; g.beginPath(); g.arc(64, top + 12 * k, 12 * k + 3, 0, 7); g.fill();
+      g.fillStyle = '#4a3f36'; g.fillRect(64 - 14 * k, top + 26 * k, 28 * k, 112 - top - 26 * k);
+    }
+  });
+}
 
 function inCorridor(p) { return (p.x > 0 && p.x < 24 && p.z > 0 && p.z < 3) || (p.x > 21 && p.x < 24 && p.z > -16 && p.z <= 0); }
 function pathS(p) { return (p.z < 0.2 && p.x > 20.5) ? 22.5 + (1.5 - p.z) : Math.min(p.x, 22.5); }
@@ -842,8 +1036,10 @@ function genPuzzles(n) {
     if (rest.length < Tp.anchors - 1) return null;
     const out = rest.slice(); out.splice(Tp.keyAt || 0, 0, main); return out;
   };
+  const used = new Set();   // 数门、顺序、窗外每层最多一次
   for (const id of F.keys) {
-    let tpl = state.forceTpl.shift() || pick(F.pool), Tp = TEMPLATES[tpl], rs = take(Tp, id);
+    let tpl = state.forceTpl.shift() || pick(F.pool.filter(t => !(TEMPLATES[t].once && used.has(t)))), Tp = TEMPLATES[tpl], rs = take(Tp, id);
+    used.add(tpl);
     if (!rs) { tpl = 'misplaced'; Tp = TEMPLATES.misplaced; rs = take(Tp, id); }
     const inst = { id, tpl, anchors: rs.map(r => r.a.id), ...Tp.build(id, rs) };
     // 真的收音机一直开着，发出沙沙声（跟着玩家移动的「回头」除外）
@@ -920,23 +1116,30 @@ async function say(text, ms = 4000) {
 }
 function setDoor(leaf, open) { leaf.visible = !open; leaf.userData.col.enabled = !open; }
 
-async function enterRoom() {
+function enterRoom() {
   state.phase = 'room';
   setDoor(world.entranceLeaf, false);                               // 身后的门关上
   applyRoomNotes(state.floor);                                      // 墙上便条反映这次拿到了哪些
-  const F = FLOORS[state.floor], all = F.keys.every(k => state.keysGot.has(k));
+  for (const id of FLOORS[state.floor].keys) world.slots[id].visible = !state.recovered.has(id);  // 本层「钥匙」的空位
+  if (world.startDoor.visible) { world.startDoor.visible = false; world.startDoor.userData.col.enabled = false; }  // 之后都从楼梯上来
+}
+// 推尽头的门时判定：本层「钥匙」都放回了 → 剧情台词、上楼；没齐 → 提示台词、回到本层
+async function openFarDoor() {
+  const F = FLOORS[state.floor];
+  if (F.keys.some(k => state.keysGot.has(k) && !state.placed.has(k))) { say('手里的东西，该放回原处。', 2600); return; }
+  state.deciding = true;
+  const all = F.keys.every(k => state.placed.has(k));
   const line = all ? LINES.success[state.floor] : state.wrong ? pick(LINES.confused) : pick(LINES.hint[state.floor]);
   Platform.emit('room', { floor: state.floor, result: all ? 'success' : state.wrong ? 'confused' : 'hint' });
   // 走廊已经看不见了：换成下一段要走的状态（失败则同层重来，钥匙清空）
   state.next = all ? state.floor + 1 : state.floor;
-  if (all) { F.keys.forEach(k => state.recovered.add(k)); revealRoomKeys(F.keys); }   // 拿齐的「钥匙」在房间里归位
-  if (world.startDoor.visible) { world.startDoor.visible = false; world.startDoor.userData.col.enabled = false; }  // 之后都从楼梯上来
-  state.keysGot.clear(); state.wrong = false; setLights(true);
+  if (all) F.keys.forEach(k => state.recovered.add(k));
+  state.keysGot.clear(); state.placed.clear(); state.wrong = false; setLights(true);
   state.roofMode = state.next === 5; world.stub.visible = !state.roofMode; roof.visible = state.roofMode;
   applyContent(state.next); genPuzzles(state.next);
   setLook(state.next);                                              // 光和颜色从现在开始慢慢变
-  await wait(700); await say(line, 4200);
-  setDoor(world.farLeaf, true); state.phase = 'stairs';             // 尽头的门打开
+  await say(line, 4200);
+  setDoor(world.farLeaf, true); state.phase = 'stairs'; state.deciding = false;   // 尽头的门打开
 }
 
 // 出口楼梯走到一半：移到入口楼梯的同一位置（两处看到的完全一样）
@@ -1015,7 +1218,7 @@ function collide(p) {
 let bob = 0;
 function updatePlayer(dt) {
   const p = player.pos;
-  if (playing && !state.ended) {
+  if (playing && !state.ended && !state.scope) {
     const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
     const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
     if (f || s) {
@@ -1030,6 +1233,7 @@ function updatePlayer(dt) {
   if (p.y < -40) spawn();
   camera.position.set(p.x, p.y + CFG.eyeHeight + Math.sin(bob) * 0.022, p.z);
   camera.rotation.set(player.pitch, player.yaw, 0);
+  if (state.scope) { camera.position.copy(state.scope.pos); camera.lookAt(state.scope.target); }
 
   if (state.ended) return;
   const onExitStair = p.x < 18.3 && p.x > 8 && p.z > -20.2 && p.z < -17.8;
@@ -1039,7 +1243,7 @@ function updatePlayer(dt) {
     if (!state.roofMode && world.farLeaf.visible && p.x < 12.7) stairWarp();
   }
   if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sun.position.set(30, 40, 20); Platform.emit('floor', { floor: 5 }); }
-  if (state.phase === 'roof' && Math.abs(p.z - world.portal.position.z) < 0.45 && Math.abs(p.x - world.portal.position.x) < 1.0) endGame();
+  if (state.phase === 'roof' && p.z > world.portal.position.z - 0.9 && p.z < world.portal.position.z + 0.3 && Math.abs(p.x - world.portal.position.x) < 0.6) endGame();  // 走到门前就被白光吞没
 }
 
 /* =====================================================================
@@ -1065,7 +1269,7 @@ function tryInteract() { if (!playing || !focused || state.busy) return; const f
  * 13. 调试（?debug）：1–5 跳楼层，K 拿齐本层钥匙
  * ===================================================================*/
 function debugJump(n) {
-  state.floor = state.next = state.prevFloor = n; state.keysGot.clear(); state.wrong = false; setLights(true);
+  state.floor = state.next = state.prevFloor = n; state.keysGot.clear(); state.placed.clear(); state.wrong = false; state.deciding = false; setLights(true);
   state.roofMode = n === 5; world.stub.visible = !state.roofMode; roof.visible = state.roofMode;
   setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, false);
   world.startDoor.visible = false; world.startDoor.userData.col.enabled = false;
@@ -1091,7 +1295,7 @@ function tick() {
   renderer.render(scene, camera);
   if (DEBUG) {
     const p = player.pos;
-    $('hud').textContent = `floor ${state.floor}→${state.next}  phase ${state.phase}  keys ${[...state.keysGot]}  wrong ${state.wrong}  lights ${state.lightsOn}\n` +
+    $('hud').textContent = `floor ${state.floor}→${state.next}  phase ${state.phase}  keys ${[...state.keysGot]}  placed ${[...state.placed]}  wrong ${state.wrong}  lights ${state.lightsOn}\n` +
       `puzzles ${state.puzzles.map(q => `${q.id}:${q.tpl}@${q.anchors}`).join('  ')}\n` +
       `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  calls ${renderer.info.render.calls}  [1-5] 跳楼层 [K] 拿齐钥匙`;
   }
