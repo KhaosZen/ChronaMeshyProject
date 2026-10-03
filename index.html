@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>ROOT（工作名）</title>
+<title>ROOT</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #1c1d1e; color: #d6d0c2;
-    font-family: "Songti SC", "Noto Serif SC", Georgia, serif; user-select: none; }
+    font-family: Georgia, "Times New Roman", serif; user-select: none; }
   canvas { display: block; }
   .layer { position: fixed; inset: 0; pointer-events: none; }
   #start { display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -37,15 +37,15 @@
 <body>
 <div id="start" class="layer">
   <h1>ROOT</h1>
-  <p>WASD 移动 · Shift 快走 · 鼠标 视角<br>E / 左键 交互 · Esc 暂停</p>
-  <p class="go" id="startText">载入中…</p>
+  <p>WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause</p>
+  <p class="go" id="startText">Loading…</p>
 </div>
 <div id="crosshair"></div>
 <div id="prompt" class="layer"></div>
 <div id="subtitle" class="layer"></div>
 <div id="scope" class="layer"></div>
 <div id="fade" class="layer"></div>
-<div id="end" class="layer"><div class="t">回 家</div><div id="stats"></div></div>
+<div id="end" class="layer"><div class="t">HOME</div><div id="stats"></div></div>
 <div id="hud" class="layer"></div>
 
 <script type="module">
@@ -64,38 +64,38 @@ const CFG = {
 // 每层要找的「钥匙」和可用的谜题模板
 const FLOORS = {
   1: { keys: ['photo'], pool: ['misplaced'] },
-  2: { keys: ['cup', 'radio'], pool: ['misplaced', 'twin', 'behind', 'dark'] },
+  2: { keys: ['lamp', 'radio'], pool: ['misplaced', 'twin', 'behind', 'dark'] },
   3: { keys: ['poster', 'tickets', 'machine'], pool: ['twin', 'behind', 'dark', 'sound', 'doors', 'combo', 'window'] },
   4: { keys: ['housekey', 'can'], pool: ['sound', 'doors', 'combo', 'order', 'window'] },
   5: { rooftop: true },
 };
-// name：交互提示；text：拿到时的字幕；note：过渡房间墙上对应的便条（没拿到时字迹模糊）
+// name：交互提示里的名字；text：拿到时的字幕；note：过渡房间墙上对应的便条（没拿到时字迹模糊）
 const KEYS = {
-  photo:    { name: '全家福',     note: '照片 挂好',  text: '照片里缺了一张脸。' },
-  cup:      { name: '杯子',       note: '杯子 扣着',  text: '杯子倒扣着。有人在等谁回家。' },
-  radio:    { name: '收音机',     note: '收音机 别关', text: '「……水位仍在上涨，请居民尽快撤离……」' },
-  poster:   { name: '寻人启事',   note: '启事 又贴',  text: '「寻人：离家时 16 岁……」名字被水泡糊了。' },
-  tickets:  { name: '船票存根',   note: '船票 收好',  text: '背面写着：「今天又去码头问了，还是没有你的消息。」' },
-  machine:  { name: '答录机',     note: '留言 听了',  text: '「大家都搬走了。我不走，怕你回来找不到家。」' },
-  housekey: { name: '家门钥匙',   note: '钥匙 挂着',  text: '钥匙一直挂在门边。' },
-  can:      { name: '喷壶',       note: '喷壶 装满',  text: '「花盆里种了你小时候捡的那颗种子。等它长大，你就回来吧。」' },
+  photo:    { name: 'family photo',      note: ['Photo:', 'hung'],         text: 'One face is missing from the photo.' },
+  lamp:     { name: 'lamp',              note: ['Lamp:', 'on'],            text: 'A lamp left on in the window. Someone is waiting.' },
+  radio:    { name: 'radio',             note: ['Radio:', 'on'],           text: '"…the dykes have failed. All residents must evacuate immediately…"' },
+  poster:   { name: 'flyer',             note: ['Flyers:', 'again'],       text: '"MISSING. Last seen age 16…" The name has washed away.' },
+  tickets:  { name: 'ferry tickets',     note: ['Tickets:', 'kept'],       text: 'On the back: "Went to the ferry again today. Still no word from you."' },
+  machine:  { name: 'answering machine', note: ['Message:', 'heard'],      text: '"Everyone\'s left. I\'m staying — in case you come home and can\'t find us."' },
+  housekey: { name: 'house key',         note: ['Key:', 'on the string'],  text: 'The key on the string. Still there.' },
+  can:      { name: 'watering can',      note: ['Can:', 'filled'],         text: 'A note on it: "I planted the seed you found when you were little. When it\'s grown, come home."' },
 };
 const LINES = {
   success: {
-    1: '照片上那张空着的脸……是我。我在这里长大。',
-    2: '杯子扣着，是在等人回家。窗外……整座城都没了。',
-    3: '我一直以为是我在找她。原来是她一直在找我。',
-    4: '门从来没锁。花一直有人浇。……我该回家了。',
+    1: 'The empty face in the photo… that\'s me. I grew up here.',
+    2: 'She left a light on for me. And outside… the whole town is under water.',
+    3: 'I thought I was the one looking for her. She was looking for me all along.',
+    4: 'The door was never locked. Someone kept watering the flowers. …Time to go home.',
   },
   hint: {
-    1: ['墙上的照片，好像少了点什么。', '这条走廊，刚才也是这样吗？'],
-    2: ['有什么东西摆得不太对。', '是收音机的声音吗？'],
-    3: ['码头……她是不是去过很多次？', '贴在墙上的纸，写的是谁？'],
-    4: ['门边原来挂着什么来着？', '花，好像还是湿的。'],
+    1: ['Something\'s missing from those photos.', 'Was this hallway always like this?'],
+    2: ['Something here isn\'t where it belongs.', 'Is that a radio?'],
+    3: ['The ferry… how many times did she go?', 'Whose face is on all those flyers?'],
+    4: ['Didn\'t we keep a key behind the letterbox?', 'The soil is still damp.'],
   },
-  confused: ['……不对，不是这个。', '我刚才碰了什么？', '好像越来越想不起来了。', '这里……我来过吗？', '头有点疼。'],
+  confused: ['…No. Not that.', 'What did I just touch?', 'It\'s getting harder to remember.', 'Have I been here before?', 'My head hurts.'],
 };
-const WALL_NOTES = ['门 没锁', '花 浇了', '等你 回来']; // 2 楼起每层多一行
+const WALL_NOTES = ['Dear ___,', 'The door\'s open.', 'I watered the plants.', 'Come home.']; // 母亲的便条：2 楼起出现，每层多一行
 
 // 一楼暗冷的蓝灰 → 四楼温暖、鲜艳
 const PAL0 = { wall: '#4d5864', floor: '#343c46', ceil: '#59636f', trim: '#3c4550', furn: '#46505b', key: '#8d99a6',
@@ -112,7 +112,7 @@ const LOOK = {
   5: { f: 1,    lamp: 4.8, lampColor: '#ffc585', sun: 2.20, hemi: 1.00, fog: [80, 700], sky: '#9fd0ea' },
 };
 // 每把「钥匙」只出现在跟它有关的摆放点（鞋柜=门口，电话桌、边桌、纸箱……）
-const KEY_SPOTS = { photo: [3, 2, 6], cup: [1, 2, 7], radio: [6, 2, 4], poster: [5, 7, 3],
+const KEY_SPOTS = { photo: [3, 2, 6], lamp: [2, 4, 8], radio: [6, 2, 4], poster: [5, 7, 3],
   tickets: [1, 6, 8], machine: [6, 2, 4], housekey: [1, 7, 8], can: [5, 7, 4] };
 
 /* =====================================================================
@@ -204,7 +204,7 @@ function canvasTex(w, h, draw) {
 function textTexture(lines, { w = 512, h = 128, font = 56, color = '#2b2521', bg = null } = {}) {
   return canvasTex(w, h, (g) => {
     if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); }
-    g.fillStyle = color; g.font = `${font}px "Songti SC","Noto Serif SC",serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = color; g.font = `${font}px "Georgia","Times New Roman",serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     lines.forEach((t, i) => g.fillText(t, w / 2, h / (lines.length + 1) * (i + 1)));
   });
 }
@@ -372,7 +372,7 @@ function buildBuilding() {
   world.entranceLeaf.userData.col = collider(21.9, 23.1, -16.25, -15.95, 0, H);
   world.farLeaf = box(0.06, 2.2, 1.2, M.trim, 18.4, 1.1, -19, B);
   world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H);
-  world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? 'E　开门' : '', act: openFarDoor };
+  world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? 'E   Open' : '', act: openFarDoor };
   permTargets.push(world.farLeaf);
   // 过渡房间逐层"恢复"：1 楼空着，2 楼有桌子，3 楼有椅子，4 楼两把椅子和一瓶花
   const rf = world.roomFurn = {
@@ -386,8 +386,8 @@ function buildBuilding() {
   buildHome(); buildRoomKeys();
   WALL_NOTES.forEach((t, i) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.33),
-      new THREE.MeshStandardMaterial({ map: textTexture([t], { font: 60 }), transparent: true, roughness: 1 }));
-    m.position.set(20.5, 2.15 - i * 0.4, -21.98); B.add(m); world.notes.push(m);
+      new THREE.MeshStandardMaterial({ map: textTexture([t], { font: 44 }), transparent: true, roughness: 1 }));
+    m.position.set(20.5, 2.25 - i * 0.36, -21.98); B.add(m); world.notes.push(m);
   });
   for (let i = 0; i < 3; i++) { // 本层「钥匙」对应的便条：数量暗示要找几样，没找到的字迹模糊
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.32), new THREE.MeshStandardMaterial({ roughness: 1 }));
@@ -408,7 +408,7 @@ function buildBuilding() {
   // --- 墙上开关（关灯谜题用；随时可按）
   const sw = group(box(0.08, 0.14, 0.03, M.trim, 0, 0, 0), box(0.03, 0.05, 0.02, M.white, 0, 0, 0.02));
   sw.position.set(21.02, 1.3, -1.5); sw.rotation.y = FACE.W; B.add(sw);
-  sw.userData.interact = { label: () => state.lightsOn ? 'E　关灯' : 'E　开灯', act: () => setLights(!state.lightsOn) };
+  sw.userData.interact = { label: () => state.lightsOn ? 'E   Turn off the light' : 'E   Turn on the light', act: () => setLights(!state.lightsOn) };
   permTargets.push(sw);
 
   for (const a of ANCHORS) world.anchors.push(buildFurniture(a));
@@ -433,7 +433,7 @@ function faceTexture(faces, clear) {
 function posterTexture(i) {
   return canvasTex(128, 176, (g, w, h) => {
     g.fillStyle = i % 2 ? '#e4dcc6' : '#d8cfb6'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#3a312b'; g.font = '30px "Songti SC","Noto Serif SC",serif'; g.textAlign = 'center'; g.fillText('寻 人', w / 2, 36);
+    g.fillStyle = '#3a312b'; g.font = 'bold 26px \'Georgia\',\'Times New Roman\',serif'; g.textAlign = 'center'; g.fillText('MISSING', w / 2, 36);
     g.filter = 'blur(2px)'; g.beginPath(); g.arc(w / 2, 78, 16, 0, 7); g.fill(); g.fillRect(w / 2 - 20, 94, 40, 30); g.filter = 'none';
     g.fillStyle = 'rgba(58,49,43,.5)'; for (let k = 0; k < 3; k++) g.fillRect(20, 136 + k * 12, w - 40 - k * 14, 5);
   });
@@ -517,12 +517,12 @@ function buildNeighborDoor(x, z, ry) {
   box(1.0, DOOR_H - 0.02, 0.05, M.furn, 0.5, (DOOR_H - 0.02) / 2, 0, leaf);
   box(0.04, 0.12, 0.05, M.white, 0.88, 1.05, 0.04, leaf);
   const notice = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.38), new THREE.MeshStandardMaterial({ roughness: 1,
-    map: textTexture(['搬 迁', '通 知'], { w: 128, h: 160, font: 34, bg: '#e9e4d6' }) }));
+    map: textTexture(['EVACUATION', 'NOTICE'], { w: 128, h: 160, font: 18, bg: '#e9e4d6' }) }));
   notice.position.set(0.62, 1.5, 0.03); leaf.add(notice); world.notices.push(notice);
   const bb = new THREE.Box3(V(-0.5, 0, -0.2), V(0.5, DOOR_H, 0)).applyMatrix4(ctx.T);
   const d = { g, leaf, bulb, open: false, col: collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, DOOR_H),
     keySpot: V(0.45, 0.6, -2.0).applyMatrix4(ctx.T), keyRot: ry };
-  leaf.children[0].userData.interact = { label: () => d.open ? '' : '门锁着', act() {} }; permTargets.push(leaf.children[0]);
+  leaf.children[0].userData.interact = { label: () => d.open ? '' : 'Locked', act() {} }; permTargets.push(leaf.children[0]);
   return d;
 }
 function setNeighborDoor(d, open) {
@@ -724,11 +724,11 @@ function buildHome() {
 const ROOM_SPOTS = {
   photo:    { p: [26.4, 1.25, -18.4], ry: -Math.PI / 2 },                      // 东墙挂着
   poster:   { p: [26.47, 1.55, -20.3], ry: -Math.PI / 2, rx: Math.PI / 2 },    // 东墙贴着
-  cup:      { p: [24.15, 0.75, -20.25], ry: 0.3 },                             // 桌上，扣着
+  lamp:     { p: [18.75, 0.7, -16.75], ry: 0 },                               // 边柜上，亮着
   radio:    { p: [25.0, 0.75, -20.6], ry: 0 },
   tickets:  { p: [24.6, 0.75, -20.15], ry: 0.4 },
   machine:  { p: [18.62, 1.015, -21.2], ry: Math.PI / 2 },                     // 西墙搁板
-  housekey: { p: [18.55, 1.15, -17.75], ry: Math.PI / 2 },                     // 出口门边的钩子
+  housekey: { p: [18.55, 0.95, -17.75], ry: Math.PI / 2 },                     // 出口门边，系在绳上
   can:      { p: [25.7, 0, -19.3], ry: -0.6 },                                 // 桌边地上
 };
 // 本层还没归位的「钥匙」在归位处留一个淡淡的空位；手里有的走过去按 E 放回
@@ -743,7 +743,7 @@ function buildRoomKeys() {
       o.position.set(...s.p); o.rotation.set(s.rx || 0, s.ry, 0); o.visible = false; building.add(o);
       if (kind === 'key') { world.roomKeys[id] = o; continue; }
       o.traverse(m => { if (m.isMesh && m.material !== proxyMat) m.material = ghost; });
-      o.userData.interact = { label: () => state.phase === 'room' && state.keysGot.has(id) && !state.placed.has(id) ? `E　放回　${KEYS[id].name}` : '', act: () => placeKey(id) };
+      o.userData.interact = { label: () => state.phase === 'room' && state.keysGot.has(id) && !state.placed.has(id) ? `E   Put back the ${KEYS[id].name}` : '', act: () => placeKey(id) };
       permTargets.push(o); world.slots[id] = o;
     }
   }
@@ -767,14 +767,14 @@ function updateReveals() {
 function applyRoomNotes(n) {
   world.home.sheets.visible = n === 1;
   for (const id in world.roomKeys) { const o = world.roomKeys[id]; o.visible = state.recovered.has(id); o.scale.setScalar(1); world.slots[id].visible = false; }
-  world.notes.forEach((m, i) => m.visible = i < n - 1);
+  world.notes.forEach((m, i) => m.visible = n >= 2 && i < n);   // 「Dear ___,」+ 每层多一行
   const rf = world.roomFurn; rf.table.visible = rf.table.userData.col.enabled = n >= 2;
   rf.chair.visible = n >= 3; rf.chair2.visible = rf.vase.visible = n >= 4;
   const ks = FLOORS[n]?.keys || [];
   world.keyNotes.forEach((m, i) => {
     m.visible = i < ks.length; if (!m.visible) return;
     m.material.map?.dispose();
-    m.material.map = state.keysGot.has(ks[i]) ? textTexture([KEYS[ks[i]].note], { w: 256, h: 128, font: 40, bg: '#e6dfcc' }) : smudgeTexture(i * 31 + n);
+    m.material.map = state.keysGot.has(ks[i]) ? textTexture(KEYS[ks[i]].note, { w: 256, h: 128, font: 30, bg: '#e6dfcc' }) : smudgeTexture(i * 31 + n);
     m.material.needsUpdate = true;
   });
 }
@@ -826,10 +826,12 @@ function makeKey(id, variant = 'real', mat = M.key) {
       const pic = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.34), new THREE.MeshStandardMaterial({ map: faceTexture(real ? 2 : 3, true), roughness: 1 }));
       pic.position.set(0, 0.22, 0.017); pic.rotation.x = -0.18; g.add(pic); break;
     }
-    case 'cup': { // 真：扣着；假：正放（能看到杯口）
-      const c = new THREE.Mesh(new THREE.CylinderGeometry(real ? 0.04 : 0.05, real ? 0.05 : 0.04, 0.11, 8), mat); c.position.y = 0.055; g.add(c);
-      b(0.015, 0.06, 0.03, 0.06, 0.055, 0);
-      if (!real) { const m = new THREE.Mesh(new THREE.CircleGeometry(0.043, 8), M.dark); m.rotation.x = -Math.PI / 2; m.position.y = 0.111; g.add(m); }
+    case 'lamp': { // 真：一直亮着（给你留的灯）；假：灭着
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.14, 7), mat); base.position.y = 0.07; g.add(base);
+      const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.11, 7, 1, true),
+        real ? std('#ffe3a8', { emissive: '#ffcf70', emissiveIntensity: 1.6, side: THREE.DoubleSide }) : std('#c9bda4', { side: THREE.DoubleSide }));
+      shade.position.y = 0.2; g.add(shade);
+      if (real) { const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.025, 0), std('#fff', { emissive: '#ffe0a0', emissiveIntensity: 2 })); bulb.position.y = 0.18; g.add(bulb); }
       break;
     }
     case 'radio': // 真：刻度灯亮着、有沙沙声；假：没声音
@@ -850,11 +852,12 @@ function makeKey(id, variant = 'real', mat = M.key) {
       const led = b(0.02, 0.01, 0.02, 0.08, 0.075, 0.05, real ? std('#f33', { emissive: '#f22', emissiveIntensity: 2 }) : M.dark);
       if (real) g.userData.blink = led; break;
     }
-    case 'housekey': // 真：挂在钥匙钩上；假：随手扔在台面
+    case 'housekey': // 真：系在绳子上，挂在信箱口后面（荷兰老习惯：门永远为你开着）；假：随手扔在台面
       if (real) {
-        b(0.02, 0.2, 0.02, 0, 0.1, 0, M.trim); b(0.02, 0.02, 0.07, 0, 0.19, 0.035, M.trim);
-        const r = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 4, 8), mat); r.position.set(0, 0.16, 0.07); g.add(r);
-        b(0.012, 0.08, 0.01, 0, 0.1, 0.07);
+        b(0.1, 0.03, 0.02, 0, 0.3, 0, M.trim);                                  // 信箱口
+        b(0.006, 0.18, 0.006, 0, 0.2, 0.012, std('#9a5a3a'));                   // 绳子
+        const r = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 4, 8), mat); r.position.set(0, 0.09, 0.012); g.add(r);
+        b(0.012, 0.08, 0.01, 0, 0.03, 0.012);
       } else {
         const r = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 4, 8), mat); r.rotation.x = Math.PI / 2; r.position.set(-0.04, 0.008, 0); g.add(r);
         b(0.08, 0.01, 0.012, 0.02, 0.008, 0);
@@ -882,7 +885,7 @@ function takeKey(obj, id) {
     housekey: () => sfx.click(P) })[id]?.();
 }
 function growPlants() { const shown = world.plants.filter(p => p.visible).length; world.plants.forEach((p, i) => { if (i < shown + 10) p.visible = true; }); }
-const takeLabel = id => () => `E　拿起　${KEYS[id].name}`;
+const takeLabel = id => () => `E   Pick up the ${KEYS[id].name}`;
 function wrongPick(obj) { obj.visible = false; wrongBlink(); }
 function wrongBlink() { // 交互错了：灯闪一下
   state.wrong = true; Platform.emit('wrong', { floor: state.floor });
@@ -924,7 +927,7 @@ const TEMPLATES = {
     const cab = r.cabinet, o = makeKey(id); o.visible = false;
     o.position.set(0.1, 0.25, 0); r.group.add(o);
     const body = r.group.children[0];
-    interactable(body, () => cab.open ? '' : 'E　打开柜子', () => { cab.open = true; cab.leaf.rotation.y = -1.6; o.visible = true; stopSound(snd); });
+    interactable(body, () => cab.open ? '' : 'E   Open the cabinet', () => { cab.open = true; cab.leaf.rotation.y = -1.6; o.visible = true; stopSound(snd); });
     interactable(o, takeLabel(id), () => takeKey(o, id));
     const snd = startSound(anchorTop(r, 0));
     return { obj: o, cab: body, cleanup() { stopSound(snd); cab.open = false; cab.leaf.rotation.y = 0; r.group.remove(o); body.userData.interact = null; } };
@@ -934,8 +937,8 @@ const TEMPLATES = {
     const chest = placeAt(group(box(0.44, 0.26, 0.3, M.furn, 0, 0.13, 0)), r2, 0.2);
     const lid = box(0.44, 0.04, 0.3, M.trim, 0, 0.28, 0, chest); hitSphere(chest, 0.3, 0.15);
     const o = makeKey(id); o.visible = false; o.position.set(0, 0.26, 0); chest.add(o);
-    interactable(tool, () => 'E　拿起　把手', () => { tool.visible = false; hasTool = true; say('一只旧把手。', 2000); });
-    interactable(chest, () => lid.userData.open ? '' : hasTool ? 'E　用把手打开箱子' : '箱子锁着', () => {
+    interactable(tool, () => 'E   Pick up the handle', () => { tool.visible = false; hasTool = true; say('An old handle.', 2000); });
+    interactable(chest, () => lid.userData.open ? '' : hasTool ? 'E   Open the box with the handle' : 'The box is locked', () => {
       if (!hasTool || lid.userData.open) return; lid.userData.open = true; lid.rotation.x = -1.2; lid.position.set(0, 0.36, -0.15); o.visible = true;
     });
     interactable(o, takeLabel(id), () => takeKey(o, id));
@@ -962,7 +965,7 @@ const TEMPLATES = {
     });
     let next = 0;
     const lit = (m, on) => { m.material.emissiveIntensity = on ? 0.45 : 0; m.position.z = -wall + (on ? 0.045 : 0.025); };
-    for (const m of pics) interactable(m, () => next < 4 ? `E　碰一下这张${kind === 'tree' ? '画' : '照片'}` : '', () => {
+    for (const m of pics) interactable(m, () => next < 4 ? `E   Touch this ${kind === 'tree' ? 'drawing' : 'photo'}` : '', () => {
       if (m.material.emissiveIntensity > 0 || next >= 4) return;
       if (m.userData.step !== next) { pics.forEach(p => lit(p, false)); next = 0; wrongBlink(); return; }
       lit(m, true); if (audio) sfx.click(m.getWorldPosition(V(0, 0, 0)));
@@ -983,7 +986,7 @@ const TEMPLATES = {
     o.position.copy(w.sill); o.rotation.y = far.rotation.y; o.visible = false; puzzleGroup.add(o);
     scope.position.copy(w.scopeAt); scope.rotation.y = Math.atan2(w.dir.x, w.dir.z); scope.visible = true;
     let used = false;
-    scope.userData.interact = { label: () => used ? '' : 'E　用望远镜看', act: async () => {
+    scope.userData.interact = { label: () => used ? '' : 'E   Look through the telescope', act: async () => {
       used = true; await lookThroughScope(w);
       w.lit.visible = false; far.visible = false; o.visible = true; o.scale.setScalar(0.001); world.reveals.push({ o, t0: performance.now(), done: false });
     } };
@@ -1126,7 +1129,7 @@ function enterRoom() {
 // 推尽头的门时判定：本层「钥匙」都放回了 → 剧情台词、上楼；没齐 → 提示台词、回到本层
 async function openFarDoor() {
   const F = FLOORS[state.floor];
-  if (F.keys.some(k => state.keysGot.has(k) && !state.placed.has(k))) { say('手里的东西，该放回原处。', 2600); return; }
+  if (F.keys.some(k => state.keysGot.has(k) && !state.placed.has(k))) { say('I should put these back where they belong.', 2600); return; }
   state.deciding = true;
   const all = F.keys.every(k => state.placed.has(k));
   const line = all ? LINES.success[state.floor] : state.wrong ? pick(LINES.confused) : pick(LINES.hint[state.floor]);
@@ -1157,7 +1160,7 @@ async function endGame() {
   const secs = Math.round((performance.now() - state.t0) / 1000), mm = String(Math.floor(secs / 60)).padStart(2, '0'), ss = String(secs % 60).padStart(2, '0');
   Platform.emit('end', { seconds: secs, puzzles: state.experienced, solved: state.solved });
   $('fade').style.opacity = 1; await wait(1800);
-  $('stats').textContent = `用时 ${mm}:${ss}　·　体验过 ${state.experienced} 个谜题`;
+  $('stats').textContent = `Time ${mm}:${ss}   ·   Puzzles ${state.experienced}`;
   $('end').style.display = 'flex'; document.exitPointerLock?.();
 }
 
@@ -1196,7 +1199,7 @@ function startPlaying() {
 function enableDragLook() { dragLook = true; startPlaying(); }
 document.addEventListener('pointerlockerror', enableDragLook);
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement !== canvas && !dragLook && !state.ended) { playing = false; $('start').style.display = 'flex'; $('startText').textContent = '点击继续'; }
+  if (document.pointerLockElement !== canvas && !dragLook && !state.ended) { playing = false; $('start').style.display = 'flex'; $('startText').textContent = 'Click to continue'; }
 });
 
 const DOWN = V(0, -1, 0), ray = new THREE.Raycaster();
@@ -1297,7 +1300,7 @@ function tick() {
     const p = player.pos;
     $('hud').textContent = `floor ${state.floor}→${state.next}  phase ${state.phase}  keys ${[...state.keysGot]}  placed ${[...state.placed]}  wrong ${state.wrong}  lights ${state.lightsOn}\n` +
       `puzzles ${state.puzzles.map(q => `${q.id}:${q.tpl}@${q.anchors}`).join('  ')}\n` +
-      `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  calls ${renderer.info.render.calls}  [1-5] 跳楼层 [K] 拿齐钥匙`;
+      `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  calls ${renderer.info.render.calls}  [1-5] jump to floor  [K] collect keys`;
   }
   requestAnimationFrame(tick);
 }
@@ -1311,7 +1314,7 @@ function tick() {
     $('hud').style.display = 'block';
     window.__game = { player, state, world, camera, T, Tinv, debugJump, debugCollectAll, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
   }
-  ready = true; $('startText').textContent = '点 击 进 入';
+  ready = true; $('startText').textContent = 'Click to enter';
   Platform.emit('ready');
   tick();
 })();
