@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Meshy 批量生成 → assets/*.glb（贴图自动压到 512px）
+// Meshy 批量生成 → assets/*.glb（贴图默认压到 512px，assets.json 里 "texture": 1024 的近景模型压到 1024px）
 //
 //   node tools/meshy/generate.mjs                    生成所有缺失的资产
 //   node tools/meshy/generate.mjs --only lamp,radio  只生成指定 key

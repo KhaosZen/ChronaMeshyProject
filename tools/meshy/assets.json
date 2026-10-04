@@ -8,63 +8,74 @@
       "key": "lamp",
       "image": "refs/lamp.png",
       "target_polycount": 1500,
-      "note": "2 楼「钥匙」：窗边一直亮着的台灯"
+      "note": "2 楼「钥匙」：窗边一直亮着的台灯",
+      "texture": 1024
     },
     {
       "key": "photo",
       "image": "refs/photo.png",
       "target_polycount": 800,
-      "note": "1 楼「钥匙」：全家福相框（照片画面用贴图替换）"
+      "note": "1 楼「钥匙」：全家福相框（照片画面用贴图替换）",
+      "texture": 1024
     },
     {
       "key": "radio",
       "image": "refs/radio.png",
       "target_polycount": 2000,
-      "note": "2 楼「钥匙」：80 年代收录机"
+      "note": "2 楼「钥匙」：80 年代收录机",
+      "texture": 1024
     },
     {
       "key": "tickets",
       "image": "refs/tickets.png",
       "target_polycount": 600,
-      "note": "3 楼「钥匙」：一沓渡轮票"
+      "note": "3 楼「钥匙」：一沓渡轮票",
+      "texture": 1024
     },
     {
       "key": "machine",
       "image": "refs/machine.png",
       "target_polycount": 1500,
-      "note": "3 楼「钥匙」：磁带答录机"
+      "note": "3 楼「钥匙」：磁带答录机",
+      "texture": 1024
     },
     {
       "key": "housekey",
       "image": "refs/housekey.png",
       "target_polycount": 800,
-      "note": "4 楼「钥匙」：系在绳上的家门钥匙"
+      "note": "4 楼「钥匙」：系在绳上的家门钥匙",
+      "texture": 1024
     },
     {
       "key": "can",
       "image": "refs/can.png",
       "target_polycount": 1500,
-      "note": "4 楼「钥匙」：喷壶"
+      "note": "4 楼「钥匙」：喷壶",
+      "texture": 1024
     },
     {
       "key": "pendant",
       "prompt": "a hanging industrial pendant ceiling lamp, dark metal cone shade, short metal rod, round ceiling mount, bulb visible underneath",
-      "target_polycount": 800
+      "target_polycount": 800,
+      "texture": 1024
     },
     {
       "key": "homeDoor",
       "prompt": "a Dutch apartment front door standing alone in a thin wooden door frame, dark brown wooden panel door with a brass house number plate and a brass letterbox slot, door slightly open",
-      "target_polycount": 1500
+      "target_polycount": 1500,
+      "texture": 1024
     },
     {
       "key": "potCracked",
       "prompt": "an empty terracotta flower pot cracked open down one side, a thin tree root growing out of the crack",
-      "target_polycount": 800
+      "target_polycount": 800,
+      "texture": 1024
     },
     {
       "key": "telescope",
       "prompt": "an old brass telescope on a wooden tripod, pointing slightly upward",
-      "target_polycount": 1500
+      "target_polycount": 1500,
+      "texture": 1024
     },
     {
       "key": "farHouseA",
@@ -95,49 +106,57 @@
       "key": "shoeCabinet",
       "image": "refs/shoeCabinet.png",
       "target_polycount": 2000,
-      "note": "摆放点 1：鞋柜"
+      "note": "摆放点 1：鞋柜",
+      "texture": 1024
     },
     {
       "key": "sideTable",
       "image": "refs/sideTable.png",
       "target_polycount": 1500,
-      "note": "摆放点 2：边桌（带花瓶）"
+      "note": "摆放点 2：边桌（带花瓶）",
+      "texture": 1024
     },
     {
       "key": "shelf",
       "image": "refs/shelf.png",
       "target_polycount": 2000,
-      "note": "摆放点 3：墙上搁板"
+      "note": "摆放点 3：墙上搁板",
+      "texture": 1024
     },
     {
       "key": "boxes",
       "image": "refs/boxes.png",
       "target_polycount": 1200,
-      "note": "摆放点 5：搬家纸箱"
+      "note": "摆放点 5：搬家纸箱",
+      "texture": 1024
     },
     {
       "key": "phoneTable",
       "image": "refs/phoneTable.png",
       "target_polycount": 2000,
-      "note": "摆放点 6：电话桌（转盘电话）"
+      "note": "摆放点 6：电话桌（转盘电话）",
+      "texture": 1024
     },
     {
       "key": "bench",
       "image": "refs/bench.png",
       "target_polycount": 1000,
-      "note": "摆放点 7：长凳"
+      "note": "摆放点 7：长凳",
+      "texture": 1024
     },
     {
       "key": "lowCabinet",
       "image": "refs/lowCabinet.png",
       "target_polycount": 1500,
-      "note": "摆放点 4、8：矮柜"
+      "note": "摆放点 4、8：矮柜",
+      "texture": 1024
     },
     {
       "key": "slippers",
       "image": "refs/slippers.png",
       "target_polycount": 800,
-      "note": "4 楼房间门口的两双拖鞋"
+      "note": "4 楼房间门口的两双拖鞋",
+      "texture": 1024
     },
     {
       "key": "treeCrown",
@@ -150,25 +169,153 @@
       "key": "treeTrunk",
       "prompt": "a very tall straight section of a giant old tree trunk, thick dark brown bark with deep vertical grooves, no branches, no leaves, cut flat at the top and at the bottom, cylinder shape",
       "target_polycount": 2000,
-      "note": "大树：树干段（上下接起来贯穿楼层）"
+      "note": "大树：树干段（上下接起来贯穿楼层）",
+      "texture": 1024
     },
     {
       "key": "treeBranch",
       "prompt": "a single long thick tree branch reaching forward horizontally, brown bark, a few side twigs, three rounded clumps of green leaves near the tip",
       "target_polycount": 2500,
-      "note": "大树：穿窗伸进走廊的枝条"
+      "note": "大树：穿窗伸进走廊的枝条",
+      "texture": 1024
     },
     {
       "key": "mother",
       "prompt": "a full body woman in her late thirties, 1980s Dutch fashion, curly brown shoulder-length hair, white blouse with a small floral print, high-waisted light blue jeans, white sneakers, standing straight, arms relaxed at her sides, gentle face, game character",
       "target_polycount": 4000,
-      "note": "联机：母亲（第二个玩家），游戏里渲染成发暖光的半透明人形"
+      "note": "联机：母亲（第二个玩家），游戏里渲染成发暖光的半透明人形",
+      "texture": 1024
     },
     {
       "key": "child",
       "prompt": "a full body teenager about sixteen years old, short messy brown hair, white t-shirt with red and blue stripes, navy jacket, blue jeans, white sneakers, a backpack on one shoulder, standing straight, arms relaxed at sides, game character",
       "target_polycount": 4000,
-      "note": "联机：母亲那边看到的孩子（主角）"
+      "note": "联机：母亲那边看到的孩子（主角）",
+      "texture": 1024
+    },
+    {
+      "key": "sofa",
+      "prompt": "a 1980s three-seat sofa with brown corduroy upholstery, wooden legs",
+      "target_polycount": 3000,
+      "note": "房间：沙发"
+    },
+    {
+      "key": "armchair",
+      "prompt": "a 1980s armchair with mustard yellow fabric and wooden armrests",
+      "target_polycount": 2500,
+      "note": "房间：扶手椅"
+    },
+    {
+      "key": "tvCabinet",
+      "prompt": "a 1980s CRT television with a wood-grain casing standing on a low wooden TV cabinet",
+      "target_polycount": 2500,
+      "note": "房间：木纹电视 + 电视柜"
+    },
+    {
+      "key": "floorLamp",
+      "prompt": "a 1980s floor lamp with a tall brass pole and a pleated cream fabric shade",
+      "target_polycount": 1500,
+      "note": "房间：落地灯"
+    },
+    {
+      "key": "bookshelf",
+      "prompt": "a tall wooden bookshelf filled with books, a few ornaments and a blue and white Delft plate on display",
+      "target_polycount": 3000,
+      "note": "房间：书架"
+    },
+    {
+      "key": "coatRack",
+      "prompt": "a wooden standing coat rack with a beige trench coat and a scarf hanging on it",
+      "target_polycount": 2000,
+      "note": "房间：衣帽架"
+    },
+    {
+      "key": "wallClock",
+      "prompt": "a round wall clock with a wooden frame and a cream face",
+      "target_polycount": 600,
+      "note": "房间：挂钟"
+    },
+    {
+      "key": "diningTable",
+      "prompt": "a small square wooden dining table with a lace tablecloth and a coffee pot on it",
+      "target_polycount": 2000,
+      "note": "房间：餐桌"
+    },
+    {
+      "key": "diningChair",
+      "prompt": "a simple wooden dining chair with a woven rush seat",
+      "target_polycount": 1200,
+      "note": "房间：餐椅"
+    },
+    {
+      "key": "farBlockA",
+      "prompt": "the top three floors of a long four-storey red-brick Dutch apartment block with white window frames, a flat roof with small trees growing on it, cut off flat at the bottom as if sinking into water",
+      "target_polycount": 2500,
+      "note": "远景：半淹的公寓楼",
+      "texture": 1024
+    },
+    {
+      "key": "farBlockB",
+      "prompt": "the top floors of a row of four narrow Dutch canal houses with different gables side by side, cut off flat at the bottom as if sinking into water, ivy and small trees on the roofs",
+      "target_polycount": 2500,
+      "note": "远景：一排半淹的运河屋",
+      "texture": 1024
+    },
+    {
+      "key": "lighthouse",
+      "prompt": "a red and white striped lighthouse standing on a small rocky base surrounded by water, a lantern room on top",
+      "target_polycount": 2000,
+      "note": "远景：灯塔",
+      "texture": 1024
+    },
+    {
+      "key": "ferry",
+      "prompt": "a small white Dutch passenger ferry boat half sunk and tilted, the bow sticking up out of the water, rust stains",
+      "target_polycount": 2500,
+      "note": "远景：半沉的渡轮（呼应船票）",
+      "texture": 1024
+    },
+    {
+      "key": "dyke",
+      "prompt": "a long broken section of a concrete sea dyke wall with a crack and missing chunks, moss on top",
+      "target_polycount": 1500,
+      "note": "远景：堤坝残段"
+    },
+    {
+      "key": "cloudA",
+      "prompt": "a large fluffy cumulus cloud made of a few rounded low poly puffs, pure white",
+      "target_polycount": 1200,
+      "note": "天空：云"
+    },
+    {
+      "key": "cloudB",
+      "prompt": "a long flat stretched cloud made of many small rounded low poly puffs, pure white",
+      "target_polycount": 1200,
+      "note": "天空：云"
+    },
+    {
+      "key": "debrisCrate",
+      "prompt": "a weathered wooden crate floating, half in water",
+      "target_polycount": 500,
+      "note": "水面碎片：木箱"
+    },
+    {
+      "key": "streetLamp",
+      "prompt": "the top of an old Dutch street lamp post with a lantern head, cut off flat at the bottom",
+      "target_polycount": 600,
+      "note": "水面碎片：露出水面的路灯"
+    },
+    {
+      "key": "waterTree",
+      "prompt": "a small leafy tree growing up out of the water, roots hidden, rounded low poly canopy",
+      "target_polycount": 1500,
+      "note": "水面碎片：水里长出的树"
+    },
+    {
+      "key": "bicycle",
+      "prompt": "an old black Dutch city bicycle lying on its side",
+      "target_polycount": 1500,
+      "note": "水面碎片：半露的自行车"
     }
   ]
 }
