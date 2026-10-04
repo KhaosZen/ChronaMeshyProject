@@ -1,0 +1,131 @@
+{
+  "lamp": {
+    "image": "01a0ffc8-4693-72a6-b362-da4d18a7cc0b",
+    "done": true
+  },
+  "photo": {
+    "image": "01a0ffca-dca8-746d-97e8-6072d673e2c4",
+    "done": true
+  },
+  "radio": {
+    "image": "01a0ffca-dcb8-742c-8e7c-2e8922607b8b",
+    "done": true
+  },
+  "tickets": {
+    "image": "01a0ffca-dcaa-7588-a83a-00a6bbb23e50",
+    "done": true
+  },
+  "machine": {
+    "image": "01a0ffca-dca8-7768-ad9b-b8834e719b79",
+    "done": true
+  },
+  "housekey": {
+    "image": "01a0ffcb-fbdf-70c5-b810-850a7dc2a2bc",
+    "done": true
+  },
+  "can": {
+    "image": "01a0ffcb-ff8d-7268-a8f6-22016f53c136",
+    "done": true
+  },
+  "pendant": {
+    "preview": "01a0ffcc-02ae-73e3-af21-58476c06491c",
+    "refine": "01a0ffcc-d81b-74cd-8306-c1f701b2c647",
+    "done": true
+  },
+  "homeDoor": {
+    "preview": "01a0ffcc-5519-7489-ab1d-83cfe125168e",
+    "refine": "01a0ffcd-51e7-74c2-9fcb-9b3e3e667ee7",
+    "done": true
+  },
+  "potCracked": {
+    "preview": "01a0ffcc-d004-76f4-bac6-b025f1b99bf2",
+    "refine": "01a0ffcd-a141-7093-888a-b2763ebfe7ae",
+    "done": true
+  },
+  "telescope": {
+    "preview": "01a0ffcd-2454-74b8-9cdb-69e1e60b35e5",
+    "refine": "01a0ffcd-fb02-7749-804b-08a34d196cbf",
+    "done": true
+  },
+  "farHouseA": {
+    "preview": "01a0ffcd-56ba-7563-bcb7-aa337cd5d9af",
+    "refine": "01a0ffce-a3f6-7704-a805-d4013fd3ed28",
+    "done": true
+  },
+  "farHouseB": {
+    "preview": "01a0ffcd-fadc-77c9-a648-3647574b5080",
+    "refine": "01a0ffcf-45b3-754f-8359-49626256a647",
+    "done": true
+  },
+  "farHouseC": {
+    "preview": "01a0ffce-485e-72a6-aee1-3e54b73c7b8b",
+    "refine": "01a0ffcf-bb4b-7627-b2de-b09c0c5eda5d",
+    "done": true
+  },
+  "farChurch": {
+    "preview": "01a0ffce-a40a-7282-aaf8-e92854288302",
+    "refine": "01a0ffcf-7c33-754f-aecf-6a6e1ac02251",
+    "done": true
+  },
+  "farMill": {
+    "preview": "01a0ffcf-4e49-7268-9076-4f19a2fd0de6",
+    "refine": "01a0ffd0-20ec-7751-a6a2-48b2c1882ce1",
+    "done": true
+  },
+  "shoeCabinet": {
+    "image": "01a0ffdf-751f-72c4-8c11-b0c342031479",
+    "done": true
+  },
+  "sideTable": {
+    "image": "01a0ffdf-7559-7766-ab95-2660775a3214",
+    "done": true
+  },
+  "shelf": {
+    "image": "01a0ffdf-7590-702c-a3d2-e610a91d09a7",
+    "done": true
+  },
+  "boxes": {
+    "image": "01a0ffdf-751c-756b-a068-4ed4b05ccbfa",
+    "done": true
+  },
+  "phoneTable": {
+    "image": "01a0ffe0-6e82-7788-8f7f-3ea4e4836ba5",
+    "done": true
+  },
+  "bench": {
+    "image": "01a0ffe0-71cf-73e2-aad5-496686efd217",
+    "done": true
+  },
+  "lowCabinet": {
+    "image": "01a0ffe0-c411-72e8-8488-7fe77b3097c0",
+    "done": true
+  },
+  "slippers": {
+    "image": "01a0ffe0-e227-7676-a647-48e65d313dcb",
+    "done": true
+  },
+  "treeCrown": {
+    "image": "01a0ffe1-4301-729c-a951-4d8cd7afcf64",
+    "done": true
+  },
+  "treeTrunk": {
+    "preview": "01a0ffe1-b925-7191-b634-77053ea7b976",
+    "refine": "01a0ffe2-8e9f-728c-99ed-4c141cb26a85",
+    "done": true
+  },
+  "treeBranch": {
+    "preview": "01a0ffe1-bf18-71d4-b592-4890450e660d",
+    "refine": "01a0ffe2-6b5c-7632-89c8-705f6764d6c7",
+    "done": true
+  },
+  "mother": {
+    "preview": "01a10024-cb75-73d6-aa66-4dd7f45e80c1",
+    "refine": "01a10025-c802-7260-ad53-608ba67a891c",
+    "done": true
+  },
+  "child": {
+    "preview": "01a10024-cba3-734c-bb2f-cd21db318417",
+    "refine": "01a10025-9c7e-7551-834c-14a0a0bea842",
+    "done": true
+  }
+}

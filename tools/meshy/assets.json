@@ -1,27 +1,174 @@
 {
-  "style": "low poly game asset, flat shading, matte surface, muted desaturated colors, simple shapes, no fine detail, no text",
-  "defaults": { "target_polycount": 3000 },
+  "style": "stylized low poly 3D game asset, faceted flat-shaded, chunky geometric shapes, flat colors with simple painted color variation, slight wear, 1980s Netherlands, single object, no base, no text",
+  "defaults": {
+    "target_polycount": 2000
+  },
   "assets": [
-    { "key": "wall",         "file": "wall_segment.glb",      "prompt": "a straight section of an old apartment corridor wall, plaster, with a wooden skirting board, flat rectangular panel" },
-    { "key": "wallDoor",     "file": "wall_door_closed.glb",  "prompt": "a section of old apartment corridor wall with a closed wooden door and door frame" },
-    { "key": "wallDoorOpen", "file": "wall_door_open.glb",    "prompt": "a section of old apartment corridor wall with a wooden door frame and the door swung half open inward" },
-    { "key": "wallWindow",   "file": "wall_window.glb",       "prompt": "a section of old apartment corridor wall with an empty wooden window frame opening, cross mullion, no glass" },
-    { "key": "floor",        "file": "floor_tile.glb",        "prompt": "a square worn wooden floor tile slab" },
-    { "key": "ceiling",      "file": "ceiling_tile.glb",      "prompt": "a square plaster ceiling panel slab, slightly stained" },
-    { "key": "stairs",       "file": "stairs_flight.glb",     "prompt": "a single straight flight of old concrete stairs with 15 steps", "target_polycount": 4000 },
-    { "key": "railing",      "file": "railing.glb",           "prompt": "a straight section of old metal stair railing with a wooden handrail" },
-    { "key": "trunk",        "file": "tree_trunk.glb",        "prompt": "a tall thick gnarled tree trunk segment, bark, no leaves, no roots", "target_polycount": 4000 },
-    { "key": "rootMass",     "file": "tree_root_mass.glb",    "prompt": "a tangled mass of thick tree roots growing upward in a flat cluster, like covering a doorway" },
-    { "key": "moss",         "file": "moss_patch.glb",        "prompt": "a thin flat irregular patch of moss on the ground", "target_polycount": 800 },
-    { "key": "leaves",       "file": "tree_canopy_chunk.glb", "prompt": "a rounded cluster of tree foliage, canopy chunk", "target_polycount": 1500 },
-    { "key": "chair",        "file": "chair_old.glb",         "prompt": "an old simple wooden chair with a slatted back" },
-    { "key": "cup",          "file": "cup.glb",               "prompt": "a plain ceramic mug with a handle", "target_polycount": 800 },
-    { "key": "frame",        "file": "photo_frame_empty.glb", "prompt": "an empty wooden picture frame with no picture, just the frame and a dark backing", "target_polycount": 800 },
-    { "key": "letter",       "file": "letter_folded.glb",     "prompt": "a folded paper letter, slightly creased", "target_polycount": 500 },
-    { "key": "key",          "file": "key.glb",               "prompt": "an old brass door key with a round bow", "target_polycount": 800 },
-    { "key": "pot",          "file": "flower_pot_empty.glb",  "prompt": "an empty terracotta flower pot", "target_polycount": 800 },
-    { "key": "lamp",         "file": "pendant_lamp.glb",      "prompt": "a simple hanging pendant ceiling lamp with a cone metal shade, cord and bulb", "target_polycount": 1500 },
-    { "key": "curtain",      "file": "curtain_torn.glb",      "prompt": "a single torn old fabric curtain hanging straight down, ragged bottom edge", "target_polycount": 1500 },
-    { "key": "crack",        "file": "floor_crack.glb",       "prompt": "a thin flat jagged crack decal piece for a floor", "target_polycount": 500 }
+    {
+      "key": "lamp",
+      "image": "refs/lamp.png",
+      "target_polycount": 1500,
+      "note": "2 楼「钥匙」：窗边一直亮着的台灯"
+    },
+    {
+      "key": "photo",
+      "image": "refs/photo.png",
+      "target_polycount": 800,
+      "note": "1 楼「钥匙」：全家福相框（照片画面用贴图替换）"
+    },
+    {
+      "key": "radio",
+      "image": "refs/radio.png",
+      "target_polycount": 2000,
+      "note": "2 楼「钥匙」：80 年代收录机"
+    },
+    {
+      "key": "tickets",
+      "image": "refs/tickets.png",
+      "target_polycount": 600,
+      "note": "3 楼「钥匙」：一沓渡轮票"
+    },
+    {
+      "key": "machine",
+      "image": "refs/machine.png",
+      "target_polycount": 1500,
+      "note": "3 楼「钥匙」：磁带答录机"
+    },
+    {
+      "key": "housekey",
+      "image": "refs/housekey.png",
+      "target_polycount": 800,
+      "note": "4 楼「钥匙」：系在绳上的家门钥匙"
+    },
+    {
+      "key": "can",
+      "image": "refs/can.png",
+      "target_polycount": 1500,
+      "note": "4 楼「钥匙」：喷壶"
+    },
+    {
+      "key": "pendant",
+      "prompt": "a hanging industrial pendant ceiling lamp, dark metal cone shade, short metal rod, round ceiling mount, bulb visible underneath",
+      "target_polycount": 800
+    },
+    {
+      "key": "homeDoor",
+      "prompt": "a Dutch apartment front door standing alone in a thin wooden door frame, dark brown wooden panel door with a brass house number plate and a brass letterbox slot, door slightly open",
+      "target_polycount": 1500
+    },
+    {
+      "key": "potCracked",
+      "prompt": "an empty terracotta flower pot cracked open down one side, a thin tree root growing out of the crack",
+      "target_polycount": 800
+    },
+    {
+      "key": "telescope",
+      "prompt": "an old brass telescope on a wooden tripod, pointing slightly upward",
+      "target_polycount": 1500
+    },
+    {
+      "key": "farHouseA",
+      "prompt": "the top floor and stepped gable roof of a narrow red-brick Dutch canal house, cut off flat at the bottom as if sinking into water, a small tree growing from the roof",
+      "target_polycount": 1200
+    },
+    {
+      "key": "farHouseB",
+      "prompt": "the top two floors and pointed gable roof of a pair of brick Dutch townhouses, cut off flat at the bottom as if sinking into water, white window frames, a few plants on the roof",
+      "target_polycount": 1200
+    },
+    {
+      "key": "farHouseC",
+      "prompt": "the upper part of a small brick Dutch house with a steep tiled roof and a chimney, cut off flat at the bottom as if sinking into water, a bush growing on the roof",
+      "target_polycount": 1000
+    },
+    {
+      "key": "farChurch",
+      "prompt": "the tall brick bell tower and pointed spire of a Dutch village church, cut off flat at the bottom as if sinking into water, a small tree growing from a ledge",
+      "target_polycount": 1500
+    },
+    {
+      "key": "farMill",
+      "prompt": "the upper half of a traditional Dutch windmill with its cap and four sails, cut off flat at the bottom as if sinking into water",
+      "target_polycount": 1500
+    },
+    {
+      "key": "shoeCabinet",
+      "image": "refs/shoeCabinet.png",
+      "target_polycount": 2000,
+      "note": "摆放点 1：鞋柜"
+    },
+    {
+      "key": "sideTable",
+      "image": "refs/sideTable.png",
+      "target_polycount": 1500,
+      "note": "摆放点 2：边桌（带花瓶）"
+    },
+    {
+      "key": "shelf",
+      "image": "refs/shelf.png",
+      "target_polycount": 2000,
+      "note": "摆放点 3：墙上搁板"
+    },
+    {
+      "key": "boxes",
+      "image": "refs/boxes.png",
+      "target_polycount": 1200,
+      "note": "摆放点 5：搬家纸箱"
+    },
+    {
+      "key": "phoneTable",
+      "image": "refs/phoneTable.png",
+      "target_polycount": 2000,
+      "note": "摆放点 6：电话桌（转盘电话）"
+    },
+    {
+      "key": "bench",
+      "image": "refs/bench.png",
+      "target_polycount": 1000,
+      "note": "摆放点 7：长凳"
+    },
+    {
+      "key": "lowCabinet",
+      "image": "refs/lowCabinet.png",
+      "target_polycount": 1500,
+      "note": "摆放点 4、8：矮柜"
+    },
+    {
+      "key": "slippers",
+      "image": "refs/slippers.png",
+      "target_polycount": 800,
+      "note": "4 楼房间门口的两双拖鞋"
+    },
+    {
+      "key": "treeCrown",
+      "image": "refs/treeCrown.png",
+      "target_polycount": 6000,
+      "texture": 1024,
+      "note": "大树：树冠（天台上方）"
+    },
+    {
+      "key": "treeTrunk",
+      "prompt": "a very tall straight section of a giant old tree trunk, thick dark brown bark with deep vertical grooves, no branches, no leaves, cut flat at the top and at the bottom, cylinder shape",
+      "target_polycount": 2000,
+      "note": "大树：树干段（上下接起来贯穿楼层）"
+    },
+    {
+      "key": "treeBranch",
+      "prompt": "a single long thick tree branch reaching forward horizontally, brown bark, a few side twigs, three rounded clumps of green leaves near the tip",
+      "target_polycount": 2500,
+      "note": "大树：穿窗伸进走廊的枝条"
+    },
+    {
+      "key": "mother",
+      "prompt": "a full body woman in her late thirties, 1980s Dutch fashion, curly brown shoulder-length hair, white blouse with a small floral print, high-waisted light blue jeans, white sneakers, standing straight, arms relaxed at her sides, gentle face, game character",
+      "target_polycount": 4000,
+      "note": "联机：母亲（第二个玩家），游戏里渲染成发暖光的半透明人形"
+    },
+    {
+      "key": "child",
+      "prompt": "a full body teenager about sixteen years old, short messy brown hair, white t-shirt with red and blue stripes, navy jacket, blue jeans, white sneakers, a backpack on one shoulder, standing straight, arms relaxed at sides, game character",
+      "target_polycount": 4000,
+      "note": "联机：母亲那边看到的孩子（主角）"
+    }
   ]
 }

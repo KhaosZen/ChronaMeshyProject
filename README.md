@@ -1,79 +1,82 @@
-# ROOT（工作名）— Meshy × Chrona 3D 世界创作赛参赛作品
+# ROOT — an entry for the Meshy × Chrona 3D World Contest
 
-一个离家多年的孩子，被困在关于老家的记忆里。大海中央一栋被树占据的废弃楼，每层解开谜题才能上楼，否则永远留在同一层。从压抑、无色走到明亮、有色，最后在天台推开一扇虚掩的家门——回家。
+A grown-up child who left home at sixteen is trapped in the memory of the place they grew up: a red-brick apartment block in a drowned Dutch seaside town, 1980s, with a giant tree growing up through its courtyard. Each floor only lets you climb higher once you find what was lost; otherwise you keep walking the same hallway. The world moves from cold and colourless to warm and bright, until you reach the roof and push open a door standing on its own — home.
 
-- **截止**：2026-10-09 07:59（北京时间）
-- **平台**：[Chrona.world](https://chrona.world)，上传 ZIP（index.html + assets）≤ 200 MiB，发布即公开
-- **在线试玩**：https://khaoszen.github.io/ChronaMeshyProject/（合进 main 自动部署，调试加 `?debug`）
-- **设计文档**：Claude Docs「ROOT 设计文档」（玩法、叙事、谜题池、资产清单、概念图提示词）
-- **技术**：Three.js + 外链 GLB（Meshy API 生成）
+- **Deadline**: 2026-10-09 07:59 (Beijing time)
+- **Platform**: [Chrona.world](https://chrona.world) — ZIP upload (index.html + assets), ≤ 200 MiB; published worlds are public
+- **Play online**: https://khaoszen.github.io/ChronaMeshyProject/ (auto-deployed from `main`; add `?debug` for the debug HUD)
+- **Design doc**: "ROOT 设计文档" in Claude Docs (gameplay, story, puzzle pool, asset list, concept-art prompts)
+- **Tech**: Three.js + GLB models generated with the Meshy API
 
-## 运行
+## Run locally
 
 ```bash
 python3 -m http.server 8000
-# http://localhost:8000/?debug   调试：显示楼层/谜题/钥匙；1–5 跳楼层，K 拿齐本层钥匙
+# http://localhost:8000/?debug   HUD with floor / puzzles / keys; 1–5 jump to a floor, K collects this floor's keys
 ```
 
-## 打包上传 Chrona
+## Package for Chrona
 
 ```bash
 npm install
-npm run pack        # → dist/root.zip（index.html + assets + 本地化的 three，不依赖 CDN）
+npm run pack        # → dist/root.zip (index.html + assets + a local copy of three, no CDN)
 ```
 
-## 结构
+## Layout
 
 ```
-index.html               全部游戏逻辑（按编号分节：设计数据 / 平台适配层 / 关卡 / 楼层外观 / 谜题系统 / 声音 / 过渡房间与传送 / 控制 / 交互）
-tools/pack.mjs           打包 dist/root.zip
-tools/meshy/             Meshy API 批量生成脚本 + 提示词清单
-docs/chrona-checklist.md Chrona 平台待确认项与事件接口
-docs/assets.md           资产约定（旧版清单，新清单见设计文档）
+index.html               the whole game (numbered sections: design data / platform adapter / level / floor looks / puzzles / audio / room & stairs / controls / interaction)
+tools/pack.mjs           builds dist/root.zip
+tools/meshy/             Meshy API batch generator + asset prompt list
+docs/chrona-checklist.md open questions about the Chrona platform and the event interface
+docs/assets.md           old asset conventions (the current list lives in the design doc)
 ```
 
-## 灰盒现状
+## How it plays (graybox)
 
-每层同一布局：直角走廊 → 过渡房间 → 楼梯。走廊走在内圈：内侧的窗看天井里的大树（3 楼起枝条从窗伸进来），外侧是邻居家的门，转角两扇窗朝海。站在不同楼层，透过天井看到的是大树的不同段，头顶剩下的楼层也不同。
+Every floor has the same layout: an L-shaped hallway → a small living room → stairs. The hallway runs around the inner courtyard: windows on the inner side look at the giant tree (from floor 3 its branches reach in through them), neighbours' doors line the outer side, and two corner windows face the sea. From each floor you see a different section of the tree, and a different number of storeys above you.
 
-- **找「钥匙」**：每把随机抽一个谜题模板和 8 个摆放点之一；屏幕上不显示要找几把。
-- **过渡房间**：进门后身后的门关上。本层每把「钥匙」在归位处留一个淡淡的空位，手里有的走过去按 E 放回。推尽头的门时判定，播内心独白：
-  - 全放回了：剧情台词，上楼。
-  - 没齐：抽一句提示台词，回到本层，已拿到的「钥匙」清空。
-  - 交互错过：迷茫台词。
-  - 手里还有没放回的：门不开，提醒一句。
-  - 墙上每把「钥匙」对应一张便条，没拿到的字迹模糊，以此暗示数量。
-- **楼梯无缝**：出口楼梯顶端是下一层起点的复制品。爬到一半时移到入口楼梯的同一位置，两处画面逐像素一致，所以看不出切换。光和颜色在上楼途中几秒内平滑过渡到下一层。
-- **冷 → 暖**：1 楼暗冷的蓝灰，每往上一层更暖、更鲜艳。
-- **叙事与场景**：「钥匙」只出现在跟它有关的位置；墙上全家福、邻居门上的搬迁通知、3 楼满墙寻人启事、4 楼门口两双拖鞋；拿到「钥匙」时场景有回应（照片里的脸清楚了、广播、汽笛、植物长出来）；过渡房间逐层添家具；2 楼远处广播、4 楼有人哼歌。
-- **过渡房间**：有家的陈设（地毯、沙发、书架、落地灯、挂钟、衣帽架、边柜），1 楼盖着防尘布；放回的「钥匙」一直留在房间里。
-- **真假谜题**：和母亲的痕迹对得上的才是真的（杯子扣着、全家福缺一张脸、收音机还在响……），过渡房间的便条写着这个特征。
-- **1 楼开局**：楼梯口是一扇关着的门，第一次进过渡房间后撤掉；楼层号牌在出生点右前方。
-- **天台**：4 楼的楼梯直接通到楼顶，天井里长出巨树，四周是海。天台上立着一扇虚掩的家门，门缝透着白光，走过去后白场，显示用时和体验过的谜题数。
+- **Finding the "keys"**: each key (a keepsake that brings back a memory) gets a random puzzle template and one of 8 spots that fit it. The screen never says how many there are.
+- **The living room**: the door closes behind you. Each of this floor's keys has a faint outline where it belongs; walk up and press E to put it back. Opening the far door decides what happens, as an inner monologue:
+  - all keys back: a story line, and the stairs lead up;
+  - some missing: a hint line, and you are back at the start of this floor with the keys reset;
+  - after a wrong interaction: a confused line;
+  - still holding a key: the door won't open yet.
+  - Each key has a note on the wall; the ones you haven't found are washed out, which hints at how many there are.
+- **Seamless stairs**: the top of the exit stairs is a copy of the next floor's start. Halfway up you are moved to the same spot on the entry stairs; both views match pixel for pixel, so the switch is invisible. Light and colour blend into the next floor over a few seconds.
+- **Cold → warm**: floor 1 is dark blue-grey; each floor up is warmer and more saturated.
+- **Story in the space**: keys only appear where they make sense; family photos with blurred faces, evacuation notices on neighbours' doors, MISSING flyers on floor 3, two pairs of slippers on floor 4; the world reacts when you pick a key up (a face comes back into the photos, a broadcast, a ferry horn, plants grow); the living room gains furniture floor by floor; a distant broadcast on floor 2, someone humming on floor 4.
+- **Twin puzzle**: the real one is the one that matches the mother's habits (the lamp still on, a face missing from the photo, the radio still playing…), and the wall notes say exactly that.
+- **Floor 1 start**: the stairwell is closed by a door until you first reach the living room; the floor number sits to the front-right of the spawn.
+- **Roof**: the floor-4 stairs lead straight onto the roof, the tree rises out of the courtyard, the sea is all around. A lone front door stands ajar with white light in the gap, a cracked empty flower pot beside it; walk through and the screen fades to white with your time and number of puzzles.
 
-| 模板 | 状态 |
+**Two players (optional)**: on the start screen, the player can invite someone to join as **the mother**. They get a 4-letter room code; the second player opens the same world, picks "Join as the mother" and enters it. The mother sees every lost keepsake on the floor — even the hidden ones — but can't pick them up; looking at one and pressing E lights a warm beam over it for the child. The child sees her as a glowing, translucent figure. Playing alone works exactly the same. (Chrona's sandbox blocks WebSockets, so the two browsers connect peer-to-peer over WebRTC, with the handshake relayed through ntfy.sh over HTTPS.)
+
+| Template | Status |
 |---|---|
-| 错位、真假、回头、关灯、循声、组合 | ✅ 已实现 |
-| 数门：三扇邻居门平时锁着，其中一扇虚掩，门后储物间里放着「钥匙」 | ✅ 已实现 |
-| 顺序：墙上 4 张画（种子→大树）或照片（婴儿→离家），按故事顺序碰，错了重来 | ✅ 已实现 |
-| 窗外：雾里远处废楼有扇窗亮着，用望远镜看清后「钥匙」出现在窗台上 | ✅ 已实现 |
+| Misplaced, Twin, Behind you, Lights out, Follow the sound, Combine | ✅ |
+| Doors: three neighbours' doors are locked; one is left ajar with the key in the closet behind it | ✅ |
+| Order: four drawings (seed → tree) or photos (baby → empty pier), shuffled; touch them in story order | ✅ |
+| Window: a lit window in a distant building; the telescope shows the key there, then it is on your windowsill | ✅ |
 
-数门、顺序、窗外每层最多出现一次。可用模板：1 楼错位；2 楼错位、真假、回头、关灯；3 楼加循声、数门、组合、窗外（去掉错位）；4 楼循声、数门、组合、顺序、窗外。
+Doors, Order and Window appear at most once per floor. Templates per floor: 1 — Misplaced; 2 — Misplaced, Twin, Behind you, Lights out; 3 — Twin, Behind you, Lights out, Follow the sound, Doors, Combine, Window; 4 — Follow the sound, Doors, Combine, Order, Window.
 
-## 进度
+## Progress
 
-- [x] Day 1 原型、Chrona ZIP 打包、Meshy 脚本打通（椅子试生成）
-- [x] 设计重规划：玩法、故事「空花盆」、谜题池、资产清单、概念图提示词
-- [x] 灰盒：四层 + 天台完整流程、6 种谜题模板、台词、无缝楼梯（逐像素验证）、便条暗示、结局统计
-- [x] 真假谜题按母亲的痕迹分辨；叙事与场景结合 5 项；冷→暖色调
-- [x] 过渡房间：家的陈设、「钥匙」亲手放回
-- [x] 数门 / 顺序 / 窗外三个模板（9 种模板全部完成）
-- [ ] 上传 Chrona 测试（交互 API、iframe、Pointer Lock）
-- [ ] 概念图定调（GPT image）→ Meshy 资产生成与替换
-- [ ] 声音、打磨、性能（合批、贴图压缩）
+- [x] Day 1 prototype, Chrona ZIP packaging, Meshy pipeline (test chair)
+- [x] Redesign: gameplay, story "The Empty Flower Pot", puzzle pool, asset list, concept-art prompts
+- [x] Graybox: four floors + roof, 9 puzzle templates, monologue lines, seamless stairs (pixel-verified), wall notes, end screen
+- [x] Living room keepsakes put back by hand; courtyard layout; rooftop home door and flower pot
+- [x] Setting moved to a 1980s Dutch apartment block; all in-game text in English
+- [x] Concept art locked: hallway (floor 1, two states), roof, key props, furniture
+- [x] Meshy assets: key props, furniture, pendant lamps, tree, rooftop door, distant drowned town, mother and child (29 models, ~4 MB total)
+- [x] Photo / drawing textures (GPT image)
+- [x] Optional two-player mode: the second player is the mother
+- [ ] Sound, polish, performance (batching, texture compression)
+- [ ] Chrona upload by Oct 6 (Chrona records the demo video after upload; the X post must be live before Oct 8 23:59 UTC)
 
-## 下次待办
+## Next
 
-1. 用 GPT image 出概念图 1、6、7（1 楼走廊、天台、「钥匙」道具设定），定高保真色调和造型；提示词见设计文档。
-2. 定稿后批量生成 Meshy 资产（约 67 个，P0 44 个），贴图压到 512px，替换灰盒占位体。
-3. 上传 Chrona 测试交互 API、iframe、Pointer Lock。
+1. Wall / floor materials (brick, plaster, peeling paint by floor), living-room furniture.
+2. Polish: sound, performance, a full playthrough on a real GPU, two-player test across two networks.
+3. Upload to Chrona by Oct 6, then post on X with the demo video.
