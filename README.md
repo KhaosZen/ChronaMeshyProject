@@ -72,11 +72,12 @@ Doors, Order and Window appear at most once per floor. Templates per floor: 1 â€
 - [x] Meshy assets: key props, furniture, pendant lamps, tree, rooftop door, distant drowned town, mother and child (29 models, ~4 MB total)
 - [x] Photo / drawing textures (GPT image)
 - [x] Optional two-player mode: the second player is the mother
+- [ ] Mobile touch controls
 - [ ] Sound, polish, performance (batching, texture compression)
 - [ ] Chrona upload by Oct 6 (Chrona records the demo video after upload; the X post must be live before Oct 8 23:59 UTC)
 
 ## Next
 
-1. Wall / floor materials (brick, plaster, peeling paint by floor), living-room furniture.
-2. Polish: sound, performance, a full playthrough on a real GPU, two-player test across two networks.
+1. Oct 4: wall / floor materials (brick, plaster, peeling paint by floor), living-room furniture, tree branches, rooftop sea / sky / distant town.
+2. Oct 5: mobile (landscape, left stick to walk, drag to look, a Use button; lower pixel ratio and effects on phones), then sound and polish, a full playthrough on a real GPU, two-player test across two networks.
 3. Upload to Chrona by Oct 6, then post on X with the demo video.
