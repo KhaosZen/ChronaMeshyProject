@@ -127,5 +127,105 @@
     "preview": "01a10024-cba3-734c-bb2f-cd21db318417",
     "refine": "01a10025-9c7e-7551-834c-14a0a0bea842",
     "done": true
+  },
+  "sofa": {
+    "preview": "01a104eb-bcac-738d-94d8-96866c095d20",
+    "refine": "01a104ec-8b4b-72ad-92fc-9a147d61fa5c",
+    "done": true
+  },
+  "armchair": {
+    "preview": "01a104eb-bced-7409-9248-00f1f5a5c865",
+    "refine": "01a104ec-b814-70ff-bf31-76b1bfd84971",
+    "done": true
+  },
+  "tvCabinet": {
+    "preview": "01a104eb-bcb6-70f0-958d-1925a5d7d751",
+    "refine": "01a104ec-8d78-725b-8ad6-6e624b7088b1",
+    "done": true
+  },
+  "floorLamp": {
+    "preview": "01a104eb-bd06-74f9-b56b-401c3859e7d8",
+    "refine": "01a104ec-90e8-76cb-9b55-fc7068f27027",
+    "done": true
+  },
+  "bookshelf": {
+    "preview": "01a104ed-0973-71af-b9a2-64cddd38d4d4",
+    "refine": "01a104ee-020c-7412-94d0-d2d9d9567e09",
+    "done": true
+  },
+  "coatRack": {
+    "preview": "01a104ed-0e84-742d-8beb-f9adef58f64b",
+    "refine": "01a104ee-0640-7654-9e9a-4e947383311d",
+    "done": true
+  },
+  "wallClock": {
+    "preview": "01a104ed-353c-7194-8f3c-4b74cc2f3ba8",
+    "refine": "01a104ee-2fff-768d-86d7-b42b81ea55de",
+    "done": true
+  },
+  "diningTable": {
+    "preview": "01a104ed-5e2b-706e-bdb5-81f3bb6b194f",
+    "refine": "01a104ee-7b65-73d8-a4d0-df43df0a5a25",
+    "done": true
+  },
+  "diningChair": {
+    "preview": "01a104ee-d87a-73f6-a14f-63195fd7cbbe",
+    "refine": "01a104ef-a7af-73d4-9cc5-ce5d4d4a4a8e",
+    "done": true
+  },
+  "farBlockA": {
+    "preview": "01a104ee-f6bb-7527-9575-0e1ba374a2b4",
+    "refine": "01a104ef-f15f-7768-af5b-bf24b43d9e74",
+    "done": true
+  },
+  "farBlockB": {
+    "preview": "01a104ee-fe75-7067-9e59-49442b747894",
+    "refine": "01a104f0-26a8-75cc-b020-46f536ee6bcb",
+    "done": true
+  },
+  "lighthouse": {
+    "preview": "01a104ef-25f3-74f4-9b87-5932cba546c4",
+    "refine": "01a104ef-f5ce-77f3-9879-e8cded21fbfb",
+    "done": true
+  },
+  "ferry": {
+    "preview": "01a104f0-26a4-7145-93d4-890c49a93fe9",
+    "refine": "01a104f0-f7c0-7320-a586-b2e47f887ab6",
+    "done": true
+  },
+  "dyke": {
+    "preview": "01a104f0-75a6-73c7-9e9b-405f5d1faada",
+    "refine": "01a104f1-4a29-7730-bbdb-00c198b1620d",
+    "done": true
+  },
+  "cloudA": {
+    "preview": "01a104f0-967c-76cf-a7dd-183888b01c39",
+    "refine": "01a104f1-b79d-71a3-ab16-20e882ce95ce",
+    "done": true
+  },
+  "cloudB": {
+    "preview": "01a104f0-a785-7425-8a68-b4771df8914b",
+    "refine": "01a104f1-a0d5-710f-8cee-14399d1d22d3",
+    "done": true
+  },
+  "debrisCrate": {
+    "preview": "01a104f1-773d-75ec-ac84-eaf589f55c6e",
+    "refine": "01a104f2-7444-7445-906f-05fa9b9f594e",
+    "done": true
+  },
+  "streetLamp": {
+    "preview": "01a104f1-cd7c-770f-9d5e-2fb13f514547",
+    "refine": "01a104f2-9efd-7626-beaf-2ee8e28350ee",
+    "done": true
+  },
+  "waterTree": {
+    "preview": "01a104f2-23e0-7377-ba4b-f64727a2bfbb",
+    "refine": "01a104f3-4c5f-733c-8ad3-09a71fe6e9d1",
+    "done": true
+  },
+  "bicycle": {
+    "preview": "01a104f2-5ded-7045-a52c-42592f3b1d88",
+    "refine": "01a104f3-548e-762a-9785-6d20dc095c24",
+    "done": true
   }
 }
