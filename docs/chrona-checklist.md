@@ -9,9 +9,9 @@
 | 1 | GLB 怎么加载：外链 URL、平台资产库，还是必须 base64 内嵌？ | ✅ 上传 ZIP（index.html + assets），相对路径外链 | `ASSET_BASE`、`loadAssets()` |
 | 2 | 单文件大小上限？GLB 总量上限？ | ✅ 整个上传 ≤ 200 MiB | 决定是否内嵌、模型面数预算 |
 | 3 | 是否允许加载外部脚本（jsdelivr CDN）？ | 已绕开：`npm run pack` 把 three 打进 ZIP | 顶部 `importmap`；不允许就把 three 打包进 HTML |
-| 4 | 页面是否跑在 iframe 里？是否允许 Pointer Lock？ | | 已做兜底：不允许时改为按住鼠标拖拽转视角 |
+| 4 | 页面是否跑在 iframe 里？是否允许 Pointer Lock？ | ✅ 跑在 `sandbox="allow-scripts allow-pointer-lock"` 的 iframe 里：Pointer Lock 可用；没有 allow-same-origin，所以 origin 是 null、localStorage 不可用、资源请求是跨源的（服务器带 `Access-Control-Allow-Origin: *`，图片要设 crossOrigin） | 已做兜底：不允许时改为按住鼠标拖拽转视角 |
 | 5 | 平台是否自带第一人称控制器？要不要用它的？ | | 第 9 节"第一人称控制" |
-| 6 | 拾取 / 触发 / 对话 / 交给 NPC 的接口写法 | | 第 2 节 `Platform` 适配层 |
+| 6 | 拾取 / 触发 / 对话 / 交给 NPC 的接口写法 | ✅ 没有这类接口；宿主页只通过 postMessage 收发 `chrona:world-init`（带每个玩家的进度）、`chrona:save-status` 这类存档消息 | 第 2 节 `Platform` 适配层 |
 | 7 | 是否支持移动端？需要虚拟摇杆吗？ | | 目前只有键鼠 |
 | 8 | 是否能存档（跨会话记住循环数和拾取过的道具）？ | | `state` |
 
@@ -32,3 +32,9 @@
 | `end` | `{ seconds, puzzles, solved }` | 走进传送门 |
 
 确认 Chrona API 后只需要改 `Platform` 对象；台词如果要走平台的对话接口，改 `say()`。
+
+## 联机（10/4 查到的平台限制）
+
+- CSP：`connect-src 'self' https: blob: data:`，没有 `wss:`，**WebSocket 用不了**，只能发 https 请求（fetch / EventSource）。
+- Chrona 不提供运行时多人接口（页面上的 Co-build 是共同编辑世界，不是多人游玩）。
+- 我们的做法：房间码 + ntfy.sh 中转握手消息（https POST + SSE）+ WebRTC 数据通道直连。已在模拟的沙盒 + CSP 环境里，用真实的 ntfy.sh 两个浏览器连通。

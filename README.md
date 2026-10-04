@@ -50,6 +50,8 @@ Every floor has the same layout: an L-shaped hallway → a small living room →
 - **Floor 1 start**: the stairwell is closed by a door until you first reach the living room; the floor number sits to the front-right of the spawn.
 - **Roof**: the floor-4 stairs lead straight onto the roof, the tree rises out of the courtyard, the sea is all around. A lone front door stands ajar with white light in the gap, a cracked empty flower pot beside it; walk through and the screen fades to white with your time and number of puzzles.
 
+**Two players (optional)**: on the start screen, the player can invite someone to join as **the mother**. They get a 4-letter room code; the second player opens the same world, picks "Join as the mother" and enters it. The mother sees every lost keepsake on the floor — even the hidden ones — but can't pick them up; looking at one and pressing E lights a warm beam over it for the child. The child sees her as a glowing, translucent figure. Playing alone works exactly the same. (Chrona's sandbox blocks WebSockets, so the two browsers connect peer-to-peer over WebRTC, with the handshake relayed through ntfy.sh over HTTPS.)
+
 | Template | Status |
 |---|---|
 | Misplaced, Twin, Behind you, Lights out, Follow the sound, Combine | ✅ |
@@ -67,13 +69,14 @@ Doors, Order and Window appear at most once per floor. Templates per floor: 1 �
 - [x] Living room keepsakes put back by hand; courtyard layout; rooftop home door and flower pot
 - [x] Setting moved to a 1980s Dutch apartment block; all in-game text in English
 - [x] Concept art locked: hallway (floor 1, two states), roof, key props, furniture
-- [ ] Meshy asset generation and replacement of graybox shapes
-- [ ] Photo / drawing textures (GPT image)
+- [x] Meshy assets: key props, furniture, pendant lamps, tree, rooftop door, distant drowned town, mother and child (29 models, ~4 MB total)
+- [x] Photo / drawing textures (GPT image)
+- [x] Optional two-player mode: the second player is the mother
 - [ ] Sound, polish, performance (batching, texture compression)
-- [ ] Chrona upload (last two days; publishing is public)
+- [ ] Chrona upload by Oct 6 (Chrona records the demo video after upload; the X post must be live before Oct 8 23:59 UTC)
 
 ## Next
 
-1. Batch-generate the Meshy assets (P0 first), compress textures to 512 px, swap out the graybox shapes.
-2. Bring in the photo and drawing textures.
-3. Polish, then upload to Chrona in the last two days.
+1. Wall / floor materials (brick, plaster, peeling paint by floor), living-room furniture.
+2. Polish: sound, performance, a full playthrough on a real GPU, two-player test across two networks.
+3. Upload to Chrona by Oct 6, then post on X with the demo video.
