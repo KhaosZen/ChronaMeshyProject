@@ -27,7 +27,7 @@ fs.rmSync(path.join(ROOT, 'dist'), { recursive: true, force: true });
 const copy = (from, to) => { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(from, to); };
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
-for (const f of ['build/three.module.min.js', 'examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/utils/BufferGeometryUtils.js'])
+for (const f of ['build/three.module.min.js', 'examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/utils/BufferGeometryUtils.js', 'examples/jsm/environments/RoomEnvironment.js'])
   copy(path.join(THREE, f), path.join(OUT, 'vendor/three', f));
 fs.cpSync(path.join(ROOT, 'assets'), path.join(OUT, 'assets'), { recursive: true, filter: f => !path.basename(f).startsWith('.') });
 

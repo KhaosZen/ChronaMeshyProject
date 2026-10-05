@@ -26,13 +26,6 @@
       "texture": 1024
     },
     {
-      "key": "tickets",
-      "image": "refs/tickets.png",
-      "target_polycount": 600,
-      "note": "3 楼「钥匙」：一沓渡轮票",
-      "texture": 1024
-    },
-    {
       "key": "machine",
       "image": "refs/machine.png",
       "target_polycount": 1500,
@@ -67,8 +60,9 @@
     },
     {
       "key": "potCracked",
-      "prompt": "an empty terracotta flower pot cracked open down one side, a thin tree root growing out of the crack",
-      "target_polycount": 800,
+      "prompt": "an empty terracotta flower pot with a big crack running down one side and a chunk broken out of the rim, classic tapered pot shape, no plant, no soil inside",
+      "target_polycount": 1500,
+      "ai_model": "latest",
       "texture": 1024
     },
     {
@@ -104,9 +98,10 @@
     },
     {
       "key": "shoeCabinet",
-      "image": "refs/shoeCabinet.png",
-      "target_polycount": 2000,
       "note": "摆放点 1：鞋柜",
+      "image": "refs/shoeCabinet.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
       "texture": 1024
     },
     {
@@ -160,16 +155,18 @@
     },
     {
       "key": "treeCrown",
-      "image": "refs/treeCrown.png",
+      "note": "大树：树冠（天台上方）",
+      "prompt": "a large wide rounded tree canopy made of clustered green leaf masses with a few thick branches underneath forking out from a short cut-off stub, no trunk, no roots, summer oak",
       "target_polycount": 6000,
-      "texture": 1024,
-      "note": "大树：树冠（天台上方）"
+      "ai_model": "latest",
+      "texture": 1024
     },
     {
       "key": "treeTrunk",
-      "prompt": "a very tall straight section of a giant old tree trunk, thick dark brown bark with deep vertical grooves, no branches, no leaves, cut flat at the top and at the bottom, cylinder shape",
-      "target_polycount": 2000,
       "note": "大树：树干段（上下接起来贯穿楼层）",
+      "prompt": "a straight vertical section of a very thick old tree trunk, cylindrical, cut flat at the top and flat at the bottom, no roots, no branches, rough dark brown bark",
+      "target_polycount": 2000,
+      "ai_model": "latest",
       "texture": 1024
     },
     {
@@ -219,15 +216,17 @@
     },
     {
       "key": "bookshelf",
-      "prompt": "a tall wooden bookshelf filled with books, a few ornaments and a blue and white Delft plate on display",
-      "target_polycount": 3000,
-      "note": "房间：书架"
+      "note": "房间：书架",
+      "prompt": "a classic tall pine bookcase, simple box frame with four flat horizontal shelves, rows of upright hardback books, a blue and white plate leaning on the top shelf",
+      "target_polycount": 4000,
+      "ai_model": "latest"
     },
     {
       "key": "coatRack",
-      "prompt": "a wooden standing coat rack with a beige trench coat and a scarf hanging on it",
+      "note": "房间：衣帽架",
+      "prompt": "a wooden standing coat rack with one straight central pole, three curved feet at the bottom and four hooks at the top, a beige trench coat hanging from one hook",
       "target_polycount": 2000,
-      "note": "房间：衣帽架"
+      "ai_model": "latest"
     },
     {
       "key": "wallClock",
@@ -237,9 +236,10 @@
     },
     {
       "key": "diningTable",
-      "prompt": "a small square wooden dining table with a lace tablecloth and a coffee pot on it",
+      "note": "房间：餐桌",
+      "prompt": "a small square wooden dining table with four straight legs and a plain white tablecloth lying flat on top and hanging a little over the edges, nothing on the table",
       "target_polycount": 2000,
-      "note": "房间：餐桌"
+      "ai_model": "latest"
     },
     {
       "key": "diningChair",
@@ -282,16 +282,11 @@
       "note": "远景：堤坝残段"
     },
     {
-      "key": "cloudA",
-      "prompt": "a large fluffy cumulus cloud made of a few rounded low poly puffs, pure white",
-      "target_polycount": 1200,
-      "note": "天空：云"
-    },
-    {
       "key": "cloudB",
-      "prompt": "a long flat stretched cloud made of many small rounded low poly puffs, pure white",
-      "target_polycount": 1200,
-      "note": "天空：云"
+      "note": "天空：云",
+      "prompt": "a long flat soft cloud made of smooth round white puffs merged in a row",
+      "target_polycount": 2500,
+      "ai_model": "latest"
     },
     {
       "key": "debrisCrate",
@@ -316,6 +311,46 @@
       "prompt": "an old black Dutch city bicycle lying on its side",
       "target_polycount": 1500,
       "note": "水面碎片：半露的自行车"
+    },
+    {
+      "key": "longBranch",
+      "prompt": "a long thick tree branch growing horizontally, gently curving, tapering from a thick base to a thin tip, a few small side twigs and clusters of green leaves near the tip",
+      "target_polycount": 3500,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "窗外伸进走廊的长枝（替代程序生成的管子）"
+    },
+    {
+      "key": "floorRoots",
+      "prompt": "thick gnarled tree roots crawling flat along the ground in a long line, low and flat, splitting into thinner roots, no trunk",
+      "target_polycount": 3000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "走廊地上爬的树根"
+    },
+    {
+      "key": "plantClump",
+      "prompt": "a small low clump of green weeds and leafy plants growing out of a crack in the floor, bushy",
+      "target_polycount": 1800,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "走廊地上的植物团"
+    },
+    {
+      "key": "ivyClump",
+      "prompt": "a cluster of trailing ivy with many small green leaves on thin vines, spreading flat",
+      "target_polycount": 1800,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "墙角的常春藤"
+    },
+    {
+      "key": "flowerClump",
+      "prompt": "a small clump of wild flowers, pink and yellow blossoms on green stems with leaves, growing from the ground",
+      "target_polycount": 1800,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "4 楼的花丛"
     }
   ]
 }
