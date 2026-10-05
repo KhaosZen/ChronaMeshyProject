@@ -73,7 +73,6 @@
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
 // 触屏设备（手机、平板）：换成虚拟摇杆操作，并降低画质保流畅；?touch 可在桌面上强制打开
@@ -172,8 +171,16 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 const hemi = new THREE.HemisphereLight('#c8ccd0', '#2a2622', 0.3); scene.add(hemi);
-// 环境光照（房间式的柔和反射）：模型有了明暗层次，不再是平涂；强度按楼层在 updateLook 里变
-{ const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); }
+// 环境光照：模型有了明暗层次，不再是平涂；强度按楼层在 updateLook 里变
+// 用自己搭的"房间"（顶灯 + 四面一样的侧光），绕竖轴每转 90° 都一样 —— 出口楼梯是入口楼梯转 90° 的复制品，两边光照必须完全相同
+{
+  const env = new THREE.Scene(), basic = (c, k = 1) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k), side: THREE.DoubleSide });
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(10, 6, 10), new THREE.MeshBasicMaterial({ color: '#6d6862', side: THREE.BackSide })).translateY(2));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), basic('#2e2a26')); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.95; env.add(floor);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), basic('#ffffff', 3)); top.rotation.x = Math.PI / 2; top.position.y = 4.9; env.add(top);
+  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, w = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.6), basic('#e4ddd0', 1.6)); w.position.set(Math.sin(a) * 4.9, 2.4, Math.cos(a) * 4.9); w.lookAt(0, 2.4, 0); env.add(w); }
+  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(env, 0.04).texture; pm.dispose();
+}
 scene.environmentIntensity = 0.25;
 // 楼内用正上方的平行光：墙面不受朝向影响，楼梯两端的复制品才看起来完全一样
 const sun = new THREE.DirectionalLight('#fff1d8', 0.3); sun.position.set(0, 50, 0); scene.add(sun);
@@ -1023,8 +1030,8 @@ function buildRoof() {
   const hd = model('homeDoor');
   if (hd) { // 模型是关着的门：门后放一块更大的白光板，光从门框四周漏出来
     hd.rotation.y = Math.PI; portal.add(hd);
-    const S = MODELS.homeDoor.size, glow = new THREE.Mesh(new THREE.PlaneGeometry(S.x + 0.18, S.y + 0.12), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide }));
-    glow.position.set(0, S.y / 2, S.z / 2 + 0.03); portal.add(glow);
+    const S = MODELS.homeDoor.size, glow = new THREE.Mesh(new THREE.PlaneGeometry(S.x + 0.18, S.y + 0.12), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+    glow.position.set(0, S.y / 2, S.z / 2 + 0.03); glow.rotation.y = Math.PI; portal.add(glow);   // 只朝玩家走来的那面发光，从门背后看不到
   } else {
   const frameMat = std('#8a6a4a'), doorMat = std('#a8794c');
   box(0.1, 2.25, 0.16, frameMat, -0.55, 1.125, 0, portal); box(0.1, 2.25, 0.16, frameMat, 0.55, 1.125, 0, portal); box(1.2, 0.1, 0.16, frameMat, 0, 2.2, 0, portal);
@@ -1207,14 +1214,14 @@ function updateLook(dt, instant) {
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
-    l.light.visible = state.lightsOn; l.light.color.copy(look.lampColor);
-    l.light.intensity = look.lamp * (flick && Math.random() < 0.015 ? 0.35 : 1);
+    l.light.color.copy(look.lampColor);   // 关灯用亮度 0，不隐藏：灯的数量一变所有材质都要重新编译，会卡一下
+    l.light.intensity = state.lightsOn ? look.lamp * (flick && Math.random() < 0.015 ? 0.35 : 1) : 0;
     l.bulb.emissiveIntensity = state.lightsOn ? 1 : 0;
   });
   // 复制品里的灯、替代房间灯的灯，和真灯保持一致
-  world.stubLights.forEach((s, i) => { const l = world.lamps[i].light; s.visible = l.visible; s.color.copy(l.color); s.intensity = l.intensity; });
+  world.stubLights.forEach((s, i) => { const l = world.lamps[i].light; s.color.copy(l.color); s.intensity = l.intensity; });
   const room = world.lamps[world.lamps.length - 1].light;
-  world.replicaLight.visible = room.visible; world.replicaLight.color.copy(room.color); world.replicaLight.intensity = room.intensity;
+  world.replicaLight.color.copy(room.color); world.replicaLight.intensity = room.intensity;
 }
 function setLights(on) { state.lightsOn = on; for (const p of state.puzzles) p.onLights?.(on); }
 
@@ -1590,6 +1597,23 @@ const sfx = {
     o.type = 'sawtooth'; o.frequency.setValueAtTime(open ? 70 : 95, t); o.frequency.linearRampToValueAtTime(open ? 110 : 60, t + 0.7); env(g, t, 0.08, 0.18, 0.6); o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + 0.8);
     if (!open) { const n = noiseSrc(), lp = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 180 }), g2 = audio.createGain(); env(g2, t + 0.55, 0.005, 0.9, 0.25); n.connect(lp).connect(g2).connect(out); n.start(t + 0.5); n.stop(t + 0.9); }
   },
+  step(soft) { // 脚步：木地板上一声轻响（天台是水泥，更闷）
+    const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: soft ? 380 : 650 }), g = audio.createGain();
+    env(g, t, 0.004, soft ? 0.12 : 0.09, 0.09); n.connect(f).connect(g).connect(outNode(null, 1)); n.start(t, Math.random()); n.stop(t + 0.15);
+  },
+  gull(pos) { // 海鸥：两三声往下滑的尖叫
+    const t0 = audio.currentTime, out = outNode(pos, 0.5), k = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < k; i++) { const t = t0 + i * 0.32, o = audio.createOscillator(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 1800, Q: 3 }), g = audio.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(1500 + Math.random() * 300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.25); env(g, t, 0.02, 0.35, 0.22); o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + 0.3); }
+  },
+  sea() { // 天台：持续的海浪 + 风（低通噪声，音量缓慢起伏）；返回总音量节点，结局时淡出
+    const out = audio.createGain(); out.gain.value = 0; out.connect(audio.destination); out.gain.linearRampToValueAtTime(1, audio.currentTime + 3);
+    for (const [fq, gain, rate] of [[420, 0.10, 0.11], [1600, 0.025, 0.07]]) {
+      const n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: fq }), g = audio.createGain(), lfo = audio.createOscillator(), lg = audio.createGain();
+      g.gain.value = gain; lfo.frequency.value = rate; lg.gain.value = gain * 0.7; lfo.connect(lg).connect(g.gain); n.connect(f).connect(g).connect(out); n.start(); lfo.start();
+    }
+    return out;
+  },
   click(pos) { const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'highpass', frequency: 2500 }), g = audio.createGain(); env(g, t, 0.003, 0.5, 0.05); n.connect(f).connect(g).connect(outNode(pos, 1)); n.start(t); n.stop(t + 0.1); },
   chime(pos) { const t = audio.currentTime, out = outNode(pos, 0.5); [880, 1320].forEach((fq, i) => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = fq; env(g, t + i * 0.06, 0.01, 0.25 / (i + 1), 1.2); o.connect(g).connect(out); o.start(t); o.stop(t + 1.4); }); },
   hum() { // 4 楼：隐约有人在哼歌
@@ -1603,7 +1627,13 @@ function startSound(pos, kind = 'blip') {
 }
 function stopSound(s) { if (s) { clearInterval(s.timer); sounds.delete(s); } }
 // 楼层氛围声：2 楼远处的撤离广播，4 楼有人哼歌
+let seaBed = null, gullT = 3;
 function ambience(dt) {
+  if (audio && state.phase === 'roof') { // 天台：海浪和风一直在，海鸥时不时叫几声
+    if (!seaBed) seaBed = sfx.sea();
+    if ((gullT -= dt) < 0) { gullT = 4 + Math.random() * 7; const g = world.roofLive.gulls[Math.floor(Math.random() * world.roofLive.gulls.length)]; sfx.gull(g?.getWorldPosition(V(0, 0, 0))); }
+    return;
+  }
   if (!audio || state.phase !== 'corridor') return;
   state.ambT += dt;
   if (state.floor === 2 && state.ambT > 16) { state.ambT = 0; sfx.broadcast(null, 5, 0.04); }
@@ -1680,7 +1710,7 @@ async function endGame() {
   if (net.role === 'child') net.send({ t: 'end' });
   const secs = Math.round((performance.now() - state.t0) / 1000), mm = String(Math.floor(secs / 60)).padStart(2, '0'), ss = String(secs % 60).padStart(2, '0');
   Platform.emit('end', { seconds: secs, puzzles: state.experienced, solved: state.solved });
-  $('fade').style.opacity = 1; await wait(1800);
+  $('fade').style.opacity = 1; if (seaBed) seaBed.gain.linearRampToValueAtTime(0, audio.currentTime + 2.5); await wait(1800);
   $('stats').textContent = `Time ${mm}:${ss}   ·   Puzzles ${state.experienced}`;
   $('end').style.display = 'flex'; $('touch').style.display = 'none'; document.exitPointerLock?.();
 }
@@ -1791,7 +1821,8 @@ function updatePlayer(dt) {
     if (mag > 0.08) {
       const sp = (run ? CFG.runSpeed : CFG.walkSpeed) * dt * Math.min(1, mag) / mag;
       const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
-      p.x += (-sy * f + cy * s) * sp; p.z += (-cy * f - sy * s) * sp; collide(p); bob += dt * 7;
+      p.x += (-sy * f + cy * s) * sp; p.z += (-cy * f - sy * s) * sp; collide(p);
+      const b0 = Math.floor(bob / Math.PI); bob += dt * 7 * Math.min(1, mag); if (audio && Math.floor(bob / Math.PI) !== b0 && player.onGround) sfx.step(state.roofMode);   // 每半个晃动周期一步
     }
   }
   const gy = groundAt(p.x, p.y, p.z);
@@ -2061,12 +2092,16 @@ function tick() {
 (async () => {
   await Promise.all([loadModels(), loadImages()]);
   buildBuilding(); buildRoof();
+  { // 预先编译所有着色器（含天台、楼梯口复制品等平时看不到的部分），避免第一次看到时卡一下
+    const hidden = []; scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+    await renderer.compileAsync(scene, camera); hidden.forEach(o => o.visible = false);
+  }
   state.prevFloor = 1;
   setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, false);
   applyContent(1); applyRoomNotes(1); genPuzzles(1); setLook(1, true); spawn();
   if (DEBUG) {
     $('hud').style.display = 'block';
-    window.__game = { player, state, world, camera, T, Tinv, net, debugJump, debugCollectAll, stairWarp, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
+    window.__game = { player, state, world, camera, T, Tinv, net, colliders, renderer, debugJump, debugCollectAll, stairWarp, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
   }
   ready = true; $('startText').textContent = CLICK + ' to enter';
   Platform.emit('ready');
