@@ -2094,7 +2094,8 @@ function tick() {
   buildBuilding(); buildRoof();
   { // 预先编译所有着色器（含天台、楼梯口复制品等平时看不到的部分），避免第一次看到时卡一下
     const hidden = []; scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
-    await renderer.compileAsync(scene, camera); hidden.forEach(o => o.visible = false);
+    if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera);
+    hidden.forEach(o => o.visible = false);
   }
   state.prevFloor = 1;
   setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, false);
