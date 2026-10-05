@@ -50,6 +50,8 @@ Every floor has the same layout: an L-shaped hallway → a small living room →
 - **Floor 1 start**: the stairwell is closed by a door until you first reach the living room; the floor number sits to the front-right of the spawn.
 - **Roof**: the floor-4 stairs lead straight onto the roof, the tree rises out of the courtyard, the sea is all around. A lone front door stands ajar with white light in the gap, a cracked empty flower pot beside it; walk through and the screen fades to white with your time and number of puzzles.
 
+**On a phone or tablet**: turn it sideways. Drag on the left half to walk (push the stick all the way to walk faster), drag on the right half to look around, and tap USE when something can be picked up or opened. Add `?touch` to the URL to try the touch controls on a desktop.
+
 **Two players (optional)**: on the start screen, the player can invite someone to join as **the mother**. They get a 4-letter room code; the second player opens the same world, picks "Join as the mother" and enters it. The mother sees every lost keepsake on the floor — even the hidden ones — but can't pick them up; looking at one and pressing E lights a warm beam over it for the child. The child sees her as a glowing, translucent figure. Playing alone works exactly the same. (Chrona's sandbox blocks WebSockets, so the two browsers connect peer-to-peer over WebRTC, with the handshake relayed through ntfy.sh over HTTPS.)
 
 | Template | Status |
@@ -74,11 +76,13 @@ Doors, Order and Window appear at most once per floor. Templates per floor: 1 �
 - [x] Optional two-player mode: the second player is the mother
 - [x] Brick / plaster hallways that peel less floor by floor, Meshy living-room furniture, branches through the windows
 - [x] Roof: low-poly animated sea with foam, gradient sky, drifting clouds, a ring of half-drowned buildings, lighthouse, sunken ferry, dyke, floating debris, seagulls
-- [ ] Mobile touch controls
+- [x] Mobile: landscape only, left thumb stick, right thumb look, USE button; lower pixel ratio and lighter scenery on phones
+- [x] Model review pass: shoe cabinet, bookshelf, dining table, flower pot, tree trunk / crown, coat rack and clouds regenerated; floor roots, plants, ivy, flowers and window branches are Meshy models now
+- [x] Doors swing open and shut; soft environment lighting; brighter floor 1; keys sit on the clear part of a furniture top
 - [ ] Sound, polish, performance (batching, texture compression)
 - [ ] Chrona upload by Oct 6 (Chrona records the demo video after upload; the X post must be live before Oct 8 23:59 UTC)
 
 ## Next
 
-1. Oct 5: mobile (landscape, left stick to walk, drag to look, a Use button; lower pixel ratio and effects on phones), then sound and polish, a full playthrough on a real GPU, two-player test across two networks.
+1. Oct 5: sound and polish, a full playthrough on a real GPU and a real phone, two-player test across two networks.
 2. Upload to Chrona by Oct 6, then post on X with the demo video.

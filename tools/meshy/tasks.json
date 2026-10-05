@@ -11,10 +11,6 @@
     "image": "01a0ffca-dcb8-742c-8e7c-2e8922607b8b",
     "done": true
   },
-  "tickets": {
-    "image": "01a0ffca-dcaa-7588-a83a-00a6bbb23e50",
-    "done": true
-  },
   "machine": {
     "image": "01a0ffca-dca8-7768-ad9b-b8834e719b79",
     "done": true
@@ -38,8 +34,8 @@
     "done": true
   },
   "potCracked": {
-    "preview": "01a0ffcc-d004-76f4-bac6-b025f1b99bf2",
-    "refine": "01a0ffcd-a141-7093-888a-b2763ebfe7ae",
+    "preview": "01a10ac8-ff5c-714c-9a58-33d3b632e8d3",
+    "refine": "01a10acb-1354-74d6-ae49-7bc19446051e",
     "done": true
   },
   "telescope": {
@@ -73,7 +69,7 @@
     "done": true
   },
   "shoeCabinet": {
-    "image": "01a0ffdf-751f-72c4-8c11-b0c342031479",
+    "image": "01a10ac7-7f8c-75a1-9645-966be49be717",
     "done": true
   },
   "sideTable": {
@@ -105,12 +101,13 @@
     "done": true
   },
   "treeCrown": {
-    "image": "01a0ffe1-4301-729c-a951-4d8cd7afcf64",
+    "preview": "01a10acb-1702-7212-b446-553e5d7ad55e",
+    "refine": "01a10acd-a3d5-729b-8ffb-13c9c9432bae",
     "done": true
   },
   "treeTrunk": {
-    "preview": "01a0ffe1-b925-7191-b634-77053ea7b976",
-    "refine": "01a0ffe2-8e9f-728c-99ed-4c141cb26a85",
+    "preview": "01a10aca-72c3-7383-8823-b93289832227",
+    "refine": "01a10acb-6a96-755a-9d88-490b829d54ef",
     "done": true
   },
   "treeBranch": {
@@ -149,13 +146,13 @@
     "done": true
   },
   "bookshelf": {
-    "preview": "01a104ed-0973-71af-b9a2-64cddd38d4d4",
-    "refine": "01a104ee-020c-7412-94d0-d2d9d9567e09",
+    "preview": "01a10ad4-f124-736c-a450-06df6c4f5349",
+    "refine": "01a10ad5-eade-7292-892a-201d7ee34eb0",
     "done": true
   },
   "coatRack": {
-    "preview": "01a104ed-0e84-742d-8beb-f9adef58f64b",
-    "refine": "01a104ee-0640-7654-9e9a-4e947383311d",
+    "preview": "01a10acd-05f1-740b-a243-7b10b758d798",
+    "refine": "01a10acd-df6f-7534-8cb4-6b748ad52919",
     "done": true
   },
   "wallClock": {
@@ -164,8 +161,8 @@
     "done": true
   },
   "diningTable": {
-    "preview": "01a104ed-5e2b-706e-bdb5-81f3bb6b194f",
-    "refine": "01a104ee-7b65-73d8-a4d0-df43df0a5a25",
+    "preview": "01a10ac8-cdad-7334-be04-b7d282835705",
+    "refine": "01a10ac9-cc57-77ed-9b9e-3f53f76be719",
     "done": true
   },
   "diningChair": {
@@ -198,14 +195,9 @@
     "refine": "01a104f1-4a29-7730-bbdb-00c198b1620d",
     "done": true
   },
-  "cloudA": {
-    "preview": "01a104f0-967c-76cf-a7dd-183888b01c39",
-    "refine": "01a104f1-b79d-71a3-ab16-20e882ce95ce",
-    "done": true
-  },
   "cloudB": {
-    "preview": "01a104f0-a785-7425-8a68-b4771df8914b",
-    "refine": "01a104f1-a0d5-710f-8cee-14399d1d22d3",
+    "preview": "01a10acd-65c8-711d-8e31-a9d1cb78923a",
+    "refine": "01a10ace-3764-75d0-bc72-560cd7815c74",
     "done": true
   },
   "debrisCrate": {
@@ -226,6 +218,31 @@
   "bicycle": {
     "preview": "01a104f2-5ded-7045-a52c-42592f3b1d88",
     "refine": "01a104f3-548e-762a-9785-6d20dc095c24",
+    "done": true
+  },
+  "longBranch": {
+    "preview": "01a10ad4-f12d-716f-bdea-7a80c2d5a9e4",
+    "refine": "01a10ad5-c0eb-7443-84d8-6c0a3325f67d",
+    "done": true
+  },
+  "floorRoots": {
+    "preview": "01a10ad4-f0aa-758d-9bde-530a76b31f5b",
+    "refine": "01a10ad5-eb1f-778f-959f-fbc6fcbd818d",
+    "done": true
+  },
+  "plantClump": {
+    "preview": "01a10ad6-3e54-70e1-9365-b626f40a6c50",
+    "refine": "01a10ad8-ca61-7029-8d3b-3254626a9f05",
+    "done": true
+  },
+  "ivyClump": {
+    "preview": "01a10ad6-63a9-758f-a391-fe5b29aa21fb",
+    "refine": "01a10ad8-9fd4-77cc-8282-01281ff23704",
+    "done": true
+  },
+  "flowerClump": {
+    "preview": "01a10ad6-6b7e-71ef-aa8e-4e4ecad4837a",
+    "refine": "01a10ad7-8d39-73f2-bcee-702e39f6be48",
     "done": true
   }
 }

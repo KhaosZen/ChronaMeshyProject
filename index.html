@@ -30,6 +30,19 @@
   #mp input { font: inherit; width: 6em; text-align: center; letter-spacing: .3em; text-transform: uppercase; background: rgba(0,0,0,.3); color: inherit; border: 1px solid rgba(214,208,194,.5); padding: 5px; }
   #mpPanel { max-width: 30em; line-height: 1.7; text-align: center; }
   #mpPanel b { font-size: 20px; letter-spacing: .3em; }
+  /* 触屏：左半屏拖出摇杆，右半屏拖动转视角，能交互时出现 Use 按钮；竖屏时提示横过来 */
+  #touch { display: none; pointer-events: auto; touch-action: none; }
+  #stickBase { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+    border: 1px solid rgba(214,208,194,.3); background: rgba(0,0,0,.12); }
+  #stickKnob { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; background: rgba(214,208,194,.32); }
+  #useBtn { position: absolute; right: 8vw; bottom: 18vh; width: 78px; height: 78px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(214,208,194,.7); background: rgba(0,0,0,.3); font-size: 15px; letter-spacing: .15em; opacity: 0; transition: opacity .2s; }
+  #useBtn.on { opacity: 1; }
+  #rotate { display: none; z-index: 10; background: #121212; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+    pointer-events: auto; font-size: 17px; letter-spacing: .15em; text-align: center; }
+  @media (orientation: portrait) { body.touch #rotate { display: flex; } }
+  body.touch #subtitle { font-size: 16px; bottom: 8%; }
+  body.touch #prompt { bottom: 30%; }
   #hud { inset: 8px auto auto 8px; font: 12px/1.5 ui-monospace, monospace; color: #9f9; white-space: pre; display: none; }
 </style>
 <!-- Three.js 走 CDN；npm run pack 打包时会换成 ZIP 内的本地文件 -->
@@ -43,7 +56,7 @@
 <body>
 <div id="start" class="layer">
   <h1>ROOT</h1>
-  <p>WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause</p>
+  <p id="help">WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause</p>
   <p class="go" id="startText">Loading…</p>
   <div id="mp"><button id="mpHost">Invite someone to play as the mother</button><button id="mpJoin">Join as the mother</button><div id="mpPanel"></div></div>
 </div>
@@ -54,12 +67,17 @@
 <div id="fade" class="layer"></div>
 <div id="end" class="layer"><div class="t">HOME</div><div id="stats"></div></div>
 <div id="hud" class="layer"></div>
+<div id="touch" class="layer"><div id="stickBase"><div id="stickKnob"></div></div><div id="useBtn">USE</div></div>
+<div id="rotate" class="layer"><div>ROOT</div><div style="opacity:.7;font-size:14px">Turn your phone sideways to play</div></div>
 
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
+// 触屏设备（手机、平板）：换成虚拟摇杆操作，并降低画质保流畅；?touch 可在桌面上强制打开
+const TOUCH = new URLSearchParams(location.search).has('touch') || (matchMedia('(pointer: coarse)').matches && 'ontouchstart' in window);
+const CLICK = TOUCH ? 'Tap' : 'Click';
 
 /* =====================================================================
  * 1. 设计数据（对应设计文档）
@@ -113,11 +131,11 @@ const PAL1 = { wall: '#ecc996', floor: '#a06a3a', ceil: '#f5e0bc', trim: '#b0743
 const HEMI0 = '#9fb3c8', HEMI1 = '#ffe0b0';   // 环境光也从冷变暖
 // 每层的光与雾；到新楼层后几秒内平滑过渡
 const LOOK = {
-  1: { f: 0,    lamp: 3.8, lampColor: '#b4c6de', sun: 0.30, hemi: 0.32, fog: [5, 22], flicker: true },
-  2: { f: 0.25, lamp: 4.1, lampColor: '#d9d4c8', sun: 0.55, hemi: 0.38, fog: [6, 30] },
-  3: { f: 0.55, lamp: 4.4, lampColor: '#f3d3a4', sun: 0.85, hemi: 0.46, fog: [7, 40] },
-  4: { f: 1,    lamp: 4.8, lampColor: '#ffc585', sun: 1.20, hemi: 0.56, fog: [9, 55] },
-  5: { f: 1,    lamp: 4.8, lampColor: '#ffc585', sun: 2.20, hemi: 1.00, fog: [60, 560], sky: '#a6d3ea' },
+  1: { f: 0,    lamp: 5.4, lampColor: '#b9cae0', sun: 0.40, hemi: 0.48, env: 0.30, fog: [6, 24], flicker: true },
+  2: { f: 0.25, lamp: 5.4, lampColor: '#dcd6c8', sun: 0.60, hemi: 0.50, env: 0.34, fog: [7, 32] },
+  3: { f: 0.55, lamp: 5.6, lampColor: '#f3d3a4', sun: 0.90, hemi: 0.54, env: 0.38, fog: [8, 42] },
+  4: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 1.20, hemi: 0.60, env: 0.42, fog: [9, 55] },
+  5: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 2.20, hemi: 1.00, env: 0.70, fog: [60, 560], sky: '#a6d3ea' },
 };
 // 每把「钥匙」只出现在跟它有关的摆放点（鞋柜=门口，电话桌、边桌、纸箱……）
 const KEY_SPOTS = { photo: [3, 2, 6], lamp: [2, 4, 8], radio: [6, 2, 4], poster: [5, 7, 3],
@@ -136,8 +154,8 @@ const Platform = {
 /* =====================================================================
  * 3. 渲染基础
  * ===================================================================*/
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+const renderer = new THREE.WebGLRenderer({ antialias: !TOUCH });
+renderer.setPixelRatio(Math.min(devicePixelRatio, TOUCH ? 1 : 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -153,6 +171,17 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 const hemi = new THREE.HemisphereLight('#c8ccd0', '#2a2622', 0.3); scene.add(hemi);
+// 环境光照：模型有了明暗层次，不再是平涂；强度按楼层在 updateLook 里变
+// 用自己搭的"房间"（顶灯 + 四面一样的侧光），绕竖轴每转 90° 都一样 —— 出口楼梯是入口楼梯转 90° 的复制品，两边光照必须完全相同
+{
+  const env = new THREE.Scene(), basic = (c, k = 1) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k), side: THREE.DoubleSide });
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(10, 6, 10), new THREE.MeshBasicMaterial({ color: '#6d6862', side: THREE.BackSide })).translateY(2));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), basic('#2e2a26')); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.95; env.add(floor);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), basic('#ffffff', 3)); top.rotation.x = Math.PI / 2; top.position.y = 4.9; env.add(top);
+  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, w = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.6), basic('#e4ddd0', 1.6)); w.position.set(Math.sin(a) * 4.9, 2.4, Math.cos(a) * 4.9); w.lookAt(0, 2.4, 0); env.add(w); }
+  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(env, 0.04).texture; pm.dispose();
+}
+scene.environmentIntensity = 0.25;
 // 楼内用正上方的平行光：墙面不受朝向影响，楼梯两端的复制品才看起来完全一样
 const sun = new THREE.DirectionalLight('#fff1d8', 0.3); sun.position.set(0, 50, 0); scene.add(sun);
 
@@ -168,7 +197,9 @@ M.white = std('#f2f2f2');
 M.flower = [std('#e0a0a8'), std('#f1d06a'), std('#c9a6e0'), std('#f3f0e6')];
 const _c0 = {}, _c1 = {};
 for (const k in PAL0) { _c0[k] = new THREE.Color(PAL0[k]); _c1[k] = new THREE.Color(PAL1[k]); }
-function applyPalette(f) { for (const k in PAL0) M[k].color.copy(_c0[k]).lerp(_c1[k], f); }
+const greenMats = [];   // Meshy 树根和植物的共用材质：跟着楼层冷暖变（1 楼压暗偏冷，4 楼原色）
+const _g0 = new THREE.Color(0.5, 0.56, 0.66), _g1 = new THREE.Color(1, 1, 1);
+function applyPalette(f) { for (const k in PAL0) M[k].color.copy(_c0[k]).lerp(_c1[k], f); for (const m of greenMats) m.color.copy(_g0).lerp(_g1, f); }
 
 const building = new THREE.Group(); scene.add(building);   // 1–4 楼共用的空间
 const puzzleGroup = new THREE.Group(); building.add(puzzleGroup);
@@ -246,9 +277,13 @@ function brickLayer() { // 整面墙高的砖（剥落处露出来的也是同�
   }
   return _brick;
 }
-function blob(g, x, y, r, rng, n = 11) {
+function blob(g, x, y, r, rng, n = 28) {   // 不规则的一块：大轮廓起伏 + 碎小的锯齿边
+  const p1 = rng() * 6.3, p2 = rng() * 6.3, a1 = 0.18 + rng() * 0.2, a2 = 0.1 + rng() * 0.12;
   g.beginPath();
-  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, k = r * (0.55 + rng() * 0.6); g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * k * 1.3, y + Math.sin(a) * k); }
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, k = r * (1 + a1 * Math.sin(a * 2 + p1) + a2 * Math.sin(a * 5 + p2)) * (0.86 + rng() * 0.24);
+    g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * k * 1.25, y + Math.sin(a) * k);
+  }
   g.closePath();
 }
 const texY = m => (3 - m) * PPM;   // 高度（米）→ 贴图行
@@ -273,9 +308,9 @@ function wallTexture(wear) {   // wear 1（最破）… 4（干净）
         const r2 = mulberry32(seed + 1);
         g.save(); blob(g, x + dx, y, r, r2); g.clip(); g.drawImage(brickLayer(), 0, 0); g.restore();
         const r3 = mulberry32(seed + 1);
-        blob(g, x + dx, y, r, r3); g.strokeStyle = 'rgba(40,30,25,.45)'; g.lineWidth = 2; g.stroke();
+        blob(g, x + dx, y, r, r3); g.strokeStyle = 'rgba(40,30,25,.3)'; g.lineWidth = 1.5; g.stroke();
         const r4 = mulberry32(seed);
-        blob(g, x + dx, y, r * 1.25, r4); g.strokeStyle = 'rgba(255,253,245,.8)'; g.lineWidth = 1.5; g.stroke();
+        blob(g, x + dx, y, r * 1.25, r4); g.strokeStyle = 'rgba(255,253,245,.55)'; g.lineWidth = 1.2; g.stroke();
       }
     }
     if (heavy) { g.strokeStyle = `rgba(80,70,60,${0.5 * heavy})`; g.lineWidth = 1.2;   // 裂缝
@@ -373,8 +408,8 @@ function waveH(x, z, t = seaTime.value) {   // 和着色器里同一个公式：
   return h * Math.min(1, Math.max(0, 1 - Math.hypot(x - SEA_C.x, z - SEA_C.z) / 600));
 }
 function buildSea() {
-  const pos = [], idx = [], A = 72, rs = [0];   // 极坐标网格：近处密、远处疏
-  for (let r = 1.5; r < 850; r *= 1.085) rs.push(r);
+  const pos = [], idx = [], A = TOUCH ? 48 : 72, rs = [0];   // 极坐标网格：近处密、远处疏
+  for (let r = 1.5; r < 850; r *= TOUCH ? 1.12 : 1.085) rs.push(r);
   for (const r of rs) for (let j = 0; j < A; j++) { const a = j / A * Math.PI * 2 + (rs.indexOf(r) % 2) * Math.PI / A; pos.push(Math.cos(a) * r, 0, Math.sin(a) * r); }
   for (let i = 0; i < rs.length - 1; i++) for (let j = 0; j < A; j++) {
     const a = i * A + j, b = i * A + (j + 1) % A, c = a + A, d = b + A; idx.push(a, b, c, b, d, c);
@@ -560,6 +595,7 @@ function buildBuilding() {
   world.entranceLeaf.userData.col = collider(21.9, 23.1, -16.25, -15.95, 0, H); world.entranceLeaf.userData.col.door = true;
   world.farLeaf = box(0.06, 2.2, 1.2, M.trim, 18.4, 1.1, -19, B);
   world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H); world.farLeaf.userData.col.door = true;
+  hingeDoor(world.entranceLeaf, 21.9, -16.1, 1.45); hingeDoor(world.farLeaf, 18.4, -19.6, -1.45);   // 进门往房间里开，出门往楼梯间开
   world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? 'E   Open' : '', act: openFarDoor };
   permTargets.push(world.farLeaf);
   // 过渡房间逐层"恢复"：1 楼空着，2 楼有桌子，3 楼有椅子，4 楼两把椅子和一瓶花
@@ -620,12 +656,20 @@ function loadImages() {
     const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res(); im.src = `assets/tex/${n}.jpg`;
   })));
 }
-function imgTexture(name, { blur = 0, gray = false } = {}) {
+// 照片按原图尺寸画（512×640）；faces：只把这些圆里的脸糊掉，其余保持清楚
+function imgTexture(name, { blur = 0, gray = false, faces = null } = {}) {
   const im = IMG[name]; if (!im) return null;
-  return canvasTex(256, 320, g => { g.filter = [blur && `blur(${blur}px)`, gray && 'grayscale(1)'].filter(Boolean).join(' ') || 'none'; g.drawImage(im, 0, 0, 256, 320); });
+  const t = canvasTex(im.width, im.height, (g, w, h) => {
+    g.filter = [!faces && blur && `blur(${blur}px)`, gray && 'grayscale(1)'].filter(Boolean).join(' ') || 'none'; g.drawImage(im, 0, 0, w, h);
+    if (faces) for (const [x, y, r] of faces) {
+      g.save(); g.beginPath(); g.arc(x * w, y * h, r * w, 0, 7); g.clip(); g.filter = `blur(${blur}px)`; g.drawImage(im, 0, 0, w, h); g.restore();
+    }
+  });
+  t.anisotropy = 8; return t;
 }
+const FACES = [[0.414, 0.305, 0.07], [0.533, 0.17, 0.075]];   // 全家福里孩子和母亲的脸（相对坐标，半径按宽度）
 function faceTexture(faces, clear) {
-  const t = imgTexture(faces < 3 ? 'family_missing' : 'family', { blur: clear ? 0 : 6 }); if (t) return t;
+  const t = imgTexture(faces < 3 ? 'family_missing' : 'family', clear ? {} : { blur: 9, faces: FACES }); if (t) return t;
   return canvasTex(128, 160, (g, w, h) => {
     g.fillStyle = '#6d6356'; g.fillRect(0, 0, w, h); g.fillStyle = '#8f8575'; g.fillRect(8, 96, w - 16, h - 104);
     [34, 64, 94].forEach((x, i) => {
@@ -776,11 +820,32 @@ function buildFurniture(a) {
     if (a.furn === 'cabinet') fm.scale.setScalar(0.8 / 0.9);
     g.add(fm);
   }
+  if (fm) res.spots = surfaceSpots(g, MODELS[a.furn === 'cabinet' ? 'lowCabinet' : a.furn].size);
   const bb = new THREE.Box3().setFromObject(g);
   if (a.furn !== 'shelf') collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, bb.max.y);
   return res;
 }
-function anchorTop(res, dx = 0.2) { const p = V(dx, res.top, 0.02); res.group.localToWorld(p); return p; }
+// 模型台面上空着的地方：网格采样往下打射线，出现最多的高度是台面，四周也平的点才算空位（避开台面上的花瓶、电话、书）
+function surfaceSpots(g, S) {
+  g.updateMatrixWorld(true);
+  const N = 11, M2 = 7, pts = [], count = {};
+  for (let i = 0; i < N; i++) for (let k = 0; k < M2; k++) {
+    const lx = (i / (N - 1) - 0.5) * S.x * 0.8, lz = (k / (M2 - 1) - 0.5) * S.z * 0.7;
+    _rc.set(g.localToWorld(V(lx, 4, lz)), V(0, -1, 0));
+    const h = _rc.intersectObject(g, true)[0]; const y = h ? g.worldToLocal(h.point.clone()).y : null;
+    pts.push({ i, k, x: lx, z: lz, y });
+    if (y > 0.15) { const b = Math.round(y * 100); count[b] = (count[b] || 0) + 1; }
+  }
+  const top = +Object.keys(count).sort((a, b) => count[b] - count[a])[0] / 100;
+  if (!isFinite(top)) return null;
+  const flat = q => q && q.y !== null && Math.abs(q.y - top) < 0.015, at = (i, k) => pts[i * M2 + k];
+  return pts.filter(q => flat(q) && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([di, dk]) => { const n = at(q.i + di, q.k + dk); return !n || flat(n); }));
+}
+function anchorTop(res, dx = 0.2) {
+  let p = V(dx, res.top, 0.02);
+  if (res.spots?.length) { const s = res.spots.reduce((m, q) => Math.hypot(q.x - dx, q.z) < Math.hypot(m.x - dx, m.z) ? q : m); p = V(s.x, s.y, s.z); }
+  return res.group.localToWorld(p);
+}
 
 // 逐层增多的绿植（走廊起点 4 米内不放，保证楼梯两端看到的一样）
 function buildGreenery() {
@@ -790,12 +855,24 @@ function buildGreenery() {
     const base = inB ? V(rng() < 0.5 ? 21.2 : 23.8, 0, -1 - s * 14) : V(4.5 + s * 16, 0, rng() < 0.5 ? 0.2 : 2.8);
     const pts = []; let p = base.clone();
     for (let k = 0; k < 6; k++) { pts.push(V(p.x, 0.04 + Math.sin(k) * 0.03, p.z)); p = p.clone().add(inB ? V((rng() - 0.5) * 0.4, 0, -0.5) : V(0.5, 0, (rng() - 0.5) * 0.4)); }
+    const fr = modelShared('floorRoots');
+    if (fr) { // Meshy 树根：从地板缝里拱出来的一团，压扁贴地
+      fr.position.copy(base).setY(0.01); fr.rotation.y = rng() * 6.3; const k = 0.7 + rng() * 0.5; fr.scale.set(k, k * 0.55, k);
+      building.add(fr); world.roots.push(fr); continue;
+    }
     const m = taperedTube(pts, 0.05 + rng() * 0.04, 0.01, M.root, 14, 5); building.add(m); world.roots.push(m);
   }
   for (let i = 0; i < 44; i++) {
     const inB = i % 3 === 2, s = rng();
     const pos = inB ? V(rng() < 0.5 ? 21.25 : 23.75, 0, -0.5 - s * 15) : V(4.5 + s * 18.5, 0, rng() < 0.5 ? 0.25 : 2.75);
-    const g = new THREE.Group(); g.position.copy(pos); if (rng() < 0.25) g.position.y = 0.8 + rng() * 1.6;
+    const g = new THREE.Group(); g.position.copy(pos); const high = rng() < 0.25; if (high) g.position.y = 0.8 + rng() * 1.6;
+    const pm = modelShared(i > 28 ? 'flowerClump' : high || i % 2 ? 'ivyClump' : 'plantClump');
+    if (pm) { // Meshy 植物：地上的草团 / 常春藤，4 楼多了花丛；高处的贴在墙上
+      if (high && inB) { pm.rotation.z = pos.x > 22.5 ? Math.PI / 2 : -Math.PI / 2; g.position.x = pos.x > 22.5 ? 23.98 : 21.02; }   // 贴墙长
+      else if (high) { pm.rotation.x = pos.z > 1.5 ? -Math.PI / 2 : Math.PI / 2; g.position.z = pos.z > 1.5 ? 2.98 : 0.02; }
+      else pm.rotation.y = rng() * 6.3;
+      pm.scale.setScalar(0.8 + rng() * 0.5); g.add(pm); building.add(g); world.plants.push(g); continue;
+    }
     for (let k = 0; k < 3; k++) {
       const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12 + rng() * 0.16, 0), M.plant);
       m.position.set((rng() - 0.5) * 0.3, 0.1 + rng() * 0.2, (rng() - 0.5) * 0.3); g.add(m);
@@ -807,7 +884,24 @@ function buildGreenery() {
   for (const [x, z, n] of [[10.55, -0.1, V(0, 0, 1)], [16.15, -0.1, V(0, 0, 1)], [20.9, -10.75, V(1, 0, 0)]]) {
     const w = V(x, 1.6, z), from = w.clone().sub(TREE).setY(0).normalize(), start = TREE.clone().addScaledVector(from, 1.2).setY(2.9);
     const tip = w.clone().addScaledVector(n, 1.4).add(V(n.z * 0.3, 0.3, n.x * 0.3));
-    const g = new THREE.Group(), br = model('treeBranch');
+    const g = new THREE.Group(), lb = MODELS.longBranch && model('longBranch'), br = !lb && model('treeBranch');
+    if (lb) { // Meshy 长枝：一整根从树干出发，穿过窗洞伸进走廊约 1.6 米（模型里粗端在 -x 上方，斜着往 +x 下方长）
+      const from = TREE.clone().addScaledVector(w.clone().sub(TREE).setY(0).normalize(), 1.0).setY(1.1), to = w.clone().addScaledVector(n, 1.6).setY(2.2);   // 从窗洞下半穿过，斜着长到头顶上方
+      const S = MODELS.longBranch.size, d0 = V(S.x, -S.y, 0).normalize(), L = from.distanceTo(to), k = L / Math.hypot(S.x, S.y);
+      const dir = to.clone().sub(from).normalize(), align = new THREE.Quaternion().setFromUnitVectors(d0, dir);
+      lb.scale.setScalar(k); g.add(lb);
+      let best = null;   // 绕枝干自身转一圈，挑走廊里那段最不往上翘的角度（侧枝别戳向天花板）
+      for (let r = 0; r < 8; r++) {
+        lb.quaternion.copy(align).multiply(new THREE.Quaternion().setFromAxisAngle(d0, r * Math.PI / 4));
+        lb.position.copy(from).sub(V(-S.x / 2, S.y, 0).multiplyScalar(k).applyQuaternion(lb.quaternion)); lb.updateMatrixWorld(true);
+        let top = -Infinity; const v = V(0, 0, 0);
+        lb.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position;
+          for (let i = 0; i < p.count; i += 5) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.clone().sub(w).dot(n) > 0) top = Math.max(top, v.y); } });
+        if (!best || top < best.top) best = { top, q: lb.quaternion.clone(), p: lb.position.clone() };
+      }
+      lb.quaternion.copy(best.q); lb.position.copy(best.p);
+      building.add(g); world.branches.push(g); continue;
+    }
     if (br) { // Meshy 枝条（粗端朝 -x）：穿过窗洞伸进走廊约 2 米；天井里那段还是程序生成的，从树干接过来
       br.position.copy(w).addScaledVector(n, 0.3).setY(1.42); br.rotation.y = n.z ? -Math.PI / 2 : 0; g.add(br);
       const end = w.clone().addScaledVector(n, -1.35).setY(1.5); tip.copy(w).addScaledVector(n, 2.0).setY(1.6);
@@ -842,6 +936,7 @@ function buildCourtyard() {
   if (MODELS.treeTrunk && MODELS.treeCrown) { // Meshy：几段树干从水下接到楼顶以上，顶上是树冠
     for (let i = 0; i < 6; i++) { const seg = model('treeTrunk'); seg.position.set(T0.x, -24 + i * 6.2, T0.z); seg.rotation.y = i * 1.7; tree.add(seg); }
     const crown = model('treeCrown'); crown.position.set(T0.x, 8.5, T0.z); tree.add(crown);
+    crown.traverse(m => { if (m.isMesh) m.material.color.setRGB(0.72, 0.82, 0.66); });   // 树冠颜色压暗一点，别太荧光
     return;
   }
   tree.add(taperedTube([V(T0.x, -24, T0.z), V(T0.x + 0.4, -8, T0.z - 0.4), V(T0.x - 0.2, 4, T0.z + 0.3), V(T0.x + 0.2, 12, T0.z - 0.2), V(T0.x, 18, T0.z)], 1.7, 0.55, M.root, 16, 9));
@@ -884,11 +979,11 @@ function buildRoof() {
   })));
   // 云（Meshy），在高空慢慢飘
   const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-  for (let i = 0; i < 13; i++) {
-    const a = rng() * Math.PI * 2, d = 120 + rng() * 380, id = i % 3 ? 'cloudA' : 'cloudB';
+  for (let i = 0; i < (TOUCH ? 7 : 13); i++) {
+    const a = rng() * Math.PI * 2, d = 120 + rng() * 380, id = 'cloudB';
     let c = model(id, 0.6, '#ffffff');
     if (!c) { c = new THREE.Group(); for (let k = 0; k < 3; k++) { const q = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 6, 1), cloudMat); q.position.set(k * 8, rng() * 2, rng() * 4); q.scale.y = 0.45; c.add(q); } }
-    c.position.set(12 + Math.cos(a) * d, 70 + rng() * 70, -9 + Math.sin(a) * d); c.rotation.y = rng() * 6.3; c.scale.setScalar(0.7 + rng() * 0.8);
+    c.position.set(12 + Math.cos(a) * d, 70 + rng() * 70, -9 + Math.sin(a) * d); c.rotation.y = rng() * 6.3; const sc = 0.5 + rng() * 0.8; c.scale.set(sc * (0.7 + rng() * 0.6), sc * (0.8 + rng() * 0.5), sc);
     R.add(c); live.clouds.push(c);
   }
   // 浪花：楼脚一圈、天井里一圈、大树树干一圈
@@ -908,8 +1003,8 @@ function buildRoof() {
     const t = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 4, 1), leafMat); t.position.y = h + 3; g.add(t);
     g.position.set(12 + Math.cos(a) * d, -26, -9 + Math.sin(a) * d); g.rotation.set((rng() - 0.5) * 0.3, rng() * 3, (rng() - 0.5) * 0.3); R.add(g);
   }
-  for (let i = 0; i < 9; i++) { // 更远一圈：半淹的公寓楼、运河屋，消失在雾里
-    const id = i % 2 ? 'farBlockB' : 'farBlockA', a = i / 9 * Math.PI * 2 + 0.1 + rng() * 0.3, d = 190 + rng() * 170;
+  for (let i = 0; i < (TOUCH ? 5 : 9); i++) { // 更远一圈：半淹的公寓楼、运河屋，消失在雾里
+    const id = i % 2 ? 'farBlockB' : 'farBlockA', a = i / (TOUCH ? 5 : 9) * Math.PI * 2 + 0.1 + rng() * 0.3, d = 190 + rng() * 170;
     place(id, 12 + Math.cos(a) * d, -9 + Math.sin(a) * d, -a + Math.PI / 2 + (rng() - 0.5) * 0.5, 0.15 + rng() * 0.15);
   }
   // 标志性的远景：灯塔（家门后方）、半沉的渡轮、断掉的堤坝
@@ -937,8 +1032,8 @@ function buildRoof() {
   const hd = model('homeDoor');
   if (hd) { // 模型是关着的门：门后放一块更大的白光板，光从门框四周漏出来
     hd.rotation.y = Math.PI; portal.add(hd);
-    const S = MODELS.homeDoor.size, glow = new THREE.Mesh(new THREE.PlaneGeometry(S.x + 0.18, S.y + 0.12), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide }));
-    glow.position.set(0, S.y / 2, S.z / 2 + 0.03); portal.add(glow);
+    const S = MODELS.homeDoor.size, glow = new THREE.Mesh(new THREE.PlaneGeometry(S.x + 0.18, S.y + 0.12), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+    glow.position.set(0, S.y / 2, S.z / 2 + 0.03); glow.rotation.y = Math.PI; portal.add(glow);   // 只朝玩家走来的那面发光，从门背后看不到
   } else {
   const frameMat = std('#8a6a4a'), doorMat = std('#a8794c');
   box(0.1, 2.25, 0.16, frameMat, -0.55, 1.125, 0, portal); box(0.1, 2.25, 0.16, frameMat, 0.55, 1.125, 0, portal); box(1.2, 0.1, 0.16, frameMat, 0, 2.2, 0, portal);
@@ -1036,7 +1131,10 @@ function buildHome() {
   // 逐层多出来的：3 楼起有扶手椅，4 楼电视也回来了
   const arm = put('armchair', 25.95, -20.6, -Math.PI / 2), tv = put('tvCabinet', 21.9, -21.6);
   if (arm) home.extra.push([arm, 3, collider(25.55, 26.4, -21.0, -20.2, 0, 0.9)]);
-  if (tv) home.extra.push([tv, 4, collider(21.4, 22.4, -22, -21.2, 0, 1.0)]);
+  if (tv) { // 模型屏幕上画着一幅风景：盖一块深色玻璃，像关着的显像管
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.46), std('#1b2125', { roughness: 0.25, metalness: 0.2, flatShading: false }));
+    glass.position.set(-0.1, 0.49, 0.135); tv.add(glass); home.extra.push([tv, 4, collider(21.4, 22.4, -22, -21.2, 0, 1.0)]);
+  }
 }
 
 // 过渡房间里「钥匙」的归位处：拿齐一层后，这层的「钥匙」依次出现在这里，之后一直留着
@@ -1099,33 +1197,33 @@ function applyRoomNotes(n) {
   });
 }
 
-const look = { f: 0, lamp: 3.8, hemi: 0.32, sun: 0.3, near: 5, far: 22, sky: new THREE.Color(PAL0.sky), lampColor: new THREE.Color('#b4c6de') };
+const look = { f: 0, lamp: 5.4, hemi: 0.48, sun: 0.4, env: 0.3, near: 5, far: 22, sky: new THREE.Color(PAL0.sky), lampColor: new THREE.Color('#b4c6de') };
 const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1);
 let lookTo = null;
 function lookTarget(n) {
   const L = LOOK[n];
-  return { f: L.f, lamp: L.lamp, hemi: L.hemi, sun: L.sun, near: L.fog[0], far: L.fog[1],
+  return { f: L.f, lamp: L.lamp, hemi: L.hemi, sun: L.sun, env: L.env, near: L.fog[0], far: L.fog[1],
     sky: L.sky ? new THREE.Color(L.sky) : _c0.sky.clone().lerp(_c1.sky, L.f), lampColor: new THREE.Color(L.lampColor), flicker: !!L.flicker };
 }
 function setLook(n, instant) { lookTo = lookTarget(n); if (instant) updateLook(0, true); }
 function updateLook(dt, instant) {
   const k = instant ? 1 : 1 - Math.exp(-dt / 2.2), t = lookTo;
-  for (const key of ['f', 'lamp', 'hemi', 'sun', 'near', 'far']) look[key] += (t[key] - look[key]) * k;
+  for (const key of ['f', 'lamp', 'hemi', 'sun', 'env', 'near', 'far']) look[key] += (t[key] - look[key]) * k;
   look.sky.lerp(t.sky, k); look.lampColor.lerp(t.lampColor, k);
   applyPalette(look.f);
   scene.background.copy(look.sky); scene.fog.color.copy(look.sky); scene.fog.near = look.near; scene.fog.far = look.far;
   if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
-  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
+  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
-    l.light.visible = state.lightsOn; l.light.color.copy(look.lampColor);
-    l.light.intensity = look.lamp * (flick && Math.random() < 0.015 ? 0.35 : 1);
+    l.light.color.copy(look.lampColor);   // 关灯用亮度 0，不隐藏：灯的数量一变所有材质都要重新编译，会卡一下
+    l.light.intensity = state.lightsOn ? look.lamp * (flick && Math.random() < 0.015 ? 0.35 : 1) : 0;
     l.bulb.emissiveIntensity = state.lightsOn ? 1 : 0;
   });
   // 复制品里的灯、替代房间灯的灯，和真灯保持一致
-  world.stubLights.forEach((s, i) => { const l = world.lamps[i].light; s.visible = l.visible; s.color.copy(l.color); s.intensity = l.intensity; });
+  world.stubLights.forEach((s, i) => { const l = world.lamps[i].light; s.color.copy(l.color); s.intensity = l.intensity; });
   const room = world.lamps[world.lamps.length - 1].light;
-  world.replicaLight.visible = room.visible; world.replicaLight.color.copy(room.color); world.replicaLight.intensity = room.intensity;
+  world.replicaLight.color.copy(room.color); world.replicaLight.intensity = room.intensity;
 }
 function setLights(on) { state.lightsOn = on; for (const p of state.puzzles) p.onLights?.(on); }
 
@@ -1139,15 +1237,16 @@ function hitSphere(obj, r = 0.25, y = 0.1) { const h = new THREE.Mesh(new THREE.
 
 // 「钥匙」外形。variant = 'real'（和母亲的痕迹对得上）/ 'fake'（真假谜题里的假货）
 // Meshy 模型（assets/*.glb）：载入后按目标尺寸缩放，底部中心对齐原点；载不到就退回灰盒形状
-const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, tickets: { w: 0.16 }, machine: { w: 0.26 },
+const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, machine: { w: 0.26 },
   housekey: { h: 0.2 }, can: { h: 0.24 }, pendant: { h: 0.62 }, homeDoor: { h: 2.3 }, potCracked: { h: 0.34 }, telescope: { h: 1.35 },
   farHouseA: { h: 16 }, farHouseB: { h: 15 }, farHouseC: { h: 12 }, farChurch: { h: 34 }, farMill: { h: 20 },
   shoeCabinet: { w: 1.0 }, sideTable: { w: 0.55 }, shelf: { w: 1.1 }, boxes: { w: 0.6 }, phoneTable: { w: 0.5 }, bench: { w: 1.2 },
   lowCabinet: { w: 0.9 }, slippers: { w: 0.32 },
   sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
-  wallClock: { w: 0.36 }, diningTable: { h: 0.92 }, diningChair: { h: 0.92 },
-  farBlockA: { w: 34 }, farBlockB: { w: 28 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudA: { w: 48 }, cloudB: { w: 75 },
-  debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 } };
+  wallClock: { w: 0.36 }, diningTable: { h: 0.78 }, diningChair: { h: 0.92 },
+  farBlockA: { w: 34 }, farBlockB: { w: 28 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
+  debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
+  longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
@@ -1159,6 +1258,12 @@ function loadModels() {
     MODELS[k] = { obj: group(o), size: sz.multiplyScalar(f) }; res();
   }, undefined, () => res()))));
 }
+// 大量重复摆放的模型（植物、树根）：共用材质，省显存和绘制开销
+function modelShared(id) {
+  const t = MODELS[id]; if (!t) return null;
+  if (!t.shared) { t.shared = true; t.obj.traverse(m => { if (m.isMesh && !greenMats.includes(m.material)) greenMats.push(m.material); }); }
+  return t.obj.clone(true);
+}
 // 复制一份模型（材质也复制，方便单独改发光）；glow：让整件东西微微发光（真货的台灯、关灯谜题里的「钥匙」）
 function model(id, glow = 0, color = '#ffd9a0') {
   const t = MODELS[id]; if (!t) return null;
@@ -1168,15 +1273,45 @@ function model(id, glow = 0, color = '#ffd9a0') {
   return o;
 }
 
+// 把一块平面贴到模型正面（+z）那一面上：从前方打三条射线量出那一面的位置和倾角
+const _rc = new THREE.Raycaster();
+function fitToFace(obj, plane, S, yFrac) {
+  obj.updateMatrixWorld(true);
+  const hit = y => { _rc.set(V(0, y, S.z + 1), V(0, 0, -1)); return _rc.intersectObject(obj, true)[0]?.point; };
+  const c = hit(S.y * yFrac), a = hit(S.y * (yFrac - 0.15)), b = hit(S.y * (yFrac + 0.15));
+  if (!c || !a || !b) { plane.position.set(0, S.y * yFrac, S.z * 0.5 + 0.004); return; }
+  const tilt = Math.atan2(a.z - b.z, b.y - a.y);   // 上沿往后仰为正
+  plane.rotation.x = -tilt; plane.position.copy(c).add(V(0, Math.sin(tilt) * 0.004, Math.cos(tilt) * 0.004));
+}
+let _ticketMats = null;
+function ticketMats() {
+  if (_ticketMats) return _ticketMats;
+  const top = canvasTex(512, 256, (g, w, h) => {
+    g.fillStyle = '#efe6d0'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#2f5d8a'; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20);
+    g.setLineDash([6, 6]); g.lineWidth = 2; g.beginPath(); g.moveTo(380, 14); g.lineTo(380, h - 14); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#2f5d8a'; g.font = 'bold 34px Georgia, serif'; g.fillText('VEERDIENST', 34, 58);
+    g.font = '20px Georgia, serif'; g.fillText('HARLINGEN  —  TERSCHELLING', 34, 92); g.fillText('ENKELE REIS  ·  1 PERSOON', 34, 122);
+    g.beginPath(); g.moveTo(40, 196); g.lineTo(320, 196); g.lineTo(296, 226); g.lineTo(66, 226); g.closePath(); g.fill();   // 渡轮
+    g.fillRect(110, 168, 150, 28); g.fillRect(160, 146, 60, 22); g.fillStyle = '#efe6d0'; for (let i = 0; i < 6; i++) g.fillRect(120 + i * 22, 176, 12, 10);
+    g.fillStyle = '#2f5d8a'; g.fillRect(196, 128, 10, 18);
+    g.font = 'bold 22px Georgia, serif'; g.fillText('f 12,50', 396, 70); g.font = '16px Georgia, serif'; g.fillText('Nº 004718', 396, 100);
+    g.strokeStyle = 'rgba(178,52,42,.75)'; g.lineWidth = 4; g.beginPath(); g.arc(440, 175, 38, 0, 7); g.stroke();
+    g.fillStyle = 'rgba(178,52,42,.75)'; g.font = 'bold 15px Georgia, serif'; g.textAlign = 'center'; g.fillText('14 AUG', 440, 172); g.fillText('1986', 440, 192);
+  });
+  top.anisotropy = 8;
+  const paper = std('#e7ddc6');
+  return (_ticketMats = [paper, paper, new THREE.MeshStandardMaterial({ map: top, roughness: 0.9 }), paper, paper, paper]);
+}
 function makeKey(id, variant = 'real', mat = M.key) {
   const real = variant === 'real', g = new THREE.Group(), b = (w, h, d, x = 0, y = 0, z = 0, m = mat) => box(w, h, d, m, x, y, z, g);
   const glowing = mat === M.glowKey, S = MODELS[id]?.size;
-  const glb = id === 'poster' || (id === 'tickets' && !real) ? null : model(id, glowing ? 1.3 : id === 'lamp' && real ? 0.9 : 0, glowing ? '#fff4d0' : '#ffcf70');
+  const glb = id === 'poster' || id === 'tickets' ? null : model(id, glowing ? 1.3 : id === 'lamp' && real ? 0.9 : 0, glowing ? '#fff4d0' : '#ffcf70');
   if (glb) {
     g.add(glb);
     if (id === 'photo') { // 相框里的画面换成游戏自己的贴图：真的缺一张脸
-      const pic = new THREE.Mesh(new THREE.PlaneGeometry(S.x * 0.62, S.y * 0.62), new THREE.MeshStandardMaterial({ map: faceTexture(real ? 2 : 3, true), roughness: 1 }));
-      pic.position.set(0, S.y * 0.53, S.z * 0.5 + 0.004); pic.rotation.x = -0.12; g.add(pic);
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(S.x * 0.6, S.x * 0.6 * 1.25), new THREE.MeshStandardMaterial({ map: faceTexture(real ? 2 : 3, true), roughness: 1 }));
+      fitToFace(glb, pic, S, 0.53); g.add(pic);
     }
     if (id === 'lamp' && real) { const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.03, 0), std('#fff', { emissive: '#ffe0a0', emissiveIntensity: 2.5 })); bulb.position.y = S.y * 0.62; g.add(bulb); }
     if (id === 'machine') { const led = b(0.016, 0.008, 0.016, S.x * 0.32, S.y + 0.002, S.z * 0.3, real ? std('#f33', { emissive: '#f22', emissiveIntensity: 2 }) : M.dark); if (real) g.userData.blink = led; }
@@ -1212,10 +1347,13 @@ function makeKey(id, variant = 'real', mat = M.key) {
       for (let i = 0; i < n; i++) { const s = b(0.34, 0.006, 0.46, (i - 1) * 0.02 * (n > 1), 0.004 + i * 0.006, 0, i === n - 1 ? M.white : std('#d6ceb8')); s.rotation.y = (i - 1) * 0.12 * (n > 1); }
       b(0.12, 0.004, 0.14, 0, 0.006 * n + 0.004, -0.08, M.dark); break;
     }
-    case 'tickets': // 真：一沓，捆得整整齐齐；假：散落的一张
-      if (real) { for (let i = 0; i < 6; i++) b(0.14, 0.01, 0.07, 0, 0.005 + i * 0.01, 0); b(0.02, 0.065, 0.075, 0, 0.03, 0, M.dark); }
-      else { const t = b(0.14, 0.01, 0.07, 0, 0.005, 0); t.rotation.y = 0.5; }
+    case 'tickets': { // 渡轮船票（印字清楚的卡片）。真：一沓，用绳捆好；假：散落的一张
+      const card = (y, ry, dx = 0) => { const t = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.003, 0.075), mat === M.glowKey ? mat : ticketMats()); t.position.set(dx, y, 0);   // 关灯谜题里整张发光
+      t.rotation.y = ry; g.add(t); };
+      if (real) { for (let i = 0; i < 6; i++) card(0.002 + i * 0.0035, (i % 3 - 1) * 0.04); b(0.012, 0.026, 0.079, 0.03, 0.011, 0, std('#7a5a3c')); }
+      else card(0.002, 0.5);
       break;
+    }
     case 'machine': { // 真：红灯在闪（有留言）；假：灯灭着
       b(0.24, 0.07, 0.17, 0, 0.035, 0);
       const led = b(0.02, 0.01, 0.02, 0.08, 0.075, 0.05, real ? std('#f33', { emissive: '#f22', emissiveIntensity: 2 }) : M.dark);
@@ -1460,6 +1598,28 @@ const sfx = {
   beeps(pos, k) { for (let i = 0; i < k; i++) { const t = audio.currentTime + i * 0.3, o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 1000; env(g, t, 0.01, 0.3, 0.12); o.connect(g).connect(outNode(pos, 1)); o.start(t); o.stop(t + 0.2); } },
   horn() { const t = audio.currentTime, f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 380 }), g = audio.createGain(); env(g, t, 0.6, 0.3, 2.2); f.connect(g).connect(outNode(null, 1));
     for (const fq of [98, 147]) { const o = audio.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fq; o.connect(f); o.start(t); o.stop(t + 3); } },
+  door(pos, open) { // 木门：低沉的吱呀 + 关上时一声闷响
+    const t = audio.currentTime, out = outNode(pos, 0.6), o = audio.createOscillator(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 420, Q: 6 }), g = audio.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(open ? 70 : 95, t); o.frequency.linearRampToValueAtTime(open ? 110 : 60, t + 0.7); env(g, t, 0.08, 0.18, 0.6); o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + 0.8);
+    if (!open) { const n = noiseSrc(), lp = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 180 }), g2 = audio.createGain(); env(g2, t + 0.55, 0.005, 0.9, 0.25); n.connect(lp).connect(g2).connect(out); n.start(t + 0.5); n.stop(t + 0.9); }
+  },
+  step(soft) { // 脚步：木地板上一声轻响（天台是水泥，更闷）
+    const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: soft ? 380 : 650 }), g = audio.createGain();
+    env(g, t, 0.004, soft ? 0.12 : 0.09, 0.09); n.connect(f).connect(g).connect(outNode(null, 1)); n.start(t, Math.random()); n.stop(t + 0.15);
+  },
+  gull(pos) { // 海鸥：两三声往下滑的尖叫
+    const t0 = audio.currentTime, out = outNode(pos, 0.5), k = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < k; i++) { const t = t0 + i * 0.32, o = audio.createOscillator(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 1800, Q: 3 }), g = audio.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(1500 + Math.random() * 300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.25); env(g, t, 0.02, 0.35, 0.22); o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + 0.3); }
+  },
+  sea() { // 天台：持续的海浪 + 风（低通噪声，音量缓慢起伏）；返回总音量节点，结局时淡出
+    const out = audio.createGain(); out.gain.value = 0; out.connect(audio.destination); out.gain.linearRampToValueAtTime(1, audio.currentTime + 3);
+    for (const [fq, gain, rate] of [[420, 0.10, 0.11], [1600, 0.025, 0.07]]) {
+      const n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: fq }), g = audio.createGain(), lfo = audio.createOscillator(), lg = audio.createGain();
+      g.gain.value = gain; lfo.frequency.value = rate; lg.gain.value = gain * 0.7; lfo.connect(lg).connect(g.gain); n.connect(f).connect(g).connect(out); n.start(); lfo.start();
+    }
+    return out;
+  },
   click(pos) { const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'highpass', frequency: 2500 }), g = audio.createGain(); env(g, t, 0.003, 0.5, 0.05); n.connect(f).connect(g).connect(outNode(pos, 1)); n.start(t); n.stop(t + 0.1); },
   chime(pos) { const t = audio.currentTime, out = outNode(pos, 0.5); [880, 1320].forEach((fq, i) => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = fq; env(g, t + i * 0.06, 0.01, 0.25 / (i + 1), 1.2); o.connect(g).connect(out); o.start(t); o.stop(t + 1.4); }); },
   hum() { // 4 楼：隐约有人在哼歌
@@ -1473,7 +1633,13 @@ function startSound(pos, kind = 'blip') {
 }
 function stopSound(s) { if (s) { clearInterval(s.timer); sounds.delete(s); } }
 // 楼层氛围声：2 楼远处的撤离广播，4 楼有人哼歌
+let seaBed = null, gullT = 3;
 function ambience(dt) {
+  if (audio && state.phase === 'roof') { // 天台：海浪和风一直在，海鸥时不时叫几声
+    if (!seaBed) seaBed = sfx.sea();
+    if ((gullT -= dt) < 0) { gullT = 4 + Math.random() * 7; const g = world.roofLive.gulls[Math.floor(Math.random() * world.roofLive.gulls.length)]; sfx.gull(g?.getWorldPosition(V(0, 0, 0))); }
+    return;
+  }
   if (!audio || state.phase !== 'corridor') return;
   state.ambT += dt;
   if (state.floor === 2 && state.ambT > 16) { state.ambT = 0; sfx.broadcast(null, 5, 0.04); }
@@ -1497,11 +1663,21 @@ async function say(text, ms = 4000) {
   const t = ++sayToken, el = $('subtitle'); el.textContent = text; el.style.opacity = 1;
   await wait(ms); if (t === sayToken) el.style.opacity = 0; await wait(600);
 }
-function setDoor(leaf, open) { leaf.visible = !open; leaf.userData.col.enabled = !open; }
+// 门绕门轴转开 / 关上；anim = false 时直接到位（玩家看不到的时候重置用）
+const doors = [];
+function hingeDoor(leaf, hx, hz, openAngle) {
+  const h = new THREE.Group(); h.position.set(hx, 0, hz); leaf.parent.add(h); leaf.position.sub(h.position); h.add(leaf);
+  Object.assign(leaf.userData, { hinge: h, openAngle, target: 0, closed: true }); doors.push(leaf);
+}
+function setDoor(leaf, open, anim = false) {
+  const u = leaf.userData; u.closed = !open; u.col.enabled = !open; u.target = open ? u.openAngle : 0;
+  if (!anim) u.hinge.rotation.y = u.target; else if (audio) sfx.door?.(leaf.getWorldPosition(V(0, 0, 0)), open);
+}
+function updateDoors(dt) { for (const d of doors) { const h = d.userData.hinge; h.rotation.y += (d.userData.target - h.rotation.y) * Math.min(1, dt * 4); } }
 
 function enterRoom() {
   state.phase = 'room';
-  setDoor(world.entranceLeaf, false);                               // 身后的门关上
+  setDoor(world.entranceLeaf, false, true);                         // 身后的门关上
   applyRoomNotes(state.floor);                                      // 墙上便条反映这次拿到了哪些
   for (const id of FLOORS[state.floor].keys) world.slots[id].visible = !state.recovered.has(id);  // 本层「钥匙」的空位
   if (world.startDoor.visible) { world.startDoor.visible = false; world.startDoor.userData.col.enabled = false; }  // 之后都从楼梯上来
@@ -1522,7 +1698,7 @@ async function openFarDoor() {
   applyContent(state.next, false); genPuzzles(state.next);
   setLook(state.next);                                              // 光和颜色从现在开始慢慢变
   await say(line, 4200);
-  setDoor(world.farLeaf, true); state.phase = 'stairs'; state.deciding = false;   // 尽头的门打开
+  setDoor(world.farLeaf, true, true); state.phase = 'stairs'; state.deciding = false;   // 尽头的门打开
 }
 
 // 出口楼梯走到一半：移到入口楼梯的同一位置（两处看到的完全一样）
@@ -1540,9 +1716,9 @@ async function endGame() {
   if (net.role === 'child') net.send({ t: 'end' });
   const secs = Math.round((performance.now() - state.t0) / 1000), mm = String(Math.floor(secs / 60)).padStart(2, '0'), ss = String(secs % 60).padStart(2, '0');
   Platform.emit('end', { seconds: secs, puzzles: state.experienced, solved: state.solved });
-  $('fade').style.opacity = 1; await wait(1800);
+  $('fade').style.opacity = 1; if (seaBed) seaBed.gain.linearRampToValueAtTime(0, audio.currentTime + 2.5); await wait(1800);
   $('stats').textContent = `Time ${mm}:${ss}   ·   Puzzles ${state.experienced}`;
-  $('end').style.display = 'flex'; document.exitPointerLock?.();
+  $('end').style.display = 'flex'; $('touch').style.display = 'none'; document.exitPointerLock?.();
 }
 
 /* =====================================================================
@@ -1570,15 +1746,55 @@ addEventListener('mouseup', () => { dragging = false; });
 $('start').addEventListener('click', e => {
   if (!ready || state.ended || e.target.closest('#mp button, #mp input') || (net.role === 'mother' && !net.synced)) return;
   initAudio();
+  if (TOUCH) { startPlaying(); return; }
   try { const p = canvas.requestPointerLock(); if (p?.catch) p.catch(() => enableDragLook()); } catch { enableDragLook(); }
   startPlaying();
 });
 function startPlaying() {
   playing = true; $('start').style.display = 'none'; $('mp').style.display = 'none';
-  if (net.role === 'mother' && !net.toldRole) { net.toldRole = true; say('You are their mother. You can see what they have lost. Look at it and press E to show them.', 6000); }
+  if (TOUCH) $('touch').style.display = 'block';
+  if (net.role === 'mother' && !net.toldRole) { net.toldRole = true; say('You are their mother. You can see what they have lost. Look at it and ' + (TOUCH ? 'tap Use' : 'press E') + ' to show them.', 6000); }
   if (!started) { started = true; state.t0 = performance.now(); Platform.emit('start', { floor: state.floor }); }
 }
 function enableDragLook() { dragLook = true; startPlaying(); }
+
+// 触屏：左半屏按下的位置出现摇杆（松手回到左下角），右半屏拖动转视角，Use 按钮 = E
+const stick = { on: false, x: 0, y: 0 };
+if (TOUCH) {
+  document.body.classList.add('touch');
+  $('help').innerHTML = 'Left thumb move · Right thumb look<br>Tap USE to interact';
+  const base = $('stickBase'), knob = $('stickKnob'), R = 50, LOOK = 0.0055 / CFG.lookSens;
+  let stickId = null, lookId = null, sx = 0, sy = 0, lx = 0, ly = 0;
+  const home = () => { base.style.left = '15vw'; base.style.top = '72vh'; knob.style.transform = ''; base.style.opacity = 0.55; };
+  home();
+  $('touch').addEventListener('touchstart', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.target.id === 'useBtn') { tryInteract(); continue; }
+      if (t.clientX < innerWidth / 2 && stickId === null) {
+        stickId = t.identifier; sx = t.clientX; sy = t.clientY; stick.on = true;
+        base.style.left = sx + 'px'; base.style.top = sy + 'px'; base.style.opacity = 1;
+      } else if (t.clientX >= innerWidth / 2 && lookId === null) { lookId = t.identifier; lx = t.clientX; ly = t.clientY; }
+    }
+  }, { passive: false });
+  $('touch').addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === stickId) {
+        let dx = t.clientX - sx, dy = t.clientY - sy; const d = Math.hypot(dx, dy);
+        if (d > R) { dx *= R / d; dy *= R / d; }
+        knob.style.transform = `translate(${dx}px,${dy}px)`; stick.x = dx / R; stick.y = dy / R;
+      } else if (t.identifier === lookId) { look2((t.clientX - lx) * LOOK, (t.clientY - ly) * LOOK); lx = t.clientX; ly = t.clientY; }
+    }
+  }, { passive: false });
+  const release = e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === stickId) { stickId = null; stick.on = false; stick.x = stick.y = 0; home(); }
+      if (t.identifier === lookId) lookId = null;
+    }
+  };
+  $('touch').addEventListener('touchend', release); $('touch').addEventListener('touchcancel', release);
+}
 document.addEventListener('pointerlockerror', enableDragLook);
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement !== canvas && !dragLook && !state.ended) { playing = false; $('start').style.display = 'flex'; $('startText').textContent = 'Click to continue'; }
@@ -1604,12 +1820,15 @@ let bob = 0;
 function updatePlayer(dt) {
   const p = player.pos;
   if (playing && !state.ended && !state.scope) {
-    const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-    const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
-    if (f || s) {
-      const sp = (keys.ShiftLeft || keys.ShiftRight ? CFG.runSpeed : CFG.walkSpeed) * dt / Math.hypot(f, s);
+    let f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+    let s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), run = keys.ShiftLeft || keys.ShiftRight;
+    if (stick.on) { f = -stick.y; s = stick.x; run = Math.hypot(f, s) > 0.92; }   // 摇杆推到头 = 快走
+    const mag = Math.hypot(f, s);
+    if (mag > 0.08) {
+      const sp = (run ? CFG.runSpeed : CFG.walkSpeed) * dt * Math.min(1, mag) / mag;
       const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
-      p.x += (-sy * f + cy * s) * sp; p.z += (-cy * f - sy * s) * sp; collide(p); bob += dt * 7;
+      p.x += (-sy * f + cy * s) * sp; p.z += (-cy * f - sy * s) * sp; collide(p);
+      const b0 = Math.floor(bob / Math.PI); bob += dt * 7 * Math.min(1, mag); if (audio && Math.floor(bob / Math.PI) !== b0 && player.onGround) sfx.step(state.roofMode);   // 每半个晃动周期一步
     }
   }
   const gy = groundAt(p.x, p.y, p.z);
@@ -1624,8 +1843,8 @@ function updatePlayer(dt) {
   const onExitStair = p.x < 18.3 && p.x > 8 && p.z > -20.2 && p.z < -17.8;
   if (state.phase === 'corridor' && p.z < -16.9 && p.x > 18.5) enterRoom();
   if (state.phase === 'stairs' && onExitStair) {
-    if (world.farLeaf.userData.col.enabled === false && p.x < 17.6) setDoor(world.farLeaf, false);  // 身后的门关上
-    if (!state.roofMode && world.farLeaf.visible && p.x < 12.7) stairWarp();
+    if (world.farLeaf.userData.col.enabled === false && p.x < 17.6) setDoor(world.farLeaf, false, true);  // 身后的门关上
+    if (!state.roofMode && world.farLeaf.userData.closed && p.x < 12.7) stairWarp();
   }
   if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sun.position.set(30, 40, 20); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }
   if (state.phase === 'roof' && p.z > world.portal.position.z - 0.9 && p.z < world.portal.position.z + 0.3 && Math.abs(p.x - world.portal.position.x) < 0.6) endGame();  // 走到门前就被白光吞没
@@ -1647,7 +1866,8 @@ function findFocus() {
     if (!o || !shown(o)) continue;
     label = o.userData.interact.label(); if (label) { focused = o; break; }
   }
-  const el = $('prompt'); if (label) el.textContent = label; el.style.opacity = label && playing ? 0.85 : 0;
+  const el = $('prompt'); if (label) el.textContent = TOUCH ? label.replace(/^E\s+/, '') : label; el.style.opacity = label && playing ? 0.85 : 0;
+  if (TOUCH) $('useBtn').classList.toggle('on', !!focused && playing);
 }
 function tryInteract() { if (!playing || !focused || state.busy) return; const f = focused; focused = null; f.userData.interact.act(); }
 
@@ -1788,7 +2008,7 @@ function mirrorFloor(m) {
     building.add(mk); net.markers[id] = mk;
   }
   if (m.pos) { player.pos.set(m.pos[0] + 0.7, m.pos[1], m.pos[2] + 0.3); player.vy = 0; }
-  if (!net.synced) { net.synced = true; $('mpPanel').textContent = 'Connected.'; $('startText').textContent = 'Click to enter as the mother'; }
+  if (!net.synced) { net.synced = true; $('mpPanel').textContent = 'Connected.'; $('startText').textContent = CLICK + ' to enter as the mother'; }
 }
 function pointAt(id) {
   net.send({ t: 'point', id });
@@ -1856,7 +2076,7 @@ function updateRoof(dt) {
 }
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
-  seaTime.value = performance.now() / 1000;
+  seaTime.value = performance.now() / 1000; updateDoors(dt);
   if (roof.visible) updateRoof(dt);
   updatePlayer(dt);
   net.update(dt);
@@ -1878,14 +2098,19 @@ function tick() {
 (async () => {
   await Promise.all([loadModels(), loadImages()]);
   buildBuilding(); buildRoof();
+  { // 预先编译所有着色器（含天台、楼梯口复制品等平时看不到的部分），避免第一次看到时卡一下
+    const hidden = []; scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+    if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera);
+    hidden.forEach(o => o.visible = false);
+  }
   state.prevFloor = 1;
   setDoor(world.entranceLeaf, true); setDoor(world.farLeaf, false);
   applyContent(1); applyRoomNotes(1); genPuzzles(1); setLook(1, true); spawn();
   if (DEBUG) {
     $('hud').style.display = 'block';
-    window.__game = { player, state, world, camera, T, Tinv, net, debugJump, debugCollectAll, stairWarp, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
+    window.__game = { player, state, world, camera, T, Tinv, net, colliders, renderer, debugJump, debugCollectAll, stairWarp, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
   }
-  ready = true; $('startText').textContent = 'Click to enter';
+  ready = true; $('startText').textContent = CLICK + ' to enter';
   Platform.emit('ready');
   tick();
 })();
