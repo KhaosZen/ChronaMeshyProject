@@ -197,7 +197,9 @@ M.white = std('#f2f2f2');
 M.flower = [std('#e0a0a8'), std('#f1d06a'), std('#c9a6e0'), std('#f3f0e6')];
 const _c0 = {}, _c1 = {};
 for (const k in PAL0) { _c0[k] = new THREE.Color(PAL0[k]); _c1[k] = new THREE.Color(PAL1[k]); }
-function applyPalette(f) { for (const k in PAL0) M[k].color.copy(_c0[k]).lerp(_c1[k], f); }
+const greenMats = [];   // Meshy 树根和植物的共用材质：跟着楼层冷暖变（1 楼压暗偏冷，4 楼原色）
+const _g0 = new THREE.Color(0.5, 0.56, 0.66), _g1 = new THREE.Color(1, 1, 1);
+function applyPalette(f) { for (const k in PAL0) M[k].color.copy(_c0[k]).lerp(_c1[k], f); for (const m of greenMats) m.color.copy(_g0).lerp(_g1, f); }
 
 const building = new THREE.Group(); scene.add(building);   // 1–4 楼共用的空间
 const puzzleGroup = new THREE.Group(); building.add(puzzleGroup);
@@ -1257,7 +1259,11 @@ function loadModels() {
   }, undefined, () => res()))));
 }
 // 大量重复摆放的模型（植物、树根）：共用材质，省显存和绘制开销
-function modelShared(id) { const t = MODELS[id]; return t ? t.obj.clone(true) : null; }
+function modelShared(id) {
+  const t = MODELS[id]; if (!t) return null;
+  if (!t.shared) { t.shared = true; t.obj.traverse(m => { if (m.isMesh && !greenMats.includes(m.material)) greenMats.push(m.material); }); }
+  return t.obj.clone(true);
+}
 // 复制一份模型（材质也复制，方便单独改发光）；glow：让整件东西微微发光（真货的台灯、关灯谜题里的「钥匙」）
 function model(id, glow = 0, color = '#ffd9a0') {
   const t = MODELS[id]; if (!t) return null;
