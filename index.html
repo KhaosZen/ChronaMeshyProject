@@ -643,14 +643,14 @@ function buildBuilding() {
   const placed = (id, x, z, ry, fallback) => { const o = model(id); if (!o) return fallback(); o.position.set(x, 0, z); o.rotation.y = ry; B.add(o); return o; };
   const rf = world.roomFurn = {
     table: placed('diningTable', 24.7, -20.4, 0, () => box(1.4, 0.75, 0.8, M.furn, 24.6, 0.375, -20.4, B)),
-    chair: placed('diningChair', 24.7, -19.7, Math.PI, () => box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B)),
-    chair2: placed('diningChair', 23.95, -20.4, Math.PI / 2, () => box(0.45, 0.45, 0.45, M.furn, 23.6, 0.225, -20.4, B)), vase: new THREE.Group(),
+    chair: placed('diningChair', 24.7, -19.5, Math.PI, () => box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B)),
+    chair2: placed('diningChair', 23.8, -20.4, Math.PI / 2, () => box(0.45, 0.45, 0.45, M.furn, 23.6, 0.225, -20.4, B)), vase: new THREE.Group(),
   };
   if (MODELS.diningTable) { // 桌面高度以模型为准：桌上的「钥匙」和花瓶放在真正的桌面上
     rf.table.updateMatrixWorld(true); const rc = new THREE.Raycaster(), top = (x, z) => { rc.set(V(x, 3, z), V(0, -1, 0)); return rc.intersectObject(rf.table, true)[0]?.point.y ?? 0.75; };
     ROOM_SPOTS.radio.p[1] = top(24.82, -20.58); ROOM_SPOTS.tickets.p[1] = top(24.52, -20.18); rf.vaseY = top(24.45, -20.62);
   }
-  rf.table.userData.col = MODELS.diningTable ? collider(24.25, 25.15, -20.85, -19.95, 0, 0.8) : collider(23.9, 25.3, -20.8, -20, 0, 0.8);
+  rf.table.userData.col = MODELS.diningTable ? collider(24.7 - MODELS.diningTable.size.x / 2, 24.7 + MODELS.diningTable.size.x / 2, -20.4 - MODELS.diningTable.size.z / 2, -20.4 + MODELS.diningTable.size.z / 2, 0, 0.8) : collider(23.9, 25.3, -20.8, -20, 0, 0.8);
   rf.vase.add(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.2, 7), std('#e8e2d4')));
   for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), M.flower[i]); f.position.set((i - 1.5) * 0.05, 0.16 + (i % 2) * 0.04, 0); rf.vase.add(f); }
   rf.vase.position.set(24.45, (rf.vaseY ?? 0.75) + 0.1, -20.62); B.add(rf.vase);
@@ -1334,12 +1334,12 @@ function buildHome() {
   const put = (id, x, z, ry = 0, y = 0) => { const o = model(id); if (!o) return null; o.position.set(x, y, z); o.rotation.y = ry; B.add(o); return o; };
   box(2.8, 0.012, 1.9, rugMat, 23.9, 0.006, -19.7, B);                                            // 地毯
   // 沙发（靠南墙，面朝房间）
-  const sofa = put('sofa', 24.8, -16.62, Math.PI);
+  const sofa = put('sofa', 24.8, -16.2 - (MODELS.sofa?.size.z ?? 0.85) / 2 - 0.02, Math.PI);   // 靠背贴着南墙
   if (!sofa) {
     box(2.0, 0.42, 0.8, cloth, 24.8, 0.21, -16.65, B); box(2.0, 0.5, 0.2, cloth, 24.8, 0.67, -16.3, B);
     box(0.18, 0.62, 0.8, cloth, 23.71, 0.31, -16.65, B); box(0.18, 0.62, 0.8, cloth, 25.89, 0.31, -16.65, B);
   }
-  collider(23.6, 26.0, -17.05, -16.2, 0, 0.9);
+  collider(23.6, 26.0, -16.2 - (MODELS.sofa?.size.z ?? 0.85), -16.2, 0, 0.9);
   const ss = model('sheetSofa'); if (ss) { ss.position.set(24.8, 0, -16.62); ss.rotation.y = Math.PI; home.sheets.add(ss); if (sofa) home.under.push(sofa); }   // 防尘布（Meshy）
   else box(2.2, 0.95, 0.95, sheet, 24.8, 0.475, -16.62, home.sheets);
   // 书架（北墙右侧）
@@ -1362,9 +1362,8 @@ function buildHome() {
   }
   collider(26.05, 26.35, -16.6, -16.3, 0, 1.7);
   // 挂钟（西墙）
-  const clk = put('wallClock', 18.51, -20.4, 0, 2.2);   // 模型是表盘朝上平放的：转成贴在西墙上、12 点朝上
-  if (clk) clk.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(V(0, 0, -1), V(1, 0, 0), V(0, -1, 0)));
-  else {
+  const clk = put('wallClock', 18.5 + (MODELS.wallClock?.size.z ?? 0) / 2, -20.4, Math.PI / 2, 2.0);   // 表盘朝 +z 立着的模型：转 90° 贴在西墙上
+  if (!clk) {
     const clock = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16), std('#e8e2d4')); clock.rotation.z = Math.PI / 2; clock.position.set(18.53, 2.2, -20.4); B.add(clock);
     box(0.01, 0.12, 0.015, dark, 18.56, 2.24, -20.4, B); box(0.01, 0.015, 0.09, dark, 18.56, 2.2, -20.37, B);
   }
@@ -1502,7 +1501,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   shoeCabinet: { w: 1.0 }, sideTable: { w: 0.55 }, shelf: { w: 1.1 }, boxes: { w: 0.6 }, phoneTable: { w: 0.5 }, bench: { w: 1.2 },
   lowCabinet: { w: 0.9 }, slippers: { w: 0.32 },
   sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.15 }, sheetSofa: { w: 2.3 }, housePlant: { h: 0.8 }, sheetBookshelf: { h: 2.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
-  wallClock: { w: 0.36 }, diningTable: { h: 0.78 }, diningChair: { h: 0.92 },
+  wallClock: { w: 0.36 }, diningTable: { h: 0.74 }, diningChair: { h: 0.92 },
   farBlockA: { w: 34 }, farBlockB: { w: 28 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
   debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, laundryLine: { w: 4 }, waterTank: { h: 2 }, roofBucket: { w: 0.9 },
