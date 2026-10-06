@@ -1248,7 +1248,6 @@ function buildRoof() {
   // 标志性的远景：灯塔（家门后方）、半沉的渡轮、断掉的堤坝
   place('lighthouse', -230, -40, 0.4, 0.06, 6);
   const ferry = place('ferry', 95, 105, 2.2, 0.35, 14); if (ferry) ferry.rotation.set(0.12, 2.2, 0.28);
-  place('dyke', -60, 150, 0.3, 0.45); place('dyke', -150, 118, 0.62, 0.5); place('dyke', 40, 175, -0.1, 0.55);
   // 水面上的碎片：漂着的木箱、一排只露出灯头的路灯（下面是条街）、水里长出的树、半露的自行车
   for (const [x, z] of [[36, 16], [-15, -32], [44, -38], [-8, 22]]) { const o = place('debrisCrate', x, z, rng() * 6, 0.3); if (o) live.bob.push(o); }
   for (let k = 0; k < 5; k++) place('streetLamp', -13 + k * 0.4, 18 - k * 14, rng() * 6, 0.45, 0.5);
@@ -1521,7 +1520,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   lowCabinet: { w: 0.9 }, slippers: { w: 0.32 },
   sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.15 }, sheetSofa: { w: 2.3 }, housePlant: { h: 0.8 }, sheetBookshelf: { h: 2.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
   wallClock: { w: 0.36 }, diningTable: { h: 0.74 }, diningChair: { h: 0.92 },
-  cityRow: { w: 32 }, cityFlat: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityTower: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
+  cityRow: { w: 32 }, cityFlat: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityTower: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, cloudB: { w: 70 },
   debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };

@@ -293,12 +293,6 @@
       "texture": 1024
     },
     {
-      "key": "dyke",
-      "prompt": "a long broken section of a concrete sea dyke wall with a crack and missing chunks, moss on top",
-      "target_polycount": 1500,
-      "note": "远景：堤坝残段"
-    },
-    {
       "key": "cloudB",
       "note": "天空：云",
       "prompt": "a long flat soft cloud made of smooth round white puffs merged in a row",
