@@ -355,5 +355,17 @@
   "cityBridge": {
     "image": "01a10f52-4489-7433-94c6-339184d9e461",
     "done": true
+  },
+  "cityRowHQ": {
+    "image": "01a11114-6056-7323-88a0-cbaae9096c91"
+  },
+  "cityFlatHQ": {
+    "image": "01a11114-6279-7680-a9d3-10e8a406c1c8"
+  },
+  "cityChurchHQ": {
+    "image": "01a11114-62b4-771d-9ce2-b231fa931740"
+  },
+  "cityWarehouseHQ": {
+    "image": "01a11114-624d-7526-b215-bbac8f1ba8ef"
   }
 }

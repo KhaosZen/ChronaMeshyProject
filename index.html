@@ -1226,9 +1226,7 @@ function buildRoof() {
   const sink = (o, id, f) => o.position.y = SEA_Y - MODELS[id].size.y * f;
   const place = (id, x, z, ry, f, ring = 0) => { const o = model(id); if (!o) return null; o.position.set(x, 0, z); o.rotation.y = ry; sink(o, id, f); R.add(o);
     if (ring) live.rings.push(foamRing(R, fRing, x, z, ring)); return o; };
-  // 远处沉没的城市：运河把海面分成一个个街区，按离天台的远近分三圈 ——
-  // 近处是沿运河排开的运河屋和仓库、运河口的吊桥；中间是外廊式公寓楼；最远是写字楼，和几座教堂尖塔一起组成天际线。
-  // 西面（推开家门看出去的方向）留一片开阔的海。每种楼用一个 InstancedMesh 画，远处的用减面版本
+  // 远处沉没的城镇（每种楼用一个 InstancedMesh 画）
   buildCity(R, fRing, live);
   // 标志性的远景：灯塔（家门后方）、半沉的渡轮、断掉的堤坝
   place('lighthouse', -230, -40, 0.4, 0.06, 6);
@@ -1505,8 +1503,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   lowCabinet: { w: 0.9 }, slippers: { w: 0.32 },
   sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.15 }, sheetSofa: { w: 2.3 }, housePlant: { h: 0.8 }, sheetBookshelf: { h: 2.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
   wallClock: { w: 0.36 }, diningTable: { h: 0.74 }, diningChair: { h: 0.92 },
-  cityRow: { w: 32 }, cityRow_lo: { w: 32 }, cityFlat: { w: 56 }, cityFlat_lo: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityWarehouse_lo: { h: 24 },
-  cityTower: { h: 50 }, cityTower_lo: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
+  cityRow: { w: 32 }, cityFlat: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityTower: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
   debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
@@ -2397,31 +2394,20 @@ function debugCollectAll() { (FLOORS[state.floor].keys || []).forEach(k => state
  * ===================================================================*/
 const clock = new THREE.Clock();
 function buildCity(R, fRing, live) {
-  const rr = mulberry32(99), CELL = 46, CANAL = 12, half = (CELL - CANAL) / 2, inst = {}, rings = [];
-  const add = (id, x, z, ry, sink) => { const S = MODELS[id]?.size; if (!S) return;
-    (inst[id] ||= []).push({ x, z, ry, y: SEA_Y - S.y * sink, tx: (rr() - 0.5) * 0.05, tz: (rr() - 0.5) * 0.05 });
-    if (Math.hypot(x - 12, z + 9) < 210) rings.push([x, z, Math.max(S.x, S.z) * 0.55]); };
-  const churches = [[2, -2], [-1, 3], [6, 2]];   // 教堂所在的街区（网格坐标），这几块不放别的楼
-  for (const [gx, gz] of churches) add('cityChurch', 12 + gx * CELL, -9 + gz * CELL, rr() * 6.3, 0.18 + rr() * 0.08);
-  for (let gx = -10; gx <= 10; gx++) for (let gz = -10; gz <= 10; gz++) {
-    if (churches.some(([a, b]) => a === gx && b === gz)) continue;
-    const cx = 12 + gx * CELL, cz = -9 + gz * CELL, d = Math.hypot(cx - 12, cz + 9), ang = Math.atan2(cz + 9, cx - 12);
-    if (d < 60 || d > (TOUCH ? 300 : 400)) continue;
-    if (Math.abs(Math.atan2(Math.sin(ang - Math.PI), Math.cos(ang - Math.PI))) < 0.5 && d < 330) continue;   // 西面的开阔海
-    if (rr() < 0.2) continue;   // 整片沉下去了的街区
-    const lo = d > 130 ? '_lo' : '', zone = d < 150 ? 0 : d < 290 ? 1 : 2;
-    const edges = [[0, -half + 4, Math.PI], [0, half - 4, 0], [-half + 4, 0, -Math.PI / 2], [half - 4, 0, Math.PI / 2]];
-    if (zone === 0) {
-      for (const [ox, oz, ry] of edges) { if (rr() < 0.2) continue; add((rr() < 0.18 ? 'cityWarehouse' : 'cityRow') + lo, cx + ox, cz + oz, ry + (rr() - 0.5) * 0.06, 0.22 + rr() * 0.15); }
-      if (rr() < 0.35) add('cityBridge', cx + CELL / 2, cz + (rr() - 0.5) * 10, Math.PI / 2 * (rr() < 0.5 ? 0 : 1), 0.2);   // 运河上的吊桥
-    } else if (zone === 1) {
-      const [ox, oz, ry] = edges[Math.floor(rr() * 4)]; add('cityFlat' + lo, cx + ox * 0.6, cz + oz * 0.6, ry + (rr() - 0.5) * 0.05, 0.3 + rr() * 0.12);
-      if (rr() < 0.5) { const e = edges[Math.floor(rr() * 4)]; add((rr() < 0.3 ? 'cityWarehouse' : 'cityRow') + lo, cx + e[0], cz + e[1], e[2], 0.25 + rr() * 0.15); }
-    } else {
-      if (rr() < 0.55) add('cityTower' + lo, cx + (rr() - 0.5) * 12, cz + (rr() - 0.5) * 12, rr() * 6.3, 0.3 + rr() * 0.2);
-      else add('cityFlat' + lo, cx, cz, Math.floor(rr() * 4) * Math.PI / 2, 0.35 + rr() * 0.1);
-    }
-  }
+  // 远处沉没的城镇：十几座高精度的楼，三三两两成组，散在 120–350 米外的雾里，每座都大致朝着天台（西面灯塔那边留空）
+  const rr = mulberry32(99), inst = {}, rings = [];
+  const add = (id, x, z, sink) => { const S = MODELS[id]?.size; if (!S) return;
+    (inst[id] ||= []).push({ x, z, ry: Math.atan2(12 - x, -9 - z) + (rr() - 0.5) * 0.5, y: SEA_Y - S.y * sink, tx: (rr() - 0.5) * 0.04, tz: (rr() - 0.5) * 0.04 });
+    rings.push([x, z, Math.max(S.x, S.z) * 0.55]); };
+  const PLAN = [
+    ['cityRow', 132, -92, 0.25], ['cityWarehouse', 158, -66, 0.25], ['cityBridge', 112, -112, 0.2],          // 东北：运河边一排房子、仓库、吊桥
+    ['cityChurch', 196, 24, 0.2], ['cityRow', 168, 58, 0.28],                                                   // 东：教堂
+    ['cityFlat', 46, -214, 0.32], ['cityRow', -12, -168, 0.26],                                                 // 南
+    ['cityRow', -118, -150, 0.27], ['cityWarehouse', -92, -184, 0.24],                                         // 西南
+    ['cityTower', 64, 262, 0.3], ['cityFlat', -84, 236, 0.32], ['cityChurch', -150, 196, 0.22],                // 北：堤坝后面
+    ['cityTower', 262, -206, 0.32], ['cityFlat', 300, 90, 0.33],                                                // 最远的天际线
+  ];
+  for (const [id, x, z, sink] of PLAN.slice(0, TOUCH ? 9 : PLAN.length)) add(id, x, z, sink);
   const e = new THREE.Euler(), q = new THREE.Quaternion(), one = V(1, 1, 1);
   for (const id in inst) {
     const M = MODELS[id], list = inst[id]; M.obj.updateMatrixWorld(true);
