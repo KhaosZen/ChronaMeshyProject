@@ -331,5 +331,17 @@
   "boxesHQ": {
     "image": "01a10f1f-3d0a-704a-9dff-b6b83ba9950e",
     "done": true
+  },
+  "cityRow": {
+    "image": "01a10f50-04a9-76ee-a9e7-65938f483005"
+  },
+  "cityFlat": {
+    "image": "01a10f50-0551-717e-897e-3f953481cab4"
+  },
+  "cityChurch": {
+    "image": "01a10f50-056c-75fa-9ba8-f350dade77d8"
+  },
+  "cityWarehouse": {
+    "image": "01a10f50-0567-70f8-a09d-4f9c9b2c86db"
   }
 }

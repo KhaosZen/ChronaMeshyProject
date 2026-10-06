@@ -90,31 +90,6 @@
       "simplify": 0.02
     },
     {
-      "key": "farHouseA",
-      "prompt": "the top floor and stepped gable roof of a narrow red-brick Dutch canal house, cut off flat at the bottom as if sinking into water, a small tree growing from the roof",
-      "target_polycount": 1200
-    },
-    {
-      "key": "farHouseB",
-      "prompt": "the top two floors and pointed gable roof of a pair of brick Dutch townhouses, cut off flat at the bottom as if sinking into water, white window frames, a few plants on the roof",
-      "target_polycount": 1200
-    },
-    {
-      "key": "farHouseC",
-      "prompt": "the upper part of a small brick Dutch house with a steep tiled roof and a chimney, cut off flat at the bottom as if sinking into water, a bush growing on the roof",
-      "target_polycount": 1000
-    },
-    {
-      "key": "farChurch",
-      "prompt": "the tall brick bell tower and pointed spire of a Dutch village church, cut off flat at the bottom as if sinking into water, a small tree growing from a ledge",
-      "target_polycount": 1500
-    },
-    {
-      "key": "farMill",
-      "prompt": "the upper half of a traditional Dutch windmill with its cap and four sails, cut off flat at the bottom as if sinking into water",
-      "target_polycount": 1500
-    },
-    {
       "key": "shoeCabinet",
       "note": "摆放点 1：鞋柜",
       "image": "refs/shoeCabinet.png",
@@ -304,20 +279,6 @@
       "simplify": 0.02
     },
     {
-      "key": "farBlockA",
-      "prompt": "the top three floors of a long four-storey red-brick Dutch apartment block with white window frames, a flat roof with small trees growing on it, cut off flat at the bottom as if sinking into water",
-      "target_polycount": 2500,
-      "note": "远景：半淹的公寓楼",
-      "texture": 1024
-    },
-    {
-      "key": "farBlockB",
-      "prompt": "the top floors of a row of four narrow Dutch canal houses with different gables side by side, cut off flat at the bottom as if sinking into water, ivy and small trees on the roofs",
-      "target_polycount": 2500,
-      "note": "远景：一排半淹的运河屋",
-      "texture": 1024
-    },
-    {
       "key": "lighthouse",
       "prompt": "a red and white striped lighthouse standing on a small rocky base surrounded by water, a lantern room on top",
       "target_polycount": 2000,
@@ -482,6 +443,54 @@
       "texture": 1024,
       "simplify": 0.02,
       "note": "房间：盆栽（浇水壶放在旁边）"
+    },
+    {
+      "key": "cityRow",
+      "image": "refs/cityRow.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "远景：运河屋一排"
+    },
+    {
+      "key": "cityFlat",
+      "image": "refs/cityFlat.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "远景：外廊式公寓楼"
+    },
+    {
+      "key": "cityChurch",
+      "image": "refs/cityChurch.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "远景：教堂"
+    },
+    {
+      "key": "cityWarehouse",
+      "image": "refs/cityWarehouse.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "远景：仓库"
+    },
+    {
+      "key": "cityTower",
+      "image": "refs/cityTower.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "远景：写字楼"
+    },
+    {
+      "key": "cityBridge",
+      "image": "refs/cityBridge.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "远景：吊桥"
     }
   ]
 }
