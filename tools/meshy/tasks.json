@@ -354,17 +354,41 @@
   },
   "telescopeHQ": {
     "preview": "01a10f20-ce26-7345-a57e-a94d6fc71d57",
-    "refine": "01a10f21-b383-7750-ab69-0b9d3eaf3871"
+    "refine": "01a10f21-b383-7750-ab69-0b9d3eaf3871",
+    "done": true
   },
   "sofaHQ": {
     "preview": "01a10f20-e080-74e9-9684-6fee6ef6e5c6",
-    "refine": "01a10f21-b3b2-76ef-8f92-d1dfc228e6ed"
+    "refine": "01a10f21-b3b2-76ef-8f92-d1dfc228e6ed",
+    "done": true
   },
   "armchairHQ": {
     "preview": "01a10f21-2cbe-7159-a642-af9b1cdcb945",
-    "refine": "01a10f22-0343-71ce-90f9-3571076f3e01"
+    "refine": "01a10f22-0343-71ce-90f9-3571076f3e01",
+    "done": true
   },
   "floorLampHQ": {
-    "preview": "01a10f21-b2f6-713b-8747-dc51defd9ccd"
+    "preview": "01a10f21-b2f6-713b-8747-dc51defd9ccd",
+    "refine": "01a10f22-7e34-7783-9cb1-e52f10b11da3",
+    "done": true
+  },
+  "coatRackHQ": {
+    "preview": "01a10f22-8cd3-740e-aa58-affa01269dc5",
+    "refine": "01a10f23-3f07-70fe-8fe8-9eddd05dd96a",
+    "done": true
+  },
+  "diningTableHQ": {
+    "preview": "01a10f22-b125-74e9-9765-2e910b62fb4e",
+    "refine": "01a10f23-8e19-73dc-82dc-3a2204060be2"
+  },
+  "diningChairHQ": {
+    "preview": "01a10f22-c14f-709a-9397-0da9443fb576",
+    "refine": "01a10f23-bb32-756a-b5ef-519dd841d958"
+  },
+  "wallClockHQ": {
+    "preview": "01a10f23-3dfe-76bb-b9bc-31562aad37de"
+  },
+  "motherHQ": {
+    "preview": "01a10f23-f079-7471-8608-4497ca9b317a"
   }
 }
