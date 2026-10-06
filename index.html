@@ -11,8 +11,8 @@
   .layer { position: fixed; inset: 0; pointer-events: none; }
   #start { display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: rgba(18,18,18,.9); pointer-events: auto; cursor: pointer; text-align: center; gap: 18px; }
-  #start { transition: background-color 1.2s; background-size: cover; background-position: center; }
-  #start.open { background-color: rgba(18,18,18,.45); }
+  #start { background: linear-gradient(rgba(8,9,12,.8), rgba(8,9,12,.88)), url(assets/tex/keyart.jpg) center / cover, #121212; }
+  #start.open { background: linear-gradient(rgba(8,9,12,.25), rgba(8,9,12,.6)), url(assets/tex/keyart.jpg) center / cover, #121212; }
   #start h1 { font-weight: 400; letter-spacing: .6em; margin: 0; font-size: 28px; }
   #start p { margin: 0; opacity: .7; font-size: 14px; line-height: 1.9; }
   #start .go { opacity: .95; font-size: 16px; letter-spacing: .3em; }
@@ -630,11 +630,13 @@ function buildBuilding() {
   // 房间西墙：3 米以上那截只在楼层之间需要（挡住楼梯口复制品），到天台就藏起来，不然会戳出屋面
   const up = world.upper = new THREE.Group(); B.add(up); const uc = { parent: up, T: I4, collide: false };
   solid(c, 18.3, 18.5, -0.2, H, -22.2, -19.6, M.wall); solid(c, 18.3, 18.5, -0.2, H, -18.4, -16, M.wall); solid(c, 18.3, 18.5, 2.2, H, -19.6, -18.4, M.wall, false);
-  solid(uc, 18.3, 18.5, H, H + 3.2, -22.2, -16, M.wall);
+  solid(uc, 18.3, 18.5, H, H + 3.2, -22.2, -20.4, M.wall); solid(uc, 18.3, 18.5, H, H + 3.2, -17.6, -16, M.wall);   // 楼梯间两侧那两截：到天台就藏掉
+  solid(c, 18.3, 18.5, H, H + 3.2, -20.4, -17.6, M.wallStair, false);   // 楼梯间朝房间这头的封墙，天台上也在
   solid(c, 21.9, 23.1, -0.1, 0, -16.2, -16, M.floor, false); solid(c, 18.3, 18.5, -0.1, 0, -19.6, -18.4, M.floor, false);   // 两道门的门槛
-  world.entranceLeaf = box(1.2, 2.2, 0.06, M.trim, 22.5, 1.1, -16.1, B);
+  const dm = doorMat() || M.trim;
+  world.entranceLeaf = box(1.2, 2.2, 0.06, dm, 22.5, 1.1, -16.1, B);
   world.entranceLeaf.userData.col = collider(21.9, 23.1, -16.25, -15.95, 0, H); world.entranceLeaf.userData.col.door = true;
-  world.farLeaf = box(0.06, 2.2, 1.2, M.trim, 18.4, 1.1, -19, B);
+  world.farLeaf = box(0.06, 2.2, 1.2, dm, 18.4, 1.1, -19, B);
   world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H); world.farLeaf.userData.col.door = true;
   hingeDoor(world.entranceLeaf, 21.9, -16.1, 1.45); hingeDoor(world.farLeaf, 18.4, -19.6, -1.45);   // 进门往房间里开，出门往楼梯间开
   world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? 'E   Open' : '', act: openFarDoor };
@@ -668,7 +670,9 @@ function buildBuilding() {
   // --- 出口楼梯（= T × 入口楼梯），顶端是下一层起点的复制品
   const exitGroup = new THREE.Group(); exitGroup.matrixAutoUpdate = false; exitGroup.matrix.copy(T); B.add(exitGroup);
   const stub = new THREE.Group(); stub.matrixAutoUpdate = false; stub.matrix.copy(T); B.add(stub); world.stub = stub;
-  buildStairwell({ parent: exitGroup, T, collide: true }, false, { parent: stub, T, collide: false });
+  // 出口楼梯 0 米以上那截墙和顶：一直显示 —— 到天台时它就是屋面上凸出来的楼梯间
+  const stairHouse = new THREE.Group(); stairHouse.matrixAutoUpdate = false; stairHouse.matrix.copy(T); B.add(stairHouse);
+  buildStairwell({ parent: exitGroup, T, collide: true }, false, { parent: stairHouse, T, collide: false });
   buildStart({ parent: stub, T, collide: false }, true);
 
   // --- 其余吊灯
@@ -692,7 +696,7 @@ function buildBuilding() {
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
 function loadImages() {
-  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark'];
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door'];
   return Promise.all(names.map(f => new Promise(res => {
     const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
     im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
@@ -725,6 +729,14 @@ function mossPatch(k, size) {
     const m = new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }); greenMats.push(m); _mossMats.push(m);
   }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size).rotateX(-Math.PI / 2), _mossMats[k % 3]); m.rotation.y = k * 2.1; return m;
+}
+// 门：旧的绿漆木门（GPT image 贴图），颜色跟着楼层冷暖变
+let _doorMat;
+function doorMat() {
+  if (_doorMat !== undefined) return _doorMat;
+  if (!IMG.door) return (_doorMat = null);
+  const t = new THREE.Texture(IMG.door); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.needsUpdate = true;
+  _doorMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.85 }); greenMats.push(_doorMat); return _doorMat;
 }
 // 照片按原图尺寸画（512×640）；faces：只把这些圆里的脸糊掉，其余保持清楚
 function imgTexture(name, { blur = 0, gray = false, faces = null } = {}) {
@@ -857,7 +869,7 @@ function buildNeighborDoor(x, z, ry) {
   const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), std('#fff', { emissive: '#ffd59a', emissiveIntensity: 0 })); bulb.position.set(0, H - 0.15, -1.3); g.add(bulb);
   // 门扇：铰链在 x=-0.5，向储物间里开
   const leaf = new THREE.Group(); leaf.position.set(-0.5, 0, -0.03); g.add(leaf);
-  box(1.0, DOOR_H - 0.02, 0.05, M.furn, 0.5, (DOOR_H - 0.02) / 2, 0, leaf);
+  box(1.0, DOOR_H - 0.02, 0.05, doorMat() || M.furn, 0.5, (DOOR_H - 0.02) / 2, 0, leaf);
   box(0.04, 0.12, 0.05, M.white, 0.88, 1.05, 0.04, leaf);
   const notice = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.38), new THREE.MeshStandardMaterial({ roughness: 1,
     map: textTexture(['EVACUATION', 'NOTICE'], { w: 128, h: 160, font: 18, bg: '#e9e4d6' }) }));
@@ -1075,8 +1087,9 @@ function barkTrunk(crown, at, y0) {
     for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); const b = Math.floor((v.y - base) / BAND); if (b >= 0 && b < NB) bands[b].push(Math.hypot(v.x - at.x, v.z - at.z)); } });
   const pct = (a, q) => { if (!a.length) return 0; a.sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(a.length * q))]; };
   const R0 = Math.min(Math.max(pct(bands[0].concat(bands[1]), 0.9), 1.0), 3.4), prof = [];
-  for (let b = 0; b < NB; b++) prof.push(pct(bands[b].filter(d => d < R0 * 2.2), 0.9));
-  let fork = 2; while (fork < NB - 1 && prof[fork] > 0 && prof[fork] < Math.max(prof[fork - 1] * 1.12, R0 * 0.3) && prof[fork] < R0 * 1.25) fork++;
+  for (let b = 0; b < NB; b++) prof.push(pct(bands[b].filter(d => d < R0 * 2.2), 0.9) || prof[b - 1] || R0);   // 低模顶点稀，空的那层沿用下面一层
+  let fork = 2; while (fork < NB - 1 && prof[fork] < 1.5 * prof.slice(0, fork).sort((x, y) => x - y)[fork >> 1]) fork++;   // 外圈突然变宽一大截 = 分叉
+  for (let b = 0, src = prof.slice(); b < fork; b++) prof[b] = Math.max(src[Math.max(0, b - 1)], src[b], src[Math.min(fork - 1, b + 1)]);   // 取相邻三层的最大值：抹掉采样稀疏造成的凹陷
   const yFork = base + fork * BAND, y1 = yFork + 0.55, R = R0 * 1.05;
   const radiusAt = y => {
     if (y <= base) return R;
@@ -1096,15 +1109,15 @@ function barkTrunk(crown, at, y0) {
   }
   for (let j = 0; j < N; j++) for (let i = 0; i < A; i++) { const a = j * (A + 1) + i, b = a + 1, c = a + A + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
-  const map = new THREE.Texture(IMG.bark); map.colorSpace = THREE.SRGBColorSpace; map.wrapS = map.wrapT = THREE.MirroredRepeatWrapping; map.anisotropy = 8; map.needsUpdate = true;
+  const map = new THREE.Texture(IMG.bark); map.colorSpace = THREE.SRGBColorSpace; map.wrapS = map.wrapT = THREE.RepeatWrapping; map.anisotropy = 8; map.needsUpdate = true;   // 树皮贴图是无缝的，直接平铺
   const nrm = canvasTex(IMG.bark.width, IMG.bark.height, (c, w, h) => {   // 亮度当高度，Sobel 求法线
-    c.drawImage(IMG.bark, 0, 0, w, h); const src = c.getImageData(0, 0, w, h), d = src.data, out = c.createImageData(w, h), L = (x, y) => { x = (x + w) % w; y = (y + h) % h; const o = (y * w + x) * 4; return (d[o] + d[o + 1] + d[o + 2]) / 765; };
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = (L(x + 1, y) - L(x - 1, y)) * 3, dy = (L(x, y + 1) - L(x, y - 1)) * 3, l = Math.hypot(dx, dy, 1), o = (y * w + x) * 4;
+    c.filter = 'blur(1.5px)'; c.drawImage(IMG.bark, 0, 0, w, h); c.filter = 'none'; const src = c.getImageData(0, 0, w, h), d = src.data, out = c.createImageData(w, h), L = (x, y) => { x = (x + w) % w; y = (y + h) % h; const o = (y * w + x) * 4; return (d[o] + d[o + 1] + d[o + 2]) / 765; };
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = (L(x + 1, y) - L(x - 1, y)) * 1.4, dy = (L(x, y + 1) - L(x, y - 1)) * 1.4, l = Math.hypot(dx, dy, 1), o = (y * w + x) * 4;
       out.data[o] = (-dx / l * 0.5 + 0.5) * 255; out.data[o + 1] = (dy / l * 0.5 + 0.5) * 255; out.data[o + 2] = (1 / l * 0.5 + 0.5) * 255; out.data[o + 3] = 255; }
     c.putImageData(out, 0, 0);
   });
-  nrm.colorSpace = THREE.NoColorSpace; nrm.wrapS = nrm.wrapT = THREE.MirroredRepeatWrapping;
-  const mat = world.barkMat = new THREE.MeshStandardMaterial({ map, normalMap: nrm, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.95 });
+  nrm.colorSpace = THREE.NoColorSpace; nrm.wrapS = nrm.wrapT = THREE.RepeatWrapping;
+  const mat = world.barkMat = new THREE.MeshStandardMaterial({ map, normalMap: nrm, normalScale: new THREE.Vector2(0.7, 0.7), roughness: 0.95 });
   return new THREE.Mesh(g, mat);
 }
 // 树冠模型里的树干和枝条换成和程序树干同一张树皮（按世界坐标三面投影），叶子（偏绿的像素）保持原样：整棵树看起来是一体的
@@ -1247,11 +1260,11 @@ function buildRoof() {
       if (x < 1.8 && z > -10 && z < -8) continue;   // 家门前的台阶别长草挡路
       g.position.set(x, Y, z); g.rotation.y = rr() * 3; R.add(g); }
   }
-  // 天台上的杂物（Meshy）：烟囱、通风管、生锈的椅子、旧花盆、晾衣绳、水箱、水桶和木箱
+  // 天台上的杂物（Meshy）：烟囱、通风管、生锈的椅子、旧花盆、水桶和木箱
   for (const [id, x, z, ry] of [['roofChimney', 25.4, -21.3, 0.2], ['roofChimney', 1.6, 4.6, 1.3], ['roofVent', 14.5, 4.9, 0.1], ['roofVent', 24.6, -16.4, 1.9],
-    ['rustyChair', 5.4, 3.6, 2.6], ['oldPots', 1.0, -12.6, 0.8], ['oldPots', 23.6, 4.6, 2.2], ['laundryLine', 11.5, 4.4, 0], ['waterTank', 25.6, 3.4, 0.4], ['roofBucket', 6.6, -21.5, 0.3]]) {
+    ['rustyChair', 5.4, 3.6, 2.6], ['oldPots', 1.0, -12.6, 0.8], ['oldPots', 23.6, 4.6, 2.2], ['roofBucket', 6.6, -21.5, 0.3]]) {
     const o = model(id); if (!o) continue; o.position.set(x, Y, z); o.rotation.y = ry; R.add(o);
-    o.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(o); if (id !== 'laundryLine') collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, Y, bb.max.y);
+    o.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(o); collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, Y, bb.max.y);
   }
   const puddle = std('#7f97a4', { roughness: 0.08, metalness: 0.4, transparent: true, opacity: 0.75, map: canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#fff'; blob(g, w / 2, h / 2, 44, mulberry32(9)); g.fill(); }), alphaTest: 0.5 });
   for (const [x, z, k] of [[4.5, -18.8, 1.6], [22.5, -19.2, 1.2], [9.5, 2.6, 2.0], [24.4, -6, 1.4], [1.4, -3.5, 1.1]]) {   // 积水
@@ -1495,7 +1508,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   cityRow: { w: 32 }, cityRow_lo: { w: 32 }, cityFlat: { w: 56 }, cityFlat_lo: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityWarehouse_lo: { h: 24 },
   cityTower: { h: 50 }, cityTower_lo: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
   debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
-  roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, laundryLine: { w: 4 }, waterTank: { h: 2 }, roofBucket: { w: 0.9 },
+  roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
 const MODELS = {};
 function loadModels() {
@@ -2393,10 +2406,10 @@ function buildCity(R, fRing, live) {
   for (let gx = -10; gx <= 10; gx++) for (let gz = -10; gz <= 10; gz++) {
     if (churches.some(([a, b]) => a === gx && b === gz)) continue;
     const cx = 12 + gx * CELL, cz = -9 + gz * CELL, d = Math.hypot(cx - 12, cz + 9), ang = Math.atan2(cz + 9, cx - 12);
-    if (d < 60 || d > 470) continue;
+    if (d < 60 || d > (TOUCH ? 300 : 400)) continue;
     if (Math.abs(Math.atan2(Math.sin(ang - Math.PI), Math.cos(ang - Math.PI))) < 0.5 && d < 330) continue;   // 西面的开阔海
-    if (rr() < 0.15) continue;   // 整片沉下去了的街区
-    const lo = d > 210 ? '_lo' : '', zone = d < 150 ? 0 : d < 290 ? 1 : 2;
+    if (rr() < 0.2) continue;   // 整片沉下去了的街区
+    const lo = d > 130 ? '_lo' : '', zone = d < 150 ? 0 : d < 290 ? 1 : 2;
     const edges = [[0, -half + 4, Math.PI], [0, half - 4, 0], [-half + 4, 0, -Math.PI / 2], [half - 4, 0, Math.PI / 2]];
     if (zone === 0) {
       for (const [ox, oz, ry] of edges) { if (rr() < 0.2) continue; add((rr() < 0.18 ? 'cityWarehouse' : 'cityRow') + lo, cx + ox, cz + oz, ry + (rr() - 0.5) * 0.06, 0.22 + rr() * 0.15); }

@@ -398,21 +398,6 @@
       "ai_model": "latest"
     },
     {
-      "key": "laundryLine",
-      "prompt": "a laundry line strung between two metal posts with three white sheets and a shirt hanging and pinned, gently swaying",
-      "target_polycount": 2500,
-      "texture": 1024,
-      "note": "天台：晾衣绳",
-      "ai_model": "latest"
-    },
-    {
-      "key": "waterTank",
-      "prompt": "a small rusty cylindrical rooftop water tank on four short metal legs with a ladder on the side",
-      "target_polycount": 2000,
-      "note": "天台：水箱",
-      "ai_model": "latest"
-    },
-    {
       "key": "roofBucket",
       "prompt": "an old galvanised metal bucket and a wooden crate with rain water, puddle around them",
       "target_polycount": 1200,
