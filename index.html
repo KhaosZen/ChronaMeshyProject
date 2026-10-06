@@ -535,7 +535,7 @@ function lampVisual(parent, x, z, idx) {
 function pointLight(parent, x, y, z) { const l = new THREE.PointLight('#fff', 3, 7, 1.4); l.position.set(x, y, z); parent.add(l); return l; }
 
 // 楼梯（入口楼梯的局部坐标）：底端平台 z -10→-8（y=-3），梯段 z -8→0 升到 y=0，宽 x 0.3→2.7
-function buildStairwell(ctx, withReplicaDoor, upperCtx) {   // upperCtx：出口楼梯 0 米以上的墙放进去（到天台时跟复制品一起隐藏）
+function buildStairwell(ctx, withReplicaDoor, upperCtx) {   // 两侧墙从 z=-10 起：出口楼梯的这一头插在房间西墙里，再往外伸就和房间墙面重叠闪烁   // upperCtx：出口楼梯 0 米以上的墙放进去（到天台时跟复制品一起隐藏）
   for (let i = 0; i < 16; i++) {
     const top = -3 + (i + 1) * 3 / 16;
     solid(ctx, 0.3, 2.7, -3.1, top, -8 + i * 0.5, -8 + (i + 1) * 0.5, M.floor, false);
@@ -548,12 +548,12 @@ function buildStairwell(ctx, withReplicaDoor, upperCtx) {   // upperCtx：出口
   }
   walkQuad(ctx, [0.3, -3, -10], [2.7, -3, -10], [2.7, -3, -8], [0.3, -3, -8]);
   if (upperCtx) {
-    solid(ctx, 0.1, 0.3, -3.2, 0, -10.2, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 0, -10.2, -0.2, M.wallStair);
-    solid(upperCtx, 0.1, 0.3, 0, 3.2, -10.2, -0.2, M.wallStair); solid(upperCtx, 2.7, 2.9, 0, 3.2, -10.2, -0.2, M.wallStair);
-    solid(upperCtx, 0.1, 2.9, 3, 3.2, -10.2, 0, M.ceil, false);
+    solid(ctx, 0.1, 0.3, -3.2, 0, -10, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 0, -10, -0.2, M.wallStair);
+    solid(upperCtx, 0.1, 0.3, 0, 3.2, -10, -0.2, M.wallStair); solid(upperCtx, 2.7, 2.9, 0, 3.2, -10, -0.2, M.wallStair);
+    solid(upperCtx, 0.1, 2.9, 3, 3.2, -10, 0, M.ceil, false);
   } else {
-    solid(ctx, 0.1, 0.3, -3.2, 3.2, -10.2, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 3.2, -10.2, -0.2, M.wallStair);
-    solid(ctx, 0.1, 2.9, 3, 3.2, -10.2, 0, M.ceil, false);
+    solid(ctx, 0.1, 0.3, -3.2, 3.2, -10, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 3.2, -10, -0.2, M.wallStair);
+    solid(ctx, 0.1, 2.9, 3, 3.2, -10, 0, M.ceil, false);
   }
   if (withReplicaDoor) { // 与过渡房间西门一模一样的关着的门（门后没有房间）
     solid(ctx, 0.1, 0.9, -3.2, 3.2, -10.2, -10, M.wallStair); solid(ctx, 2.1, 2.9, -3.2, 3.2, -10.2, -10, M.wallStair);
@@ -648,12 +648,12 @@ function buildBuilding() {
   };
   if (MODELS.diningTable) { // 桌面高度以模型为准：桌上的「钥匙」和花瓶放在真正的桌面上
     rf.table.updateMatrixWorld(true); const rc = new THREE.Raycaster(), top = (x, z) => { rc.set(V(x, 3, z), V(0, -1, 0)); return rc.intersectObject(rf.table, true)[0]?.point.y ?? 0.75; };
-    ROOM_SPOTS.radio.p[1] = top(25.0, -20.6); ROOM_SPOTS.tickets.p[1] = top(24.6, -20.15); rf.vaseY = top(24.9, -20.4);
+    ROOM_SPOTS.radio.p[1] = top(24.82, -20.58); ROOM_SPOTS.tickets.p[1] = top(24.52, -20.18); rf.vaseY = top(24.45, -20.62);
   }
   rf.table.userData.col = MODELS.diningTable ? collider(24.25, 25.15, -20.85, -19.95, 0, 0.8) : collider(23.9, 25.3, -20.8, -20, 0, 0.8);
   rf.vase.add(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.2, 7), std('#e8e2d4')));
   for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), M.flower[i]); f.position.set((i - 1.5) * 0.05, 0.16 + (i % 2) * 0.04, 0); rf.vase.add(f); }
-  rf.vase.position.set(24.9, (rf.vaseY ?? 0.75) + 0.1, -20.4); B.add(rf.vase);
+  rf.vase.position.set(24.45, (rf.vaseY ?? 0.75) + 0.1, -20.62); B.add(rf.vase);
   buildHome(); buildRoomKeys();
   WALL_NOTES.forEach((t, i) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.33),
@@ -750,8 +750,8 @@ function faceTexture(faces, clear) {
     });
   });
 }
-function posterTexture(i) {
-  return canvasTex(128, 176, (g, w, h) => {
+function posterTexture(i) {   // 画在 256×352 上（按 128×176 的坐标放大 2 倍），近看也清楚
+  return canvasTex(256, 352, (g, W, H2) => { g.scale(2, 2); const w = 128, h = 176;
     g.fillStyle = i % 2 ? '#e4dcc6' : '#d8cfb6'; g.fillRect(0, 0, w, h);
     const im = IMG.age_teen;
     if (im) { // MISSING 传单：16 岁那张照片，黑白、模糊，名字被水泡糊
@@ -934,6 +934,18 @@ function anchorTop(res, dx = 0.2) {
   return res.group.localToWorld(p);
 }
 
+// 带树皮贴图的枝条：沿曲线的锥形管，u 绕一圈、v 按长度走（和树干同一张贴图、同样的密度）
+function barkTube(points, r0, r1, mat, seg = 28, radial = 12) {
+  const curve = new THREE.CatmullRomCurve3(points), L = curve.getLength(), frames = curve.computeFrenetFrames(seg, false), pos = [], uv = [], idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg, p = curve.getPointAt(t), r = r0 + (r1 - r0) * Math.pow(t, 0.75), N = frames.normals[i], B = frames.binormals[i];
+    for (let j = 0; j <= radial; j++) { const a = j / radial * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+      pos.push(p.x + r * (c * N.x + s * B.x), p.y + r * (c * N.y + s * B.y), p.z + r * (c * N.z + s * B.z)); uv.push(j / radial, t * L / (2 * Math.PI * r0 / 1.5)); }
+  }
+  for (let i = 0; i < seg; i++) for (let j = 0; j < radial; j++) { const a = i * (radial + 1) + j, b = a + 1, c = a + radial + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g, mat);
+}
 // 逐层增多的绿植（走廊起点 4 米内不放，保证楼梯两端看到的一样）
 function buildGreenery() {
   const rng = mulberry32(7);
@@ -978,7 +990,18 @@ function buildGreenery() {
   for (const [x, z, n] of [[10.55, -0.1, V(0, 0, 1)], [16.15, -0.1, V(0, 0, 1)], [20.9, -10.75, V(1, 0, 0)]]) {
     const w = V(x, 1.6, z), from = w.clone().sub(TREE).setY(0).normalize(), start = TREE.clone().addScaledVector(from, 1.2).setY(2.9);
     const tip = w.clone().addScaledVector(n, 1.4).add(V(n.z * 0.3, 0.3, n.x * 0.3));
-    const g = new THREE.Group(), lb = MODELS.longBranch && model('longBranch'), br = !lb && model('treeBranch');
+    const g = new THREE.Group(), bm = world.barkMat, lb = !bm && MODELS.longBranch && model('longBranch'), br = !bm && !lb && model('treeBranch');
+    if (bm) { // 一根从树干里长出来的枝：起点埋在树干里，低低地穿过窗洞，进走廊后往上弯，越来越细；中途分出一根小枝，枝头长叶
+      const dir = w.clone().sub(TREE).setY(0).normalize(), side = V(-dir.z, 0, dir.x), wy = 1.25;
+      const pts = [TREE.clone().addScaledVector(dir, 0.6).setY(0.6), TREE.clone().addScaledVector(dir, 2.6).setY(0.95), w.clone().addScaledVector(n, -1.2).setY(1.15).addScaledVector(side, 0.15),
+        w.clone().setY(wy), w.clone().addScaledVector(n, 0.9).setY(1.55).addScaledVector(side, -0.12), w.clone().addScaledVector(n, 1.7).setY(2.15).addScaledVector(side, 0.1)];
+      g.add(barkTube(pts, 0.34, 0.035, bm, 40));
+      const fork = w.clone().addScaledVector(n, 0.55).setY(1.4);
+      g.add(barkTube([fork.clone().addScaledVector(n, -0.15), fork.clone().addScaledVector(side, 0.35).addScaledVector(n, 0.3).setY(1.65), fork.clone().addScaledVector(side, 0.6).addScaledVector(n, 0.75).setY(1.75)], 0.07, 0.02, bm, 12, 8));
+      const tips = [pts[5], fork.clone().addScaledVector(side, 0.6).addScaledVector(n, 0.75).setY(1.75), pts[4]];
+      for (const [i, t] of tips.entries()) { const l = modelShared('ivyClump'); if (!l) break; l.position.copy(t); l.scale.setScalar(i === 2 ? 0.55 : 0.8); l.rotation.set(0.4, i * 2.1, 0.2); g.add(l); }   // 枝头的嫩叶
+      building.add(g); world.branches.push(g); continue;
+    }
     if (lb) { // Meshy 长枝：一整根从树干出发，穿过窗洞伸进走廊约 1.6 米（模型里粗端在 -x 上方，斜着往 +x 下方长）
       const from = TREE.clone().addScaledVector(w.clone().sub(TREE).setY(0).normalize(), 1.0).setY(1.1), to = w.clone().addScaledVector(n, 1.6).setY(2.2);   // 从窗洞下半穿过，斜着长到头顶上方
       const S = MODELS.longBranch.size, d0 = V(S.x, -S.y, 0).normalize(), L = from.distanceTo(to), k = L / Math.hypot(S.x, S.y);
@@ -1020,6 +1043,7 @@ function facadeTexture(variant) {
       const x = c * bw + (r % 2) * bw / 2, y = r * bh; g.fillStyle = reds[Math.floor(rng() * reds.length)]; g.fillRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
     }
     for (let i = 0; i < 30; i++) { g.fillStyle = `rgba(${rng() < 0.5 ? '40,30,25' : '235,225,210'},${0.04 + rng() * 0.06})`; blob(g, rng() * w, rng() * h, 20 + rng() * 50, rng); g.fill(); }
+    if (variant === 3) { g.fillStyle = '#c4beb2'; g.fillRect(0, Y(0.26), w, 0.26 * P); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, Y(0.26), w, 3); return; }   // 没画窗的砖墙（本层真窗那一圈用）
     const x0 = (w - 1.2 * P) / 2, x1 = x0 + 1.2 * P, yT = Y(2.35), yB = Y(0.95), f = 0.07 * P;
     for (let i = 0; i < 4; i++) { const sx = x0 + 0.1 * P + rng() * 1.0 * P, gr = g.createLinearGradient(0, yB, 0, yB + (0.5 + rng() * 0.4) * P);   // 窗台下的水渍
       gr.addColorStop(0, 'rgba(45,40,35,.35)'); gr.addColorStop(1, 'rgba(45,40,35,0)'); g.fillStyle = gr; g.fillRect(sx, yB, 6 + rng() * 14, 0.9 * P); }
@@ -1044,17 +1068,27 @@ function facadeTexture(variant) {
 // 大树树干：程序生成的一整根，扭着长、表面有几道纵向的棱；树皮贴图横向绕 3 圈，法线贴图从贴图亮度算出来
 function barkTrunk(crown, at, y0) {
   crown.updateMatrixWorld(true);   // 量树冠模型底部那截树干有多粗，让两边接上
-  // 量树冠模型底部那截树干的粗细：程序树干略细一点，顶端收进树冠底部的外扩里；树冠的枝干也换成同一张树皮（见 barkBlend）
-  const base = crown.position.y, v = V(0, 0, 0), ds = [];
+  // 量树冠模型里那截树干每个高度有多粗（0.25 m 一层，取外圈的 90%）：程序树干在每层都比它粗一点，把它整个包进去，
+  // 一直长到分叉处（外圈突然变宽的那层），再收成圆顶 —— 树冠的几根粗枝就像从这根树干里直接长出来，没有台阶
+  const base = crown.position.y, v = V(0, 0, 0), BAND = 0.25, NB = 40, bands = Array.from({ length: NB }, () => []);
   crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position;
-    for (let i = 0; i < p.count; i += 2) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y < base + 0.4) ds.push(Math.hypot(v.x - at.x, v.z - at.z)); } });
-  ds.sort((a, b) => a - b);
-  const R = Math.min(Math.max((ds[Math.floor(ds.length * 0.6)] || 1.8) * 0.95, 1.0), 3.0), y1 = base + 1.4, radiusAt = () => R;
-  const A = 40, N = 90, pos = [], uv = [], idx = [], circ = 2 * Math.PI * R / 3;
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); const b = Math.floor((v.y - base) / BAND); if (b >= 0 && b < NB) bands[b].push(Math.hypot(v.x - at.x, v.z - at.z)); } });
+  const pct = (a, q) => { if (!a.length) return 0; a.sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(a.length * q))]; };
+  const R0 = Math.min(Math.max(pct(bands[0].concat(bands[1]), 0.9), 1.0), 3.4), prof = [];
+  for (let b = 0; b < NB; b++) prof.push(pct(bands[b].filter(d => d < R0 * 2.2), 0.9));
+  let fork = 2; while (fork < NB - 1 && prof[fork] > 0 && prof[fork] < Math.max(prof[fork - 1] * 1.12, R0 * 0.3) && prof[fork] < R0 * 1.25) fork++;
+  const yFork = base + fork * BAND, y1 = yFork + 0.55, R = R0 * 1.05;
+  const radiusAt = y => {
+    if (y <= base) return R;
+    if (y >= yFork) return Math.max(0.05, Math.sqrt(Math.max(0, 1 - Math.pow((y - yFork) / (y1 - yFork), 2)))) * prof[Math.max(0, fork - 1)] * 1.06;   // 分叉处收成圆顶
+    const t = (y - base) / BAND, b = Math.min(fork - 1, Math.floor(t)), f = t - b, r = prof[b] + (prof[Math.min(fork - 1, b + 1)] - prof[b]) * f;
+    return Math.max(r * 1.06, R0 * 0.4);
+  };
+  const A = 40, N = 110, pos = [], uv = [], idx = [], circ = 2 * Math.PI * R / 3;
   for (let j = 0; j <= N; j++) {
     const y = y0 + (y1 - y0) * j / N, k = (y1 - y) / (y1 - y0);   // k：0 在顶、1 在底
     const ox = 0.35 * Math.sin(y * 0.11) * Math.max(0, (base - y) / (base - y0)), oz = 0.3 * Math.cos(y * 0.09 + 1) * Math.max(0, (base - y) / (base - y0));   // 越往上越正，接上树冠
-    const rr = radiusAt(y) * (y <= base ? 1 + 0.05 * Math.sin(y * 0.5) * k : 1) * (j === N ? 0.82 : 1);   // 顶端最后一圈往里收，边缘藏进树冠
+    const rr = radiusAt(y) * (y <= base ? 1 + 0.05 * Math.sin(y * 0.5) * k : 1) ;
     for (let i = 0; i <= A; i++) {
       const a = i / A * Math.PI * 2, tw = a + y * 0.06, r = rr * (1 + 0.07 * Math.sin(3 * tw) + 0.035 * Math.sin(7 * tw + y * 0.3));
       pos.push(at.x + ox + Math.cos(a) * r, y, at.z + oz + Math.sin(a) * r); uv.push(i / A * 3, (y - y0) / circ);
@@ -1070,7 +1104,8 @@ function barkTrunk(crown, at, y0) {
     c.putImageData(out, 0, 0);
   });
   nrm.colorSpace = THREE.NoColorSpace; nrm.wrapS = nrm.wrapT = THREE.MirroredRepeatWrapping;
-  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map, normalMap: nrm, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.95 }));
+  const mat = world.barkMat = new THREE.MeshStandardMaterial({ map, normalMap: nrm, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.95 });
+  return new THREE.Mesh(g, mat);
 }
 // 树冠模型里的树干和枝条换成和程序树干同一张树皮（按世界坐标三面投影），叶子（偏绿的像素）保持原样：整棵树看起来是一体的
 function barkBlend(mat, bark) {
@@ -1087,16 +1122,24 @@ function barkBlend(mat, bark) {
   mat.needsUpdate = true;
 }
 function buildCourtyard() {
-  const texs = [0, 1, 2].map(facadeTexture);
+  const texs = [0, 1, 2].map(facadeTexture), plainTex = facadeTexture(3);
   const C = COURT, sides = [ // [中心 x, 中心 z, 宽, 朝向, 本层这一段是否已是真墙]
     [(C.x0 + C.x1) / 2, C.z1 - 0.01, C.x1 - C.x0, Math.PI, true], [C.x1 - 0.01, (C.z0 + C.z1) / 2, C.z1 - C.z0, -Math.PI / 2, true],
     [C.x0, (C.z0 + C.z1) / 2, C.z1 - C.z0, Math.PI / 2, false], [(C.x0 + C.x1) / 2, C.z0, C.x1 - C.x0, 0, false]];
   world.bands = [];
   for (const [x, z, w, ry, real] of sides) for (let k = -2; k <= 3; k++) {
-    if (k === 0 && real) continue;
-    const t = texs[((k + Math.round(x + z)) % 3 + 3) % 3].clone(); t.needsUpdate = true; t.repeat.set(Math.round(w / 2.2), 1);
+    const own = k === 0 && real;   // 本层走廊这一面：外侧贴砖墙立面，在真窗的位置挖洞
+    const t = (own ? plainTex : texs[((k + Math.round(x + z)) % 3 + 3) % 3]).clone(); t.needsUpdate = true; t.repeat.set(Math.round(w / 2.2), 1);
     const mat = new THREE.MeshStandardMaterial({ map: t, roughness: 1, flatShading: true }); mat.color = M.wall.color;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 3.2), mat); m.position.set(x, k * 3.2 + 1.6, z); m.rotation.y = ry;
+    let geo = new THREE.PlaneGeometry(w, 3.2);
+    if (own) {
+      const sh = new THREE.Shape([V(-w / 2, -1.6), V(w / 2, -1.6), V(w / 2, 1.6), V(-w / 2, 1.6)].map(p => new THREE.Vector2(p.x, p.y)));
+      const holes = ry === Math.PI ? [[6.6, 8.1], [9.8, 11.3], [15.4, 16.9]].map(([a, b]) => [x - b, x - a]) : [[-3.9, -2.4], [-11.5, -10]].map(([a, b]) => [a - z, b - z]);
+      for (const [a, b] of holes) sh.holes.push(new THREE.Path([new THREE.Vector2(a, 0.9 - 1.6), new THREE.Vector2(b, 0.9 - 1.6), new THREE.Vector2(b, 2.1 - 1.6), new THREE.Vector2(a, 2.1 - 1.6)]));
+      geo = new THREE.ShapeGeometry(sh); const p = geo.attributes.position, uv = geo.attributes.uv;
+      for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + w / 2) / w, (p.getY(i) + 1.6) / 3.2);
+    }
+    const m = new THREE.Mesh(geo, mat); m.position.set(x, k * 3.2 + 1.6, z); m.rotation.y = ry;
     m.userData.k = k; building.add(m); world.bands.push(m);
   }
   // 大树：从水下长上来，高过楼顶；整棵树按楼层上下移动（站在 n 楼，看到的是这一段）
@@ -1287,19 +1330,21 @@ function applyContent(n, here = true) {   // here = false：玩家还在过渡�
 // 过渡房间的日常陈设：地毯、沙发、书架、落地灯、挂钟、衣帽架、边柜；1 楼时沙发和书架盖着防尘布
 function buildHome() {
   const B = building, cloth = std('#8a7a6e'), rugMat = std('#6e4d46'), sheet = std('#c9c6bd'), dark = std('#2e2a27');
-  const home = world.home = { sheets: new THREE.Group(), extra: [] }; B.add(home.sheets);
+  const home = world.home = { sheets: new THREE.Group(), extra: [], under: [] };   // under：盖布时要藏起来的家具 B.add(home.sheets);
   const put = (id, x, z, ry = 0, y = 0) => { const o = model(id); if (!o) return null; o.position.set(x, y, z); o.rotation.y = ry; B.add(o); return o; };
   box(2.8, 0.012, 1.9, rugMat, 23.9, 0.006, -19.7, B);                                            // 地毯
   // 沙发（靠南墙，面朝房间）
-  if (!put('sofa', 24.8, -16.62, Math.PI)) {
+  const sofa = put('sofa', 24.8, -16.62, Math.PI);
+  if (!sofa) {
     box(2.0, 0.42, 0.8, cloth, 24.8, 0.21, -16.65, B); box(2.0, 0.5, 0.2, cloth, 24.8, 0.67, -16.3, B);
     box(0.18, 0.62, 0.8, cloth, 23.71, 0.31, -16.65, B); box(0.18, 0.62, 0.8, cloth, 25.89, 0.31, -16.65, B);
   }
   collider(23.6, 26.0, -17.05, -16.2, 0, 0.9);
-  const ss = model('sheetSofa'); if (ss) { ss.position.set(24.8, 0, -16.62); ss.rotation.y = Math.PI; home.sheets.add(ss); }   // 防尘布（Meshy）
+  const ss = model('sheetSofa'); if (ss) { ss.position.set(24.8, 0, -16.62); ss.rotation.y = Math.PI; home.sheets.add(ss); if (sofa) home.under.push(sofa); }   // 防尘布（Meshy）
   else box(2.2, 0.95, 0.95, sheet, 24.8, 0.475, -16.62, home.sheets);
   // 书架（北墙右侧）
-  if (!put('bookshelf', 25.8, -21.78)) {
+  const shelf = put('bookshelf', 25.8, -21.78);
+  if (!shelf) {
     box(1.0, 1.8, 0.34, M.furn, 25.8, 0.9, -21.8, B);
     for (let i = 0; i < 4; i++) {
       box(0.94, 0.03, 0.3, M.trim, 25.8, 0.35 + i * 0.42, -21.78, B);
@@ -1307,7 +1352,7 @@ function buildHome() {
     }
   }
   collider(25.3, 26.3, -22, -21.6, 0, 1.8);
-  const sb = model('sheetBookshelf'); if (sb) { sb.position.set(25.8, 0, -21.7); home.sheets.add(sb); }
+  const sb = model('sheetBookshelf'); if (sb) { sb.position.set(25.8, 0, -21.7); home.sheets.add(sb); if (shelf) home.under.push(shelf); }
   else { const bs = MODELS.bookshelf?.size; box(1.1, (bs?.y ?? 1.8) + 0.1, 0.5, sheet, 25.8, ((bs?.y ?? 1.8) + 0.1) / 2, -21.75, home.sheets); }
   // 落地灯（沙发东边的角落）
   if (!put('floorLamp', 26.2, -16.45)) {
@@ -1335,8 +1380,8 @@ function buildHome() {
   // 东墙边的一盆绿植：母亲每天浇水的那盆；浇水壶放回来时就在它旁边
   const plant = put('housePlant', 26.05, -18.85, 0.4); if (plant) collider(25.75, 26.35, -19.15, -18.55, 0, 0.8);
   // 逐层多出来的：3 楼起有扶手椅，4 楼电视也回来了
-  const arm = put('armchair', 25.95, -20.6, -Math.PI / 2), tv = put('tvCabinet', 21.9, -21.78);
-  if (arm) home.extra.push([arm, 3, collider(25.55, 26.4, -21.0, -20.2, 0, 0.9)]);
+  const arm = put('armchair', 23.4, -21.4, 0), tv = put('tvCabinet', 21.9, -21.78);
+  if (arm) home.extra.push([arm, 3, collider(23.0, 23.8, -21.85, -21.0, 0, 0.9)]);   // 北墙电视和书架中间，让开东墙贴寻人启事的位置
   if (tv) home.extra.push([tv, 4, collider(21.25, 22.55, -22, -21.35, 0, 1.15)]);
 }
 
@@ -1345,8 +1390,8 @@ const ROOM_SPOTS = {
   photo:    { p: [26.47, 1.5, -18.4], ry: -Math.PI / 2 },                     // 东墙挂着（贴墙的平框）
   poster:   { p: [26.47, 1.55, -20.3], ry: -Math.PI / 2, rx: Math.PI / 2 },    // 东墙贴着
   lamp:     { p: [18.75, 0.7, -16.75], ry: 0 },                               // 边柜上，亮着
-  radio:    { p: [25.0, 0.75, -20.6], ry: 0 },
-  tickets:  { p: [24.6, 0.75, -20.15], ry: 0.4 },
+  radio:    { p: [24.82, 0.75, -20.58], ry: 0 },                              // 桌子中间偏后，别悬在桌沿
+  tickets:  { p: [24.52, 0.75, -20.18], ry: 0.4 },
   machine:  { p: [18.62, 1.015, -21.2], ry: Math.PI / 2 },                     // 西墙搁板
   housekey: { p: [18.55, 0.95, -17.75], ry: Math.PI / 2 },                     // 出口门边，系在绳上
   can:      { p: [25.62, 0, -19.05], ry: 2.3 },                                // 花盆边上，壶嘴朝着花
@@ -1394,6 +1439,7 @@ function updateReveals() {
 
 function applyRoomNotes(n) {
   world.home.sheets.visible = n === 1;
+  for (const o of world.home.under) o.visible = n !== 1;   // 盖着布的那一层，布下面的家具不显示（盖布模型本身就是家具的形状）
   for (const [o, from, col] of world.home.extra) o.visible = col.enabled = n >= from;
   for (const id in world.roomKeys) { const o = world.roomKeys[id]; o.visible = state.recovered.has(id); o.scale.setScalar(1); world.slots[id].visible = false; }
   world.notes.forEach((m, i) => m.visible = n >= 2 && i < n);   // 「Dear ___,」+ 每层多一行
@@ -1558,8 +1604,12 @@ function makeKey(id, variant = 'real', mat = M.key) {
       g.userData.crackle = real; break;
     case 'poster': { // 真：贴了又贴，一层压一层；假：干净的一张
       const n = real ? 3 : 1;
-      for (let i = 0; i < n; i++) { const s = b(0.34, 0.006, 0.46, (i - 1) * 0.02 * (n > 1), 0.004 + i * 0.006, 0, i === n - 1 ? M.white : std('#d6ceb8')); s.rotation.y = (i - 1) * 0.12 * (n > 1); }
-      b(0.12, 0.004, 0.14, 0, 0.006 * n + 0.004, -0.08, M.dark); break;
+      for (let i = 0; i < n; i++) { // 每一层都是印着照片的 MISSING 传单（和走廊墙上贴的同一种）
+        const paper = std('#e2d9c2'), face = mat === M.glowKey ? mat : new THREE.MeshStandardMaterial({ map: posterTexture(i), roughness: 0.9 });
+        const s = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.006, 0.46), [paper, paper, face, paper, paper, paper]);
+        s.position.set((i - 1) * 0.02 * (n > 1), 0.004 + i * 0.006, 0); s.rotation.y = (i - 1) * 0.12 * (n > 1); g.add(s);
+      }
+      break;
     }
     case 'tickets': { // 渡轮船票（印字清楚的卡片）。真：一沓，用绳捆好；假：散落的一张
       const card = (y, ry, dx = 0) => { const t = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.003, 0.075), mat === M.glowKey ? mat : ticketMats()); t.position.set(dx, y, 0);   // 关灯谜题里整张发光
@@ -1927,6 +1977,12 @@ function enterRoom() {
   applyRoomNotes(state.floor);                                      // 墙上便条反映这次拿到了哪些
   for (const id of FLOORS[state.floor].keys) world.slots[id].visible = !state.recovered.has(id);  // 本层「钥匙」的空位
   if (world.startDoor.visible) { world.startDoor.visible = false; world.startDoor.userData.col.enabled = false; }  // 之后都从楼梯上来
+  if (!state.lightsOn) flickerOn();   // 关着灯进来：灯闪几下自己亮起来
+}
+async function flickerOn() {
+  await wait(700);
+  for (const [on, ms] of [[1, 90], [0, 160], [1, 60], [0, 420], [1, 120], [0, 90]]) { state.lightsOn = !!on; if (on && audio) sfx.click(world.lamps[world.lamps.length - 1].light.position); await wait(ms); }
+  setLights(true);
 }
 // 推尽头的门时判定：本层「钥匙」都放回了 → 剧情台词、上楼；没齐 → 提示台词、回到本层
 async function openFarDoor() {
@@ -1981,7 +2037,11 @@ async function endGame() {
   $('stats').innerHTML = `Time ${mm}:${ss}<br>Puzzles you came across: ${state.tplSeen.size} of ${total} kinds<br>Keepsakes found: ${state.solved}`;
   $('again').textContent = `${CLICK} to return to the main menu`;
   for (const id of ['t', 'stats', 'again']) { const el = id === 't' ? document.querySelector('#end .t') : $(id); el.style.opacity = id === 'stats' ? 0.75 : 1; }
-  $('again').addEventListener('click', () => location.reload(), { once: true });
+  $('again').addEventListener('click', () => {   // 点了马上有反馈：字变成「正在返回」，画面淡出，再重新载入到主界面
+    $('again').textContent = 'Returning to the main menu…'; $('again').style.cursor = 'default';
+    for (const el of [document.querySelector('#end .t'), $('stats')]) el.style.opacity = 0.15;
+    setTimeout(() => location.reload(), 900);
+  }, { once: true });
 }
 
 /* =====================================================================
@@ -2005,7 +2065,10 @@ const canvas = renderer.domElement;
 let lastInput = performance.now();
 function look2(dx, dy) { if (dx || dy) lastInput = performance.now();   // 浏览器会自己发 0 位移的 mousemove，不算操作
   player.yaw -= dx * CFG.lookSens; player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch - dy * CFG.lookSens)); }
-addEventListener('mousemove', e => { if (document.pointerLockElement === canvas || (dragLook && dragging)) look2(e.movementX, e.movementY); });
+addEventListener('mousemove', e => {   // 拖动转视角只在按住时算；单次位移太大（窗口切换、点开始时鼠标从角落跳过来）的不算
+  if (Math.abs(e.movementX) > 200 || Math.abs(e.movementY) > 200) return;
+  if (document.pointerLockElement === canvas || (dragLook && dragging && e.buttons)) look2(e.movementX, e.movementY);
+});
 canvas.addEventListener('mousedown', e => { if (dragLook) dragging = true; if (playing && e.button === 0) tryInteract(); });
 addEventListener('mouseup', () => { dragging = false; });
 $('start').addEventListener('click', e => {
