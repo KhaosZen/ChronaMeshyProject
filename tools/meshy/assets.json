@@ -84,33 +84,10 @@
     {
       "key": "telescope",
       "prompt": "an old brass telescope on a wooden tripod, pointing slightly upward",
-      "target_polycount": 1500,
-      "texture": 1024
-    },
-    {
-      "key": "farHouseA",
-      "prompt": "the top floor and stepped gable roof of a narrow red-brick Dutch canal house, cut off flat at the bottom as if sinking into water, a small tree growing from the roof",
-      "target_polycount": 1200
-    },
-    {
-      "key": "farHouseB",
-      "prompt": "the top two floors and pointed gable roof of a pair of brick Dutch townhouses, cut off flat at the bottom as if sinking into water, white window frames, a few plants on the roof",
-      "target_polycount": 1200
-    },
-    {
-      "key": "farHouseC",
-      "prompt": "the upper part of a small brick Dutch house with a steep tiled roof and a chimney, cut off flat at the bottom as if sinking into water, a bush growing on the roof",
-      "target_polycount": 1000
-    },
-    {
-      "key": "farChurch",
-      "prompt": "the tall brick bell tower and pointed spire of a Dutch village church, cut off flat at the bottom as if sinking into water, a small tree growing from a ledge",
-      "target_polycount": 1500
-    },
-    {
-      "key": "farMill",
-      "prompt": "the upper half of a traditional Dutch windmill with its cap and four sails, cut off flat at the bottom as if sinking into water",
-      "target_polycount": 1500
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "shoeCabinet",
@@ -122,17 +99,21 @@
     },
     {
       "key": "sideTable",
-      "image": "refs/sideTable.png",
-      "target_polycount": 1500,
       "note": "摆放点 2：边桌（带花瓶）",
-      "texture": 1024
+      "image": "refs/sideTable.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "shelf",
-      "image": "refs/shelf.png",
-      "target_polycount": 2000,
       "note": "摆放点 3：墙上搁板",
-      "texture": 1024
+      "image": "refs/shelf.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "boxes",
@@ -143,24 +124,30 @@
     },
     {
       "key": "phoneTable",
-      "image": "refs/phoneTable.png",
-      "target_polycount": 2000,
       "note": "摆放点 6：电话桌（转盘电话）",
-      "texture": 1024
+      "image": "refs/phoneTable.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "bench",
-      "image": "refs/bench.png",
-      "target_polycount": 1000,
       "note": "摆放点 7：长凳",
-      "texture": 1024
+      "image": "refs/bench.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "lowCabinet",
-      "image": "refs/lowCabinet.png",
-      "target_polycount": 1500,
       "note": "摆放点 4、8：矮柜",
-      "texture": 1024
+      "image": "refs/lowCabinet.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "slippers",
@@ -196,29 +183,39 @@
     },
     {
       "key": "mother",
-      "prompt": "a full body woman in her late thirties, 1980s Dutch fashion, curly brown shoulder-length hair, white blouse with a small floral print, high-waisted light blue jeans, white sneakers, standing straight, arms relaxed at her sides, gentle face, game character",
-      "target_polycount": 4000,
       "note": "联机：母亲（第二个玩家），游戏里渲染成发暖光的半透明人形",
-      "texture": 1024
+      "prompt": "a full body woman in her late thirties, 1980s Dutch fashion, curly brown shoulder-length hair, white blouse with a small floral print, high-waisted light blue jeans, white sneakers, standing straight, arms relaxed at her sides, gentle face, game character",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "child",
-      "prompt": "a full body teenager about sixteen years old, short messy brown hair, white t-shirt with red and blue stripes, navy jacket, blue jeans, white sneakers, a backpack on one shoulder, standing straight, arms relaxed at sides, game character",
-      "target_polycount": 4000,
       "note": "联机：母亲那边看到的孩子（主角）",
-      "texture": 1024
+      "prompt": "a full body teenager about sixteen years old, short messy brown hair, white t-shirt with red and blue stripes, navy jacket, blue jeans, white sneakers, a backpack on one shoulder, standing straight, arms relaxed at sides, game character",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "sofa",
+      "note": "房间：沙发",
       "prompt": "a 1980s three-seat sofa with brown corduroy upholstery, wooden legs",
-      "target_polycount": 3000,
-      "note": "房间：沙发"
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "armchair",
+      "note": "房间：扶手椅",
       "prompt": "a 1980s armchair with mustard yellow fabric and wooden armrests",
-      "target_polycount": 2500,
-      "note": "房间：扶手椅"
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "tvCabinet",
@@ -230,9 +227,12 @@
     },
     {
       "key": "floorLamp",
+      "note": "房间：落地灯",
       "prompt": "a 1980s floor lamp with a tall brass pole and a pleated cream fabric shade",
-      "target_polycount": 1500,
-      "note": "房间：落地灯"
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "bookshelf",
@@ -246,41 +246,37 @@
       "key": "coatRack",
       "note": "房间：衣帽架",
       "prompt": "a wooden standing coat rack with one straight central pole, three curved feet at the bottom and four hooks at the top, a beige trench coat hanging from one hook",
-      "target_polycount": 2000,
-      "ai_model": "latest"
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "wallClock",
+      "note": "房间：挂钟",
       "prompt": "a round wall clock with a wooden frame and a cream face",
-      "target_polycount": 600,
-      "note": "房间：挂钟"
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "diningTable",
       "note": "房间：餐桌",
       "prompt": "a small square wooden dining table with four straight legs and a plain white tablecloth lying flat on top and hanging a little over the edges, nothing on the table",
-      "target_polycount": 2000,
-      "ai_model": "latest"
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "diningChair",
+      "note": "房间：餐椅",
       "prompt": "a simple wooden dining chair with a woven rush seat",
-      "target_polycount": 1200,
-      "note": "房间：餐椅"
-    },
-    {
-      "key": "farBlockA",
-      "prompt": "the top three floors of a long four-storey red-brick Dutch apartment block with white window frames, a flat roof with small trees growing on it, cut off flat at the bottom as if sinking into water",
-      "target_polycount": 2500,
-      "note": "远景：半淹的公寓楼",
-      "texture": 1024
-    },
-    {
-      "key": "farBlockB",
-      "prompt": "the top floors of a row of four narrow Dutch canal houses with different gables side by side, cut off flat at the bottom as if sinking into water, ivy and small trees on the roofs",
-      "target_polycount": 2500,
-      "note": "远景：一排半淹的运河屋",
-      "texture": 1024
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "lighthouse",
@@ -402,21 +398,6 @@
       "ai_model": "latest"
     },
     {
-      "key": "laundryLine",
-      "prompt": "a laundry line strung between two metal posts with three white sheets and a shirt hanging and pinned, gently swaying",
-      "target_polycount": 2500,
-      "texture": 1024,
-      "note": "天台：晾衣绳",
-      "ai_model": "latest"
-    },
-    {
-      "key": "waterTank",
-      "prompt": "a small rusty cylindrical rooftop water tank on four short metal legs with a ladder on the side",
-      "target_polycount": 2000,
-      "note": "天台：水箱",
-      "ai_model": "latest"
-    },
-    {
       "key": "roofBucket",
       "prompt": "an old galvanised metal bucket and a wooden crate with rain water, puddle around them",
       "target_polycount": 1200,
@@ -449,148 +430,52 @@
       "note": "房间：盆栽（浇水壶放在旁边）"
     },
     {
-      "key": "sideTableHQ",
-      "remesh": false,
+      "key": "cityRow",
+      "image": "refs/cityRow.png",
+      "target_polycount": 6000,
       "ai_model": "latest",
       "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "image": "refs/sideTable.png"
+      "note": "远景：运河屋一排"
     },
     {
-      "key": "shelfHQ",
-      "remesh": false,
+      "key": "cityFlat",
+      "image": "refs/cityFlat.png",
+      "target_polycount": 6000,
       "ai_model": "latest",
       "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "image": "refs/shelf.png"
+      "note": "远景：外廊式公寓楼"
     },
     {
-      "key": "boxesHQ",
-      "remesh": false,
+      "key": "cityChurch",
+      "image": "refs/cityChurch.png",
+      "target_polycount": 6000,
       "ai_model": "latest",
       "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "image": "refs/boxes.png"
+      "note": "远景：教堂"
     },
     {
-      "key": "phoneTableHQ",
-      "remesh": false,
+      "key": "cityWarehouse",
+      "image": "refs/cityWarehouse.png",
+      "target_polycount": 6000,
       "ai_model": "latest",
       "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "image": "refs/phoneTable.png"
+      "note": "远景：仓库"
     },
     {
-      "key": "benchHQ",
-      "remesh": false,
+      "key": "cityTower",
+      "image": "refs/cityTower.png",
+      "target_polycount": 6000,
       "ai_model": "latest",
       "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "image": "refs/bench.png"
+      "note": "远景：写字楼"
     },
     {
-      "key": "lowCabinetHQ",
-      "remesh": false,
+      "key": "cityBridge",
+      "image": "refs/cityBridge.png",
+      "target_polycount": 6000,
       "ai_model": "latest",
       "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "image": "refs/lowCabinet.png"
-    },
-    {
-      "key": "telescopeHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "an old brass telescope on a wooden tripod, pointing slightly upward"
-    },
-    {
-      "key": "sofaHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a 1980s three-seat sofa with brown corduroy upholstery, wooden legs"
-    },
-    {
-      "key": "armchairHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a 1980s armchair with mustard yellow fabric and wooden armrests"
-    },
-    {
-      "key": "floorLampHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a 1980s floor lamp with a tall brass pole and a pleated cream fabric shade"
-    },
-    {
-      "key": "coatRackHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a wooden standing coat rack with one straight central pole, three curved feet at the bottom and four hooks at the top, a beige trench coat hanging from one hook"
-    },
-    {
-      "key": "diningTableHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a small square wooden dining table with four straight legs and a plain white tablecloth lying flat on top and hanging a little over the edges, nothing on the table"
-    },
-    {
-      "key": "diningChairHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a simple wooden dining chair with a woven rush seat"
-    },
-    {
-      "key": "wallClockHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a round wall clock with a wooden frame and a cream face"
-    },
-    {
-      "key": "motherHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a full body woman in her late thirties, 1980s Dutch fashion, curly brown shoulder-length hair, white blouse with a small floral print, high-waisted light blue jeans, white sneakers, standing straight, arms relaxed at her sides, gentle face, game character"
-    },
-    {
-      "key": "childHQ",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "simplify": 0.02,
-      "note": "候选：高精度重做",
-      "prompt": "a full body teenager about sixteen years old, short messy brown hair, white t-shirt with red and blue stripes, navy jacket, blue jeans, white sneakers, a backpack on one shoulder, standing straight, arms relaxed at sides, game character"
+      "note": "远景：吊桥"
     }
   ]
 }
