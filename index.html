@@ -11,6 +11,8 @@
   .layer { position: fixed; inset: 0; pointer-events: none; }
   #start { display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: rgba(18,18,18,.9); pointer-events: auto; cursor: pointer; text-align: center; gap: 18px; }
+  #start { transition: background-color 1.2s; background-size: cover; background-position: center; }
+  #start.open { background-color: rgba(18,18,18,.45); }
   #start h1 { font-weight: 400; letter-spacing: .6em; margin: 0; font-size: 28px; }
   #start p { margin: 0; opacity: .7; font-size: 14px; line-height: 1.9; }
   #start .go { opacity: .95; font-size: 16px; letter-spacing: .3em; }
@@ -966,16 +968,46 @@ function buildGreenery() {
 
 // 天井（x 3→20.8，z -15→-0.2）：四面是楼的立面，正中长着大树。楼层不同，看到的树段和上方剩下的楼层数也不同
 const TREE = V(12, 0, -7.6), COURT = { x0: 3.0, x1: 20.8, z0: -15, z1: -0.2 };
+// 天井立面：一格 2.2 m 宽、一层 3.2 m 高。红砖墙、白窗框四格窗、水泥窗台和楼板圈梁、窗台下的水渍、墙脚的苔藓；三种窗（拉着窗帘 / 钉了木板 / 玻璃碎了）
+function facadeTexture(variant) {
+  const P = 232, tex = canvasTex(512, 744, (g, w, h) => {
+    const rng = mulberry32(17 + variant * 7), Y = m => h - m * P, bw = 0.24 * P, bh = 0.075 * P;
+    g.fillStyle = '#b8ab98'; g.fillRect(0, 0, w, h);
+    const reds = ['#93503c', '#9e5a44', '#874633', '#a5604a', '#8c4a36'];
+    for (let r = 0; r * bh < h; r++) for (let c = -1; c * bw < w + bw; c++) {
+      const x = c * bw + (r % 2) * bw / 2, y = r * bh; g.fillStyle = reds[Math.floor(rng() * reds.length)]; g.fillRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
+    }
+    for (let i = 0; i < 30; i++) { g.fillStyle = `rgba(${rng() < 0.5 ? '40,30,25' : '235,225,210'},${0.04 + rng() * 0.06})`; blob(g, rng() * w, rng() * h, 20 + rng() * 50, rng); g.fill(); }
+    const x0 = (w - 1.2 * P) / 2, x1 = x0 + 1.2 * P, yT = Y(2.35), yB = Y(0.95), f = 0.07 * P;
+    for (let i = 0; i < 4; i++) { const sx = x0 + 0.1 * P + rng() * 1.0 * P, gr = g.createLinearGradient(0, yB, 0, yB + (0.5 + rng() * 0.4) * P);   // 窗台下的水渍
+      gr.addColorStop(0, 'rgba(45,40,35,.35)'); gr.addColorStop(1, 'rgba(45,40,35,0)'); g.fillStyle = gr; g.fillRect(sx, yB, 6 + rng() * 14, 0.9 * P); }
+    g.fillStyle = '#efece6'; g.fillRect(x0 - f, yT - f, x1 - x0 + 2 * f, yB - yT + 2 * f);   // 白窗框
+    const gl = g.createLinearGradient(x0, yT, x1, yB); gl.addColorStop(0, '#4c5a66'); gl.addColorStop(0.45, '#2b333b'); gl.addColorStop(1, '#3d4852');
+    g.fillStyle = gl; g.fillRect(x0, yT, x1 - x0, yB - yT);
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(x0, yT + 0.4 * P); g.lineTo(x0 + 0.5 * P, yT); g.lineTo(x0 + 0.7 * P, yT); g.lineTo(x0, yT + 0.6 * P); g.fill();   // 玻璃反光
+    if (variant === 0) { g.fillStyle = 'rgba(214,200,170,.85)'; g.fillRect(x0, yT, 0.3 * P, yB - yT); g.fillRect(x1 - 0.22 * P, yT, 0.22 * P, yB - yT); }   // 窗帘
+    if (variant === 1) { for (let i = 0; i < 4; i++) { g.save(); g.translate((x0 + x1) / 2, yT + (0.25 + i * 0.3) * P); g.rotate((rng() - 0.5) * 0.25);   // 钉上的木板
+      g.fillStyle = ['#7a5a3c', '#6b4e33', '#85623f'][i % 3]; g.fillRect(-0.68 * P, -0.08 * P, 1.36 * P, 0.16 * P); g.restore(); } }
+    if (variant === 2) { g.strokeStyle = 'rgba(220,230,235,.7)'; g.lineWidth = 2; const cx = x0 + 0.35 * P, cy = yT + 0.45 * P;   // 碎掉的玻璃
+      g.fillStyle = '#0d1013'; g.beginPath(); g.moveTo(cx, cy); for (let i = 0; i < 9; i++) { const a = i / 9 * 6.3, r = (0.08 + rng() * 0.12) * P; g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); } g.fill();
+      for (let i = 0; i < 7; i++) { const a = rng() * 6.3; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * 0.35 * P, cy + Math.sin(a) * 0.35 * P); g.stroke(); } }
+    g.fillStyle = '#efece6'; g.fillRect((x0 + x1) / 2 - f / 2, yT, f, yB - yT); g.fillRect(x0, (yT + yB) / 2 - f / 2, x1 - x0, f);   // 窗格
+    g.fillStyle = '#c9c3b8'; g.fillRect(x0 - 0.12 * P, yB + f, x1 - x0 + 0.24 * P, 0.07 * P); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x0 - 0.12 * P, yB + f + 0.07 * P, x1 - x0 + 0.24 * P, 4);   // 窗台
+    g.fillStyle = '#c4beb2'; g.fillRect(0, Y(0.26), w, 0.26 * P); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, Y(0.26), w, 3);   // 楼板圈梁
+    for (let i = 0; i < 26; i++) { g.fillStyle = `rgba(${60 + rng() * 40},${95 + rng() * 40},${40 + rng() * 20},${0.4 + rng() * 0.4})`; g.beginPath(); g.arc(rng() * w, Y(0.26) - rng() * 0.25 * P, 3 + rng() * 10, 0, 7); g.fill(); }   // 圈梁上方的苔藓
+    g.fillStyle = 'rgba(40,36,30,.25)'; for (let i = 0; i < 3; i++) g.fillRect(rng() * w, Y(0.26), 4 + rng() * 10, 0.26 * P);
+  });
+  tex.wrapS = THREE.RepeatWrapping; tex.anisotropy = 8; return tex;
+}
 function buildCourtyard() {
-  const tex = canvasTex(128, 204, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a3d40'; g.fillRect(32, 70, 64, 76); g.fillStyle = '#d9d9d9'; g.fillRect(0, h - 10, w, 10); });
-  tex.wrapS = THREE.RepeatWrapping;
+  const texs = [0, 1, 2].map(facadeTexture);
   const C = COURT, sides = [ // [中心 x, 中心 z, 宽, 朝向, 本层这一段是否已是真墙]
     [(C.x0 + C.x1) / 2, C.z1 - 0.01, C.x1 - C.x0, Math.PI, true], [C.x1 - 0.01, (C.z0 + C.z1) / 2, C.z1 - C.z0, -Math.PI / 2, true],
     [C.x0, (C.z0 + C.z1) / 2, C.z1 - C.z0, Math.PI / 2, false], [(C.x0 + C.x1) / 2, C.z0, C.x1 - C.x0, 0, false]];
   world.bands = [];
   for (const [x, z, w, ry, real] of sides) for (let k = -2; k <= 3; k++) {
     if (k === 0 && real) continue;
-    const t = tex.clone(); t.needsUpdate = true; t.repeat.set(w / 2.2, 1);
+    const t = texs[((k + Math.round(x + z)) % 3 + 3) % 3].clone(); t.needsUpdate = true; t.repeat.set(Math.round(w / 2.2), 1);
     const mat = new THREE.MeshStandardMaterial({ map: t, roughness: 1, flatShading: true }); mat.color = M.wall.color;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 3.2), mat); m.position.set(x, k * 3.2 + 1.6, z); m.rotation.y = ry;
     m.userData.k = k; building.add(m); world.bands.push(m);
@@ -1702,6 +1734,38 @@ const sfx = {
     [392, 440, 494, 440, 392, 330, 392, 294].forEach((fq, i) => { const t = t0 + i * 0.6, o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = fq; env(g, t, 0.15, 1, 0.5); o.connect(g).connect(f); o.start(t); o.stop(t + 0.7); });
   },
 };
+// 主菜单的氛围音乐：慢速和弦铺底（Am F C G）+ 稀疏的钢琴音，带混响；进游戏慢慢淡出，结局独白时回来
+const music = {
+  out: null, dry: null, step: 0,
+  start() {
+    if (!audio || this.out) return;
+    const out = this.out = audio.createGain(); out.gain.value = 0; out.connect(audio.destination);
+    const rev = audio.createConvolver(), len = audio.sampleRate * 3.5 | 0, buf = audio.createBuffer(2, len, audio.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+    rev.buffer = buf; const wet = audio.createGain(); wet.gain.value = 0.55; rev.connect(wet).connect(out);
+    this.dry = audio.createGain(); this.dry.gain.value = 0.5; this.dry.connect(out); this.dry.connect(rev);
+    this.fade(0.55, 4);
+    const chords = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]], hz = n => 440 * Math.pow(2, (n - 69) / 12);
+    const bar = () => {
+      if (this.out.gain.value < 0.001 && this.step > 1) return;   // 淡出后不再排新音符
+      const t = audio.currentTime + 0.05, ch = chords[this.step++ % 4];
+      for (const n of ch) for (const det of [-7, 7]) {
+        const o = audio.createOscillator(), f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 650 }), g = audio.createGain();
+        o.type = 'sawtooth'; o.frequency.value = hz(n - 12); o.detune.value = det;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.028, t + 2.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 8.6);
+        o.connect(f).connect(g).connect(this.dry); o.start(t); o.stop(t + 8.7);
+      }
+      for (let k = 0; k < 4; k++) { if (Math.random() < 0.4) continue;
+        const tt = t + 0.8 + k * 1.8 + Math.random() * 0.3, n = ch[Math.floor(Math.random() * 3)] + 12 + (Math.random() < 0.3 ? 12 : 0);
+        const o = audio.createOscillator(), g = audio.createGain(); o.type = 'triangle'; o.frequency.value = hz(n);
+        g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(0.08, tt + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, tt + 3.2);
+        o.connect(g).connect(this.dry); o.start(tt); o.stop(tt + 3.3);
+      }
+    };
+    bar(); setInterval(bar, 8000);
+  },
+  fade(v, secs) { if (!this.out) return; const g = this.out.gain, t = audio.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(v, t + secs); },
+};
 function startSound(pos, kind = 'blip') {
   const s = { timer: setInterval(() => { if (audio && state.phase === 'corridor') sfx[kind](pos); }, kind === 'crackle' ? 700 : 1500) };
   sounds.add(s); return s;
@@ -1803,6 +1867,7 @@ async function endGame() {
   Platform.emit('end', { seconds: secs, puzzles: state.experienced, solved: state.solved });
   $('fade').style.opacity = 1; if (seaBed) seaBed.gain.linearRampToValueAtTime(0, audio.currentTime + 2.5); await wait(1800);
   $('end').style.display = 'flex'; $('touch').style.display = 'none'; $('hint').style.opacity = 0; $('controls').style.opacity = 0; document.exitPointerLock?.();
+  music.start(); music.fade(0.5, 5);
   const mo = $('monologue');
   for (const line of MONOLOGUE) { mo.textContent = line; mo.style.opacity = 1; await wait(1400 + line.length * 55); mo.style.opacity = 0; await wait(1500); }
   const total = Object.keys(TEMPLATES).length;
@@ -1828,7 +1893,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
-let playing = false, dragLook = false, dragging = false, started = false, ready = false;
+let menuOpen = false, playing = false, dragLook = false, dragging = false, started = false, ready = false;
 const canvas = renderer.domElement;
 let lastInput = performance.now();
 function look2(dx, dy) { if (dx || dy) lastInput = performance.now();   // 浏览器会自己发 0 位移的 mousemove，不算操作
@@ -1839,12 +1904,13 @@ addEventListener('mouseup', () => { dragging = false; });
 $('start').addEventListener('click', e => {
   if (!ready || state.ended || e.target.closest('#mp button, #mp input') || (net.role === 'mother' && !net.synced)) return;
   initAudio();
+  if (!menuOpen) { menuOpen = true; music.start(); $('start').classList.add('open'); $('startText').textContent = CLICK + ' to begin'; return; }   // 第一下：音乐响起，主视觉亮起来
   if (TOUCH) { startPlaying(); return; }
   try { const p = canvas.requestPointerLock(); if (p?.catch) p.catch(() => enableDragLook()); } catch { enableDragLook(); }
   startPlaying();
 });
 function startPlaying() {
-  playing = true; $('start').style.display = 'none'; $('mp').style.display = 'none';
+  playing = true; $('start').style.display = 'none'; $('mp').style.display = 'none'; music.fade(0, 8);
   if (TOUCH) $('touch').style.display = 'block';
   if (net.role === 'mother' && !net.toldRole) { net.toldRole = true; say('You are their mother. You can see what they have lost. Look at it and ' + (TOUCH ? 'tap Use' : 'press E') + ' to show them.', 6000); }
   if (!started) {
@@ -2121,6 +2187,7 @@ function showBeam(id) {
   if (audio) sfx.chime(v);
   if (!net.told.beam) { net.told.beam = true; say('A warm light… like someone is showing me the way.', 3500); }
 }
+for (const id of ['mpHost', 'mpJoin']) $(id).addEventListener('pointerdown', () => { initAudio(); music.start(); menuOpen = true; $('start').classList.add('open'); });
 $('mpHost').addEventListener('click', e => {
   e.stopPropagation(); if (net.role) return;
   const code = hostRoom();
