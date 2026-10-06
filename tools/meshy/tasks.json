@@ -333,48 +333,27 @@
     "done": true
   },
   "cityRow": {
-    "image": "01a10f50-04a9-76ee-a9e7-65938f483005",
+    "image": "01a11114-6056-7323-88a0-cbaae9096c91",
     "done": true
   },
   "cityFlat": {
-    "image": "01a10f50-0551-717e-897e-3f953481cab4",
-    "done": true
-  },
-  "cityChurch": {
-    "image": "01a10f50-056c-75fa-9ba8-f350dade77d8",
-    "done": true
-  },
-  "cityWarehouse": {
-    "image": "01a10f50-0567-70f8-a09d-4f9c9b2c86db",
-    "done": true
-  },
-  "cityTower": {
-    "image": "01a10f52-404b-76c3-9782-277ee2c28e22",
-    "done": true
-  },
-  "cityBridge": {
-    "image": "01a10f52-4489-7433-94c6-339184d9e461",
-    "done": true
-  },
-  "cityRowHQ": {
-    "image": "01a11114-6056-7323-88a0-cbaae9096c91"
-  },
-  "cityFlatHQ": {
     "image": "01a11114-6279-7680-a9d3-10e8a406c1c8",
     "done": true
   },
-  "cityChurchHQ": {
+  "cityChurch": {
     "image": "01a11114-62b4-771d-9ce2-b231fa931740",
     "done": true
   },
-  "cityWarehouseHQ": {
+  "cityWarehouse": {
     "image": "01a11114-624d-7526-b215-bbac8f1ba8ef",
     "done": true
   },
-  "cityTowerHQ": {
-    "image": "01a1111a-53dd-74cc-91d8-16a557d6aaae"
+  "cityTower": {
+    "image": "01a1111a-53dd-74cc-91d8-16a557d6aaae",
+    "done": true
   },
-  "cityBridgeHQ": {
-    "image": "01a1111b-f4de-75ec-9cf4-b22e13721067"
+  "cityBridge": {
+    "image": "01a1111b-f4de-75ec-9cf4-b22e13721067",
+    "done": true
   }
 }

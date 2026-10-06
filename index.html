@@ -1488,8 +1488,8 @@ function updateLook(dt, instant) {
   applyPalette(look.f);
   scene.background.copy(look.sky); scene.fog.color.copy(look.sky); scene.fog.near = look.near; scene.fog.far = look.far;
   if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
-  for (const m of world.fogPlanes || []) { m.visible = !state.scope; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }
-  for (const m of world.glass || []) m.visible = !state.scope;   // 望远镜里看得清
+  for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
+  for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {

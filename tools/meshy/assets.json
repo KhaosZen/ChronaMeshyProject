@@ -431,111 +431,63 @@
     },
     {
       "key": "cityRow",
+      "note": "远景：运河屋一排",
       "image": "refs/cityRow.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：运河屋一排"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityFlat",
+      "note": "远景：外廊式公寓楼",
       "image": "refs/cityFlat.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：外廊式公寓楼"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityChurch",
+      "note": "远景：教堂",
       "image": "refs/cityChurch.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：教堂"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityWarehouse",
+      "note": "远景：仓库",
       "image": "refs/cityWarehouse.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：仓库"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityTower",
+      "note": "远景：写字楼",
       "image": "refs/cityTower.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：写字楼"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityBridge",
+      "note": "远景：吊桥",
       "image": "refs/cityBridge.png",
-      "target_polycount": 6000,
-      "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：吊桥"
-    },
-    {
-      "key": "cityRowHQ",
-      "image": "refs/cityRow.png",
-      "remesh": false,
       "ai_model": "latest",
       "texture": 2048,
-      "simplify": 0.03,
-      "simplifyError": 0.002,
-      "note": "候选：远景高精度"
-    },
-    {
-      "key": "cityFlatHQ",
-      "image": "refs/cityFlat.png",
       "remesh": false,
-      "ai_model": "latest",
-      "texture": 2048,
       "simplify": 0.03,
-      "simplifyError": 0.002,
-      "note": "候选：远景高精度"
-    },
-    {
-      "key": "cityChurchHQ",
-      "image": "refs/cityChurch.png",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 2048,
-      "simplify": 0.03,
-      "simplifyError": 0.002,
-      "note": "候选：远景高精度"
-    },
-    {
-      "key": "cityWarehouseHQ",
-      "image": "refs/cityWarehouse.png",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 2048,
-      "simplify": 0.03,
-      "simplifyError": 0.002,
-      "note": "候选：远景高精度"
-    },
-    {
-      "key": "cityTowerHQ",
-      "image": "refs/cityTower.png",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 2048,
-      "simplify": 0.03,
-      "simplifyError": 0.002,
-      "note": "候选：远景高精度"
-    },
-    {
-      "key": "cityBridgeHQ",
-      "image": "refs/cityBridge.png",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 2048,
-      "simplify": 0.03,
-      "simplifyError": 0.002,
-      "note": "候选：远景高精度"
+      "simplifyError": 0.002
     }
   ]
 }
