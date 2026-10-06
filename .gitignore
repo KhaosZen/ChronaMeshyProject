@@ -1,3 +1,6 @@
 node_modules/
 dist/
 tools/meshy/.raw/
+
+# Meshy 候选模型（审查通过后用 tools/meshy/promote.py 转正，才进仓库）
+assets/*HQ.glb
