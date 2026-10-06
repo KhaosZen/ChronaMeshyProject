@@ -803,17 +803,34 @@ function buildStoryProps() {
   building.add(world.slippers);
 }
 // 外圈窗外的雾：几层半透明的雾片，越远越大，看不清外面（望远镜里会撤掉）
-let _fogTex = null;
+let _fogTex = null, _glassTex = null;
 function fogLayers(center, normal, w, h) {
-  _fogTex ||= canvasTex(256, 256, (g, W, H2) => { const gr = g.createRadialGradient(W / 2, H2 / 2, 10, W / 2, H2 / 2, W / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.6, 'rgba(255,255,255,.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H2); });
-  [[0.9, 0.45, 1.6], [2.6, 0.45, 3], [6, 0.5, 6]].forEach(([d, op, k]) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w * k, h * k), new THREE.MeshBasicMaterial({ map: _fogTex, transparent: true, opacity: op, depthWrite: false, fog: false }));
+  // 1) 窗上的旧玻璃：一层蒙着水汽和灰的半透明玻璃（中间稍亮、四角积灰、几道往下淌的水痕）
+  _glassTex ||= canvasTex(256, 256, (g, W, H2) => {
+    const rng = mulberry32(61); g.fillStyle = 'rgba(205,212,218,.4)'; g.fillRect(0, 0, W, H2);
+    for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(${rng() < 0.5 ? '235,238,240' : '160,165,160'},${0.05 + rng() * 0.12})`; blob(g, rng() * W, rng() * H2, 10 + rng() * 40, rng); g.fill(); }
+    for (let i = 0; i < 14; i++) { const x = rng() * W, gr = g.createLinearGradient(0, 0, 0, H2); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.3 + rng() * 0.4, 'rgba(120,125,120,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x, rng() * 60, 1.5 + rng() * 2, H2); }
+    const e = g.createRadialGradient(W / 2, H2 / 2, W * 0.25, W / 2, H2 / 2, W * 0.75); e.addColorStop(0, 'rgba(90,80,65,0)'); e.addColorStop(1, 'rgba(90,80,65,.6)'); g.fillStyle = e; g.fillRect(0, 0, W, H2);
+  });
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: _glassTex, transparent: true, depthWrite: false, roughness: 0.3, side: THREE.DoubleSide }));
+  glass.position.copy(center).addScaledVector(normal, -0.1); glass.lookAt(V().copy(glass.position).add(normal)); glass.renderOrder = 11; building.add(glass); world.glass.push(glass);
+  const fr = new THREE.Group(), wood = std('#3a2a20'), t = 0.05;   // 深色木窗框 + 十字窗棂
+  for (const [bw, bh, x, y] of [[w, t, 0, h / 2 - t / 2], [w, t, 0, -h / 2 + t / 2], [t, h, -w / 2 + t / 2, 0], [t, h, w / 2 - t / 2, 0], [t * 0.7, h, 0, 0], [w, t * 0.7, 0, h * 0.12]]) box(bw, bh, 0.05, wood, x, y, 0, fr);
+  fr.position.copy(glass.position); fr.quaternion.copy(glass.quaternion); building.add(fr); world.glass.push(fr);
+  // 2) 窗外：两层很大的、浓淡均匀的云雾，铺满整个窗口看出去的范围（没有边），外面只剩一点轮廓
+  _fogTex ||= canvasTex(512, 512, (g, W, H2) => {
+    const rng = mulberry32(62); g.fillStyle = 'rgba(255,255,255,.72)'; g.fillRect(0, 0, W, H2); g.filter = 'blur(18px)';
+    for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${rng() < 0.5 ? 0.35 : 0})`; if (rng() < 0.5) g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(rng() * W, rng() * H2, 30 + rng() * 70, 0, 7); g.fillStyle = 'rgba(255,255,255,.18)'; g.fill(); g.globalCompositeOperation = 'source-over'; }
+    g.filter = 'none';
+  });
+  [[1.4, 0.6, 7], [4.5, 0.75, 14]].forEach(([d, op, k]) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(k, k * 0.75), new THREE.MeshBasicMaterial({ map: _fogTex, transparent: true, opacity: op, depthWrite: false, fog: false }));
     m.position.copy(center).addScaledVector(normal, d); m.lookAt(center); building.add(m); world.fogPlanes.push(m);
   });
 }
 // 窗外雾里的废楼（3 楼起看得见）+「窗外」谜题用的窗、望远镜
 function buildRuins() {
-  world.ruins = []; world.windows = []; world.fogPlanes = [];
+  world.ruins = []; world.windows = []; world.fogPlanes = []; world.glass = [];
   for (const [c, n] of world.closetFog) fogLayers(c, n, 1.0, 0.9);
   fogLayers(V(22.5, 1.5, 3.2), V(0, 0, 1), 1.5, 1.2); fogLayers(V(24.2, 1.5, 0.825), V(1, 0, 0), 1.25, 1.2);   // 转角两扇朝海的窗
   const body = std('#8f8a7e', { emissive: '#2c2924' }), holeMat = std('#2a2c2e'), litMat = new THREE.MeshBasicMaterial({ color: '#ffd98a', fog: false, transparent: true });   // 透明 + 后画：穿过窗外的雾层也看得见
@@ -1472,6 +1489,7 @@ function updateLook(dt, instant) {
   scene.background.copy(look.sky); scene.fog.color.copy(look.sky); scene.fog.near = look.near; scene.fog.far = look.far;
   if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
   for (const m of world.fogPlanes || []) { m.visible = !state.scope; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }
+  for (const m of world.glass || []) m.visible = !state.scope;   // 望远镜里看得清
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
