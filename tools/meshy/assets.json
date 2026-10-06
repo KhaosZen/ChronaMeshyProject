@@ -156,18 +156,18 @@
     {
       "key": "treeCrown",
       "note": "大树：树冠（天台上方）",
-      "prompt": "a large wide rounded tree canopy made of clustered green leaf masses with a few thick branches underneath forking out from a short cut-off stub, no trunk, no roots, summer oak",
-      "target_polycount": 6000,
+      "image": "refs/treeCrown2.png",
+      "target_polycount": 8000,
       "ai_model": "latest",
-      "texture": 1024
+      "texture": 2048
     },
     {
       "key": "treeTrunk",
       "note": "大树：树干段（上下接起来贯穿楼层）",
-      "prompt": "a straight vertical section of a very thick old tree trunk, cylindrical, cut flat at the top and flat at the bottom, no roots, no branches, rough dark brown bark",
-      "target_polycount": 2000,
+      "image": "refs/treeTrunk2.png",
+      "target_polycount": 8000,
       "ai_model": "latest",
-      "texture": 1024
+      "texture": 2048
     },
     {
       "key": "treeBranch",
@@ -351,6 +351,56 @@
       "ai_model": "latest",
       "texture": 1024,
       "note": "4 楼的花丛"
+    },
+    {
+      "key": "roofChimney",
+      "prompt": "a square red-brick chimney stack with two clay chimney pots on top, soot stains, a little moss at the base",
+      "target_polycount": 2000,
+      "note": "天台：烟囱",
+      "ai_model": "latest"
+    },
+    {
+      "key": "roofVent",
+      "prompt": "a rusty metal ventilation pipe sticking out of a flat roof with a mushroom-shaped cap, bent and weathered",
+      "target_polycount": 1200,
+      "note": "天台：通风管",
+      "ai_model": "latest"
+    },
+    {
+      "key": "rustyChair",
+      "prompt": "an old rusty metal garden chair with peeling green paint, slightly tipped",
+      "target_polycount": 1500,
+      "note": "天台：生锈的椅子",
+      "ai_model": "latest"
+    },
+    {
+      "key": "oldPots",
+      "prompt": "a group of three old terracotta flower pots of different sizes with dry dead plants and weeds, one pot tipped over",
+      "target_polycount": 2000,
+      "note": "天台：一组旧花盆",
+      "ai_model": "latest"
+    },
+    {
+      "key": "laundryLine",
+      "prompt": "a laundry line strung between two metal posts with three white sheets and a shirt hanging and pinned, gently swaying",
+      "target_polycount": 2500,
+      "texture": 1024,
+      "note": "天台：晾衣绳",
+      "ai_model": "latest"
+    },
+    {
+      "key": "waterTank",
+      "prompt": "a small rusty cylindrical rooftop water tank on four short metal legs with a ladder on the side",
+      "target_polycount": 2000,
+      "note": "天台：水箱",
+      "ai_model": "latest"
+    },
+    {
+      "key": "roofBucket",
+      "prompt": "an old galvanised metal bucket and a wooden crate with rain water, puddle around them",
+      "target_polycount": 1200,
+      "note": "天台：水桶和木箱",
+      "ai_model": "latest"
     }
   ]
 }
