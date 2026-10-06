@@ -284,5 +284,86 @@
   "sheetSofa": {
     "image": "01a10ef8-2234-736a-b2a1-2cb1227d9fb2",
     "done": true
+  },
+  "lampHQ": {
+    "image": "01a10f19-537a-7136-9a68-8c1b4c3eaf0c",
+    "done": true
+  },
+  "photoHQ": {
+    "image": "01a10f19-5387-7438-843a-be36ea91056d",
+    "done": true
+  },
+  "radioHQ": {
+    "image": "01a10f19-53c0-77c3-8d64-58135427ee06",
+    "done": true
+  },
+  "machineHQ": {
+    "image": "01a10f19-5374-7218-af43-4c464e5e880c",
+    "done": true
+  },
+  "housekeyHQ": {
+    "image": "01a10f1a-a6f2-7354-bfe1-a751488aa2b4",
+    "done": true
+  },
+  "canHQ": {
+    "image": "01a10f1a-b861-7787-834d-43aa9de3bd0e",
+    "done": true
+  },
+  "slippersHQ": {
+    "image": "01a10f1a-c751-7379-b815-49e0c47201b0",
+    "done": true
+  },
+  "pendantHQ": {
+    "preview": "01a10f1a-dc73-7310-b589-959bcef2a463",
+    "refine": "01a10f1b-a6cf-7062-8f58-293549fc40b5",
+    "done": true
+  },
+  "homeDoorHQ": {
+    "preview": "01a10f1b-95a6-74b4-b880-2341601c44aa",
+    "refine": "01a10f1c-48d7-74a0-a508-5f7eea9c48f5",
+    "done": true
+  },
+  "housePlant": {
+    "preview": "01a10f1b-cd55-700f-b935-debe1f93542e",
+    "refine": "01a10f1c-ebe7-75fa-b313-a16e20aca75a",
+    "done": true
+  },
+  "sideTableHQ": {
+    "image": "01a10f1f-3d1c-7766-97c9-5557e49e0616",
+    "done": true
+  },
+  "shelfHQ": {
+    "image": "01a10f1f-3ced-7374-baa6-24c121106143",
+    "done": true
+  },
+  "boxesHQ": {
+    "image": "01a10f1f-3d0a-704a-9dff-b6b83ba9950e",
+    "done": true
+  },
+  "phoneTableHQ": {
+    "image": "01a10f1f-3cf9-770b-b357-358bcdce9465",
+    "done": true
+  },
+  "benchHQ": {
+    "image": "01a10f20-41f2-7014-a9f9-7b9c30ef02a5",
+    "done": true
+  },
+  "lowCabinetHQ": {
+    "image": "01a10f20-94b1-75ef-beaa-c0744e6eea3b",
+    "done": true
+  },
+  "telescopeHQ": {
+    "preview": "01a10f20-ce26-7345-a57e-a94d6fc71d57",
+    "refine": "01a10f21-b383-7750-ab69-0b9d3eaf3871"
+  },
+  "sofaHQ": {
+    "preview": "01a10f20-e080-74e9-9684-6fee6ef6e5c6",
+    "refine": "01a10f21-b3b2-76ef-8f92-d1dfc228e6ed"
+  },
+  "armchairHQ": {
+    "preview": "01a10f21-2cbe-7159-a642-af9b1cdcb945"
+  },
+  "floorLampHQ": {
+    "preview": "01a10f21-b2f6-713b-8747-dc51defd9ccd"
   }
 }

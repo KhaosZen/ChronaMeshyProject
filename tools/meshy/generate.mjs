@@ -73,7 +73,7 @@ async function generate(a) {
     const prompt = `${a.prompt}, ${cfg.style}`.slice(0, 600);
     if (!rec.preview) {
       rec.preview = (await api('POST', `${API}/v2/text-to-3d`, {
-        mode: 'preview', prompt, art_style: 'realistic', topology: 'triangle', should_remesh: true, target_polycount: poly,
+        mode: 'preview', prompt, art_style: 'realistic', topology: 'triangle', should_remesh: a.remesh ?? true, target_polycount: poly,
         ...(a.ai_model && { ai_model: a.ai_model }),
       })).result;
       saveTasks();
@@ -91,7 +91,15 @@ async function generate(a) {
   fs.mkdirSync(path.dirname(raw), { recursive: true });
   fs.writeFileSync(raw, Buffer.from(await (await fetch(url)).arrayBuffer()));
   const size = String(a.texture ?? 512);
-  execFileSync(GT, ['resize', raw, out, '--width', size, '--height', size], { stdio: 'ignore' });
+  if (a.remesh === false) { // 原始网格面数很高：weld → simplify（误差上限保住形状）→ 压贴图 → 清理 → 量化
+    const tmp = n => path.join(HERE, '.raw', `${a.key}.${n}.glb`);
+    execFileSync(GT, ['weld', raw, tmp('w')], { stdio: 'ignore' });
+    execFileSync(GT, ['simplify', tmp('w'), tmp('s'), '--ratio', String(a.simplify ?? 0.02), '--error', String(a.simplifyError ?? 0.003)], { stdio: 'ignore' });
+    execFileSync(GT, ['resize', tmp('s'), tmp('r'), '--width', size, '--height', size], { stdio: 'ignore' });
+    execFileSync(GT, ['prune', tmp('r'), tmp('p')], { stdio: 'ignore' });
+    execFileSync(GT, ['quantize', tmp('p'), out], { stdio: 'ignore' });
+    for (const n of ['w', 's', 'r', 'p']) fs.rmSync(tmp(n), { force: true });
+  } else execFileSync(GT, ['resize', raw, out, '--width', size, '--height', size], { stdio: 'ignore' });
   rec.done = true; saveTasks();
   console.log(`✓ ${a.key} → assets/${a.key}.glb (${(fs.statSync(out).size / 1024).toFixed(0)} KB)`);
 }
