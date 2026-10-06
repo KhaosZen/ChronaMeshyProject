@@ -360,12 +360,21 @@
     "image": "01a11114-6056-7323-88a0-cbaae9096c91"
   },
   "cityFlatHQ": {
-    "image": "01a11114-6279-7680-a9d3-10e8a406c1c8"
+    "image": "01a11114-6279-7680-a9d3-10e8a406c1c8",
+    "done": true
   },
   "cityChurchHQ": {
-    "image": "01a11114-62b4-771d-9ce2-b231fa931740"
+    "image": "01a11114-62b4-771d-9ce2-b231fa931740",
+    "done": true
   },
   "cityWarehouseHQ": {
-    "image": "01a11114-624d-7526-b215-bbac8f1ba8ef"
+    "image": "01a11114-624d-7526-b215-bbac8f1ba8ef",
+    "done": true
+  },
+  "cityTowerHQ": {
+    "image": "01a1111a-53dd-74cc-91d8-16a557d6aaae"
+  },
+  "cityBridgeHQ": {
+    "image": "01a1111b-f4de-75ec-9cf4-b22e13721067"
   }
 }
