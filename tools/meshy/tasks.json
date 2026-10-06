@@ -282,5 +282,24 @@
     "preview": "01a10edf-89ef-72e5-a1e1-a506d723d9ae",
     "refine": "01a10ee0-b1b3-74de-ad0d-e5abf823868d",
     "done": true
+  },
+  "bookshelf2": {
+    "image": "01a10ef8-221a-74b9-918c-497db727332e",
+    "done": true
+  },
+  "sheetBookshelf": {
+    "image": "01a10ef8-2205-73c0-adb1-477a37637b8c",
+    "done": true
+  },
+  "sheetSofa": {
+    "image": "01a10ef8-2234-736a-b2a1-2cb1227d9fb2",
+    "done": true
+  },
+  "tvCabinet2": {
+    "image": "01a10ef8-221a-74b8-be55-79b5333acc3c",
+    "done": true
+  },
+  "bookshelf3": {
+    "image": "01a10efb-f40a-7149-b610-181442b08921"
   }
 }

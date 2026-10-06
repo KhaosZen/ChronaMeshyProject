@@ -204,9 +204,11 @@
     },
     {
       "key": "tvCabinet",
-      "prompt": "a 1980s CRT television with a wood-grain casing standing on a low wooden TV cabinet",
-      "target_polycount": 2500,
-      "note": "房间：木纹电视 + 电视柜"
+      "note": "房间：木纹电视 + 电视柜",
+      "image": "refs/tvCabinet2.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024
     },
     {
       "key": "floorLamp",
@@ -401,6 +403,38 @@
       "target_polycount": 1200,
       "note": "天台：水桶和木箱",
       "ai_model": "latest"
+    },
+    {
+      "key": "bookshelf2",
+      "image": "refs/bookshelf2.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "候选：书架"
+    },
+    {
+      "key": "sheetBookshelf",
+      "image": "refs/sheetBookshelf.png",
+      "target_polycount": 5000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "1 楼：盖白布的书架"
+    },
+    {
+      "key": "sheetSofa",
+      "image": "refs/sheetSofa.png",
+      "target_polycount": 5000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "1 楼：盖白布的沙发"
+    },
+    {
+      "key": "bookshelf3",
+      "image": "refs/bookshelf2.png",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "候选：书架（不重拓扑）"
     }
   ]
 }

@@ -9,7 +9,7 @@
 // assets.json 里每条资产二选一：
 //   "image": "refs/lamp.png"  → Image-to-3D（从概念图裁出来的参考图，造型和配色跟概念图一致）
 //   "prompt": "…"             → Text-to-3D（preview + refine）
-// 可选 "ai_model": "latest" 指定 Meshy 模型版本；"texture": 1024 指定贴图尺寸。
+// 可选 "ai_model": "latest" 指定 Meshy 模型版本；"remesh": false 保留原始网格（薄板类不容易变形，之后自己减面）；"texture": 1024 指定贴图尺寸。
 // 认证：云环境里由代理自动给 api.meshy.ai 加认证头（环境设置 → API credentials）；本地运行时设 MESHY_API_KEY。
 // 任务 id 记在 tools/meshy/tasks.json，中断后重跑会接着轮询，不会重复扣费。
 import fs from 'node:fs';
@@ -63,7 +63,7 @@ async function generate(a) {
     if (!rec.image) {
       const img = 'data:image/png;base64,' + fs.readFileSync(path.join(HERE, a.image)).toString('base64');
       rec.image = (await api('POST', `${API}/v1/image-to-3d`, {
-        image_url: img, topology: 'triangle', target_polycount: poly, should_remesh: true, should_texture: true, enable_pbr: false,
+        image_url: img, topology: 'triangle', target_polycount: poly, should_remesh: a.remesh ?? true, should_texture: true, enable_pbr: false,
         ...(a.ai_model && { ai_model: a.ai_model }),
       })).result;
       saveTasks();

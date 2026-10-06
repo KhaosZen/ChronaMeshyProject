@@ -686,10 +686,39 @@ function buildBuilding() {
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
 function loadImages() {
-  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4'];
-  return Promise.all(names.map(n => new Promise(res => {
-    const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res(); im.src = `assets/tex/${n}.jpg`;
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark'];
+  return Promise.all(names.map(f => new Promise(res => {
+    const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
+    im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
   })));
+}
+// 草和苔藓（GPT image 生成的透明底贴图）：草做成十字交叉的两片卡片；地上的苔藓是边缘柔和的贴地片
+const FOLIAGE = {};
+function foliageMat(name) {
+  if (FOLIAGE[name]) return FOLIAGE[name];
+  const im = IMG[name]; if (!im) return null;
+  const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
+  const m = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.9 }); greenMats.push(m); return (FOLIAGE[name] = m);
+}
+function grassCard(name, h) {
+  const m = foliageMat(name); if (!m) return null;
+  const im = IMG[name], w = h * im.width / im.height, g = new THREE.Group();
+  for (const r of [0, Math.PI / 2]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), m); p.rotation.y = r; g.add(p); }
+  return g;
+}
+const _mossMats = [];
+function mossPatch(k, size) {
+  if (!IMG.moss) return null;
+  if (!_mossMats.length) for (let v = 0; v < 3; v++) {
+    const t = canvasTex(256, 256, (g, w, h) => {   // 几个柔边圆叠成一块不规则的形状，用它裁出苔藓
+      const mask = document.createElement('canvas'); mask.width = w; mask.height = h; const mg = mask.getContext('2d'), rng = mulberry32(50 + v);
+      for (let i = 0; i < 5; i++) { const x = w * (0.3 + rng() * 0.4), y = h * (0.3 + rng() * 0.4), r = w * (0.16 + rng() * 0.16), gr = mg.createRadialGradient(x, y, r * 0.25, x, y, r);
+        gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); mg.fillStyle = gr; mg.fillRect(0, 0, w, h); }
+      g.drawImage(IMG.moss, 0, 0, w, h); g.globalCompositeOperation = 'destination-in'; g.drawImage(mask, 0, 0); g.globalCompositeOperation = 'source-over';
+    });
+    const m = new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }); greenMats.push(m); _mossMats.push(m);
+  }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size).rotateX(-Math.PI / 2), _mossMats[k % 3]); m.rotation.y = k * 2.1; return m;
 }
 // 照片按原图尺寸画（512×640）；faces：只把这些圆里的脸糊掉，其余保持清楚
 function imgTexture(name, { blur = 0, gray = false, faces = null } = {}) {
@@ -918,7 +947,8 @@ function buildGreenery() {
     const inB = i % 3 === 2, s = rng();
     const pos = inB ? V(rng() < 0.5 ? 21.25 : 23.75, 0, -0.5 - s * 15) : V(4.5 + s * 18.5, 0, rng() < 0.5 ? 0.25 : 2.75);
     const g = new THREE.Group(); g.position.copy(pos); const high = rng() < 0.25; if (high) g.position.y = 0.8 + rng() * 1.6;
-    const pm = modelShared(high ? 'ivyClump' : i > 28 ? 'flowerClump' : i % 2 ? 'ivyClump' : 'plantClump');   // 墙上只长常春藤
+    const pm = high ? modelShared('ivyClump') : i > 28 ? modelShared('flowerClump')   // 墙上只长常春藤；地上是草（贴图卡片）和苔藓团，4 楼多了花丛
+      : grassCard(['grassA', 'grassB', 'mossClump'][i % 3], i % 3 === 2 ? 0.28 + rng() * 0.12 : 0.4 + rng() * 0.3);
     if (pm) { // Meshy 植物：地上的草团 / 常春藤，4 楼多了花丛；高处的贴在墙上
       if (high && inB) { pm.rotation.z = pos.x > 22.5 ? Math.PI / 2 : -Math.PI / 2; g.position.x = pos.x > 22.5 ? 23.98 : 21.02; }   // 贴墙长
       else if (high) { pm.rotation.x = pos.z > 1.5 ? -Math.PI / 2 : Math.PI / 2; g.position.z = pos.z > 1.5 ? 2.98 : 0.02; }
@@ -931,6 +961,12 @@ function buildGreenery() {
     }
     if (i > 28) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), M.flower[i % 4]); f.position.set(0, 0.36, 0); g.add(f); }
     building.add(g); world.plants.push(g);
+  }
+  // 地上的苔藓：1 楼就有几块（又湿又冷），越往上越多
+  world.moss = [];
+  for (let i = 0; i < 26; i++) {
+    const inB = i % 3 === 1, m = mossPatch(i, 0.5 + rng() * 0.6); if (!m) break;
+    m.position.copy(inB ? V(rng() < 0.5 ? 21.35 : 23.65, 0.004, -1 - rng() * 14) : V(5.2 + rng() * 15.5, 0.004, rng() < 0.5 ? 0.35 : 2.65)); building.add(m); world.moss.push(m);
   }
   // 天井里大树的枝条，从内侧的窗伸进走廊（3 楼起）
   for (const [x, z, n] of [[10.55, -0.1, V(0, 0, 1)], [16.15, -0.1, V(0, 0, 1)], [20.9, -10.75, V(1, 0, 0)]]) {
@@ -999,6 +1035,34 @@ function facadeTexture(variant) {
   });
   tex.wrapS = THREE.RepeatWrapping; tex.anisotropy = 8; return tex;
 }
+// 大树树干：程序生成的一整根，扭着长、表面有几道纵向的棱；树皮贴图横向绕 3 圈，法线贴图从贴图亮度算出来
+function barkTrunk(crown, at, y0, y1) {
+  crown.updateMatrixWorld(true);   // 量树冠模型底部那截树干有多粗，让两边接上
+  let R = 0; const v = V(0, 0, 0);
+  crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position;
+    for (let i = 0; i < p.count; i += 3) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y < crown.position.y + 0.6) R = Math.max(R, Math.hypot(v.x - at.x, v.z - at.z)); } });
+  R = Math.min(Math.max(R * 0.92, 1.2), 3.2);
+  const A = 40, N = 90, pos = [], uv = [], idx = [], circ = 2 * Math.PI * R / 3;
+  for (let j = 0; j <= N; j++) {
+    const y = y0 + (y1 - y0) * j / N, k = (y1 - y) / (y1 - y0);   // k：0 在顶、1 在底
+    const ox = 0.35 * Math.sin(y * 0.11) * k, oz = 0.3 * Math.cos(y * 0.09 + 1) * k, rr = R * (1 + 0.05 * Math.sin(y * 0.5) + 0.12 * Math.max(0, k - 0.85) * 4);
+    for (let i = 0; i <= A; i++) {
+      const a = i / A * Math.PI * 2, tw = a + y * 0.06, r = rr * (1 + 0.07 * Math.sin(3 * tw) + 0.035 * Math.sin(7 * tw + y * 0.3));
+      pos.push(at.x + ox + Math.cos(a) * r, y, at.z + oz + Math.sin(a) * r); uv.push(i / A * 3, (y - y0) / circ);
+    }
+  }
+  for (let j = 0; j < N; j++) for (let i = 0; i < A; i++) { const a = j * (A + 1) + i, b = a + 1, c = a + A + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+  const map = new THREE.Texture(IMG.bark); map.colorSpace = THREE.SRGBColorSpace; map.wrapS = map.wrapT = THREE.MirroredRepeatWrapping; map.anisotropy = 8; map.needsUpdate = true;
+  const nrm = canvasTex(IMG.bark.width, IMG.bark.height, (c, w, h) => {   // 亮度当高度，Sobel 求法线
+    c.drawImage(IMG.bark, 0, 0, w, h); const src = c.getImageData(0, 0, w, h), d = src.data, out = c.createImageData(w, h), L = (x, y) => { x = (x + w) % w; y = (y + h) % h; const o = (y * w + x) * 4; return (d[o] + d[o + 1] + d[o + 2]) / 765; };
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = (L(x + 1, y) - L(x - 1, y)) * 3, dy = (L(x, y + 1) - L(x, y - 1)) * 3, l = Math.hypot(dx, dy, 1), o = (y * w + x) * 4;
+      out.data[o] = (-dx / l * 0.5 + 0.5) * 255; out.data[o + 1] = (dy / l * 0.5 + 0.5) * 255; out.data[o + 2] = (1 / l * 0.5 + 0.5) * 255; out.data[o + 3] = 255; }
+    c.putImageData(out, 0, 0);
+  });
+  nrm.colorSpace = THREE.NoColorSpace; nrm.wrapS = nrm.wrapT = THREE.MirroredRepeatWrapping;
+  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map, normalMap: nrm, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.95 }));
+}
 function buildCourtyard() {
   const texs = [0, 1, 2].map(facadeTexture);
   const C = COURT, sides = [ // [中心 x, 中心 z, 宽, 朝向, 本层这一段是否已是真墙]
@@ -1016,8 +1080,10 @@ function buildCourtyard() {
   const tree = world.tree = new THREE.Group(); building.add(tree);
   const T0 = TREE;
   if (MODELS.treeTrunk && MODELS.treeCrown) { // Meshy：几段树干从水下接到楼顶以上，顶上是树冠
-    for (let i = 0; i < 7; i++) { const seg = model('treeTrunk'); seg.position.set(T0.x, -30.6 + i * 5.6, T0.z); seg.rotation.y = i * 1.7; tree.add(seg); }   // 段与段叠 0.8 米，接缝藏在里面；最上一段收在树冠底部的外扩里
     const crown = model('treeCrown'); crown.position.set(T0.x, 8.5, T0.z); tree.add(crown);
+    const trunk = IMG.bark && barkTrunk(crown, T0, -32, 8.5 + 1.6);   // 一整根连续的树干（没有接缝），顶端收进树冠底部
+    if (trunk) tree.add(trunk);
+    else for (let i = 0; i < 7; i++) { const seg = model('treeTrunk'); seg.position.set(T0.x, -30.6 + i * 5.6, T0.z); seg.rotation.y = i * 1.7; tree.add(seg); }
     return;
   }
   tree.add(taperedTube([V(T0.x, -24, T0.z), V(T0.x + 0.4, -8, T0.z - 0.4), V(T0.x - 0.2, 4, T0.z + 0.3), V(T0.x + 0.2, 12, T0.z - 0.2), V(T0.x, 18, T0.z)], 1.7, 0.55, M.root, 16, 9));
@@ -1109,6 +1175,15 @@ function buildRoof() {
     g.scale.setScalar(1.6); R.add(g); live.gulls.push(g);
   }
   // 结局：天台上孤零零立着一扇自家的门，虚掩着，门缝里透出白光；穿过去就是回家
+  // 天台的苔藓和草：地上一块块苔藓，护栏脚下长着草
+  { const rr = mulberry32(23), area = deck.map(([x0, x1, z0, z1]) => (x1 - x0) * (z1 - z0)), A = area.reduce((a, b) => a + b);
+    const at = () => { let u = rr() * A, i = 0; while (u > area[i]) u -= area[i++]; const [x0, x1, z0, z1] = deck[i]; return [x0 + 0.3 + rr() * (x1 - x0 - 0.6), z0 + 0.3 + rr() * (z1 - z0 - 0.6)]; };
+    for (let i = 0; i < 46; i++) { const m = mossPatch(i, 0.6 + rr() * 1.2); if (!m) break; const [x, z] = at(); m.position.set(x, Y + 0.004, z); R.add(m); }
+    for (let i = 0; i < 40; i++) { const side = i % 4, t = rr(), g = grassCard(['grassA', 'grassB', 'mossClump'][i % 3], 0.35 + rr() * 0.35); if (!g) break;
+      const [x, z] = side === 0 ? [-0.2, -22.2 + t * 27.8] : side === 1 ? [26.8, -22.2 + t * 27.8] : side === 2 ? [-0.2 + t * 27, -22.2] : [-0.2 + t * 27, 5.6];
+      if (x < 1.8 && z > -10 && z < -8) continue;   // 家门前的台阶别长草挡路
+      g.position.set(x, Y, z); g.rotation.y = rr() * 3; R.add(g); }
+  }
   // 天台上的杂物（Meshy）：烟囱、通风管、生锈的椅子、旧花盆、晾衣绳、水箱、水桶和木箱
   for (const [id, x, z, ry] of [['roofChimney', 25.4, -21.3, 0.2], ['roofChimney', 1.6, 4.6, 1.3], ['roofVent', 14.5, 4.9, 0.1], ['roofVent', 24.6, -16.4, 1.9],
     ['rustyChair', 5.4, 3.6, 2.6], ['oldPots', 1.0, -12.6, 0.8], ['oldPots', 23.6, 4.6, 2.2], ['laundryLine', 11.5, 4.4, 0], ['waterTank', 25.6, 3.4, 0.4], ['roofBucket', 6.6, -21.5, 0.3]]) {
@@ -1169,6 +1244,7 @@ function applyContent(n, here = true) {   // here = false：玩家还在过渡�
   if (n === 5) { world.ruins.forEach(r => r.visible = false); return; }   // 窗外谜题的远楼在天台上用不着
   world.roots.forEach((r, i) => r.visible = i < [4, 8, 12, 16][n - 1]);
   world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
+  world.moss?.forEach((m, i) => m.visible = i < [4, 10, 18, 26][n - 1]);
   world.branches.forEach(b => b.visible = n >= 3);
   world.ruins.forEach(r => r.visible = n >= 3);
   setPhotosClear(state.recovered.has('photo'));
@@ -1190,7 +1266,8 @@ function buildHome() {
     box(0.18, 0.62, 0.8, cloth, 23.71, 0.31, -16.65, B); box(0.18, 0.62, 0.8, cloth, 25.89, 0.31, -16.65, B);
   }
   collider(23.6, 26.0, -17.05, -16.2, 0, 0.9);
-  box(2.2, 0.95, 0.95, sheet, 24.8, 0.475, -16.62, home.sheets);                                   // 防尘布
+  const ss = model('sheetSofa'); if (ss) { ss.position.set(24.8, 0, -16.62); ss.rotation.y = Math.PI; home.sheets.add(ss); }   // 防尘布（Meshy）
+  else box(2.2, 0.95, 0.95, sheet, 24.8, 0.475, -16.62, home.sheets);
   // 书架（北墙右侧）
   if (!put('bookshelf', 25.8, -21.78)) {
     box(1.0, 1.8, 0.34, M.furn, 25.8, 0.9, -21.8, B);
@@ -1200,7 +1277,8 @@ function buildHome() {
     }
   }
   collider(25.3, 26.3, -22, -21.6, 0, 1.8);
-  const bs = MODELS.bookshelf?.size; box(1.1, (bs?.y ?? 1.8) + 0.1, 0.5, sheet, 25.8, ((bs?.y ?? 1.8) + 0.1) / 2, -21.75, home.sheets);
+  const sb = model('sheetBookshelf'); if (sb) { sb.position.set(25.8, 0, -21.7); home.sheets.add(sb); }
+  else { const bs = MODELS.bookshelf?.size; box(1.1, (bs?.y ?? 1.8) + 0.1, 0.5, sheet, 25.8, ((bs?.y ?? 1.8) + 0.1) / 2, -21.75, home.sheets); }
   // 落地灯（沙发东边的角落）
   if (!put('floorLamp', 26.2, -16.45)) {
     box(0.3, 0.03, 0.3, dark, 26.2, 0.015, -16.45, B); box(0.03, 1.5, 0.03, dark, 26.2, 0.76, -16.45, B);
@@ -1225,12 +1303,9 @@ function buildHome() {
   box(0.42, 0.7, 0.9, M.furn, 18.75, 0.35, -16.9, B); box(0.02, 0.6, 0.4, M.trim, 18.97, 0.35, -16.7, B); box(0.02, 0.6, 0.4, M.trim, 18.97, 0.35, -17.15, B);
   collider(18.5, 18.97, -17.35, -16.45, 0, 0.75);
   // 逐层多出来的：3 楼起有扶手椅，4 楼电视也回来了
-  const arm = put('armchair', 25.95, -20.6, -Math.PI / 2), tv = put('tvCabinet', 21.9, -21.6);
+  const arm = put('armchair', 25.95, -20.6, -Math.PI / 2), tv = put('tvCabinet', 21.9, -21.78);
   if (arm) home.extra.push([arm, 3, collider(25.55, 26.4, -21.0, -20.2, 0, 0.9)]);
-  if (tv) { // 模型屏幕上画着一幅风景：盖一块深色玻璃，像关着的显像管
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.46), std('#1b2125', { roughness: 0.25, metalness: 0.2, flatShading: false }));
-    glass.position.set(-0.1, 0.49, 0.135); tv.add(glass); home.extra.push([tv, 4, collider(21.4, 22.4, -22, -21.2, 0, 1.0)]);
-  }
+  if (tv) home.extra.push([tv, 4, collider(21.25, 22.55, -22, -21.35, 0, 1.15)]);
 }
 
 // 过渡房间里「钥匙」的归位处：拿齐一层后，这层的「钥匙」依次出现在这里，之后一直留着
@@ -1348,7 +1423,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   farHouseA: { h: 16 }, farHouseB: { h: 15 }, farHouseC: { h: 12 }, farChurch: { h: 34 }, farMill: { h: 20 },
   shoeCabinet: { w: 1.0 }, sideTable: { w: 0.55 }, shelf: { w: 1.1 }, boxes: { w: 0.6 }, phoneTable: { w: 0.5 }, bench: { w: 1.2 },
   lowCabinet: { w: 0.9 }, slippers: { w: 0.32 },
-  sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
+  sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.15 }, sheetSofa: { w: 2.3 }, sheetBookshelf: { h: 2.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
   wallClock: { w: 0.36 }, diningTable: { h: 0.78 }, diningChair: { h: 0.92 },
   farBlockA: { w: 34 }, farBlockB: { w: 28 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
   debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
