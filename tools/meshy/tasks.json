@@ -144,8 +144,7 @@
     "done": true
   },
   "bookshelf": {
-    "preview": "01a10ad4-f124-736c-a450-06df6c4f5349",
-    "refine": "01a10ad5-eade-7292-892a-201d7ee34eb0",
+    "image": "01a10efb-f40a-7149-b610-181442b08921",
     "done": true
   },
   "coatRack": {
@@ -253,11 +252,6 @@
     "refine": "01a10edd-e8f3-73d4-8f60-4b2a5a65dc0b",
     "done": true
   },
-  "roofAntenna": {
-    "preview": "01a10edd-136b-730f-bdcc-a3355195990b",
-    "refine": "01a10edd-bd6d-7287-88cd-b252faca5a5d",
-    "done": true
-  },
   "rustyChair": {
     "preview": "01a10edd-135a-75e7-9aa8-ad90bfea5cb5",
     "refine": "01a10edd-e409-7253-84cf-e91b12d6b9a0",
@@ -283,10 +277,6 @@
     "refine": "01a10ee0-b1b3-74de-ad0d-e5abf823868d",
     "done": true
   },
-  "bookshelf2": {
-    "image": "01a10ef8-221a-74b9-918c-497db727332e",
-    "done": true
-  },
   "sheetBookshelf": {
     "image": "01a10ef8-2205-73c0-adb1-477a37637b8c",
     "done": true
@@ -294,12 +284,5 @@
   "sheetSofa": {
     "image": "01a10ef8-2234-736a-b2a1-2cb1227d9fb2",
     "done": true
-  },
-  "tvCabinet2": {
-    "image": "01a10ef8-221a-74b8-be55-79b5333acc3c",
-    "done": true
-  },
-  "bookshelf3": {
-    "image": "01a10efb-f40a-7149-b610-181442b08921"
   }
 }

@@ -218,10 +218,11 @@
     },
     {
       "key": "bookshelf",
-      "note": "房间：书架",
-      "prompt": "a classic tall pine bookcase, simple box frame with four flat horizontal shelves, rows of upright hardback books, a blue and white plate leaning on the top shelf",
-      "target_polycount": 4000,
-      "ai_model": "latest"
+      "note": "房间：书架（不重拓扑生成，之后 weld + simplify 到约 6 万面）",
+      "image": "refs/bookshelf2.png",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024
     },
     {
       "key": "coatRack",
@@ -405,14 +406,6 @@
       "ai_model": "latest"
     },
     {
-      "key": "bookshelf2",
-      "image": "refs/bookshelf2.png",
-      "target_polycount": 6000,
-      "ai_model": "latest",
-      "texture": 1024,
-      "note": "候选：书架"
-    },
-    {
       "key": "sheetBookshelf",
       "image": "refs/sheetBookshelf.png",
       "target_polycount": 5000,
@@ -427,14 +420,6 @@
       "ai_model": "latest",
       "texture": 1024,
       "note": "1 楼：盖白布的沙发"
-    },
-    {
-      "key": "bookshelf3",
-      "image": "refs/bookshelf2.png",
-      "remesh": false,
-      "ai_model": "latest",
-      "texture": 1024,
-      "note": "候选：书架（不重拓扑）"
     }
   ]
 }
