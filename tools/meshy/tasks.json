@@ -384,17 +384,22 @@
   },
   "diningChairHQ": {
     "preview": "01a10f22-c14f-709a-9397-0da9443fb576",
-    "refine": "01a10f23-bb32-756a-b5ef-519dd841d958"
+    "refine": "01a10f23-bb32-756a-b5ef-519dd841d958",
+    "done": true
   },
   "wallClockHQ": {
     "preview": "01a10f23-3dfe-76bb-b9bc-31562aad37de",
-    "refine": "01a10f24-18b6-7516-967c-7d1b21a06eed"
+    "refine": "01a10f24-18b6-7516-967c-7d1b21a06eed",
+    "done": true
   },
   "motherHQ": {
     "preview": "01a10f23-f079-7471-8608-4497ca9b317a",
-    "refine": "01a10f24-e2dd-71bb-b9b2-b69db35eeabf"
+    "refine": "01a10f24-e2dd-71bb-b9b2-b69db35eeabf",
+    "done": true
   },
   "childHQ": {
-    "preview": "01a10f24-6401-72fd-8123-60b36337f520"
+    "preview": "01a10f24-6401-72fd-8123-60b36337f520",
+    "refine": "01a10f25-7348-72b2-892b-1a787af796f5",
+    "done": true
   }
 }
