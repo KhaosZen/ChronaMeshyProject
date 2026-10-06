@@ -696,7 +696,7 @@ function buildBuilding() {
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
 function loadImages() {
-  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door'];
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
   return Promise.all(names.map(f => new Promise(res => {
     const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
     im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
@@ -1525,6 +1525,8 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
+// 天台近处的几栋远景楼：桌面上用高精度版本（每栋 10–20 万面），手机上用 2.5 万面的
+if (!TOUCH) Object.assign(MODEL_SIZE, { cityRowHi: MODEL_SIZE.cityRow, cityWarehouseHi: MODEL_SIZE.cityWarehouse, cityChurchHi: MODEL_SIZE.cityChurch, cityBridgeHi: MODEL_SIZE.cityBridge });
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
@@ -2412,20 +2414,19 @@ function debugCollectAll() { (FLOORS[state.floor].keys || []).forEach(k => state
  * ===================================================================*/
 const clock = new THREE.Clock();
 function buildCity(R, fRing, live) {
-  // 远处沉没的城镇：十几座高精度的楼，三三两两成组，散在 120–350 米外的雾里，每座都大致朝着天台（西面灯塔那边留空）
+  // 远处沉没的城镇：近处 4 栋是 3D 模型（120–200 米），更远的 6 栋是概念图做的立牌（230–330 米，始终朝着玩家），西面灯塔那边留空
   const rr = mulberry32(99), inst = {}, rings = [];
-  const add = (id, x, z, sink) => { const S = MODELS[id]?.size; if (!S) return;
-    (inst[id] ||= []).push({ x, z, ry: Math.atan2(12 - x, -9 - z) + (rr() - 0.5) * 0.5, y: SEA_Y - S.y * sink, tx: (rr() - 0.5) * 0.04, tz: (rr() - 0.5) * 0.04 });
+  const add = (id, x, z, sink) => { id = MODELS[id + 'Hi'] ? id + 'Hi' : id; const S = MODELS[id]?.size; if (!S) return;
+    (inst[id] ||= []).push({ x, z, ry: Math.atan2(12 - x, -9 - z) + (rr() - 0.5) * 0.4, y: SEA_Y - S.y * sink, tx: (rr() - 0.5) * 0.03, tz: (rr() - 0.5) * 0.03 });
     rings.push([x, z, Math.max(S.x, S.z) * 0.55]); };
-  const PLAN = [
-    ['cityRow', 132, -92, 0.25], ['cityWarehouse', 158, -66, 0.25], ['cityBridge', 112, -112, 0.2],          // 东北：运河边一排房子、仓库、吊桥
-    ['cityChurch', 196, 24, 0.2], ['cityRow', 168, 58, 0.28],                                                   // 东：教堂
-    ['cityFlat', 46, -214, 0.32], ['cityRow', -12, -168, 0.26],                                                 // 南
-    ['cityRow', -118, -150, 0.27], ['cityWarehouse', -92, -184, 0.24],                                         // 西南
-    ['cityTower', 64, 262, 0.3], ['cityFlat', -84, 236, 0.32], ['cityChurch', -150, 196, 0.22],                // 北：堤坝后面
-    ['cityTower', 262, -206, 0.32], ['cityFlat', 300, 90, 0.33],                                                // 最远的天际线
-  ];
-  for (const [id, x, z, sink] of PLAN.slice(0, TOUCH ? 9 : PLAN.length)) add(id, x, z, sink);
+  for (const [id, x, z, sink] of [['cityRow', 128, -86, 0.24], ['cityBridge', 104, -110, 0.18], ['cityChurch', 172, 28, 0.2], ['cityWarehouse', -18, -150, 0.24]]) add(id, x, z, sink);
+  live.boards = [];
+  for (const [id, x, z, h] of [['cityFlat', 70, -250, 40], ['cityTower', 280, -190, 56], ['cityRow', -130, -180, 20], ['cityFlat', -100, 250, 42], ['cityTower', 80, 285, 52], ['cityChurch', -170, 205, 42]]) {
+    const im = IMG['bb_' + id]; if (!im) continue;
+    const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
+    const w = h * im.width / im.height, m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), new THREE.MeshBasicMaterial({ map: t, alphaTest: 0.35, side: THREE.DoubleSide }));
+    m.position.set(x, SEA_Y - h * 0.04, z); R.add(m); live.boards.push(m); rings.push([x, z, w * 0.5]);
+  }
   const e = new THREE.Euler(), q = new THREE.Quaternion(), one = V(1, 1, 1);
   for (const id in inst) {
     const M = MODELS[id], list = inst[id]; M.obj.updateMatrixWorld(true);
@@ -2451,6 +2452,7 @@ function updateRoof(dt) {
     u.wings[0].rotation.z = flap; u.wings[1].rotation.z = -flap;
   }
   for (const r of L.rings) r.rotation.y += dt * 0.03;
+  for (const b of L.boards || []) b.rotation.y = Math.atan2(camera.position.x - b.position.x, camera.position.z - b.position.z);   // 立牌转向玩家
   foamMats.forEach((m, i) => { m.opacity = 0.6 + 0.25 * Math.sin(t * 1.2 + i * 2); if (i === 0) m.map.offset.x = t * 0.02; });
 }
 // 过渡房间里一直提示该做什么；站着不动 3 秒左上角浮出操作说明
