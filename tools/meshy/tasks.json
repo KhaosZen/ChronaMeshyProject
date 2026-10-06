@@ -101,13 +101,11 @@
     "done": true
   },
   "treeCrown": {
-    "preview": "01a10acb-1702-7212-b446-553e5d7ad55e",
-    "refine": "01a10acd-a3d5-729b-8ffb-13c9c9432bae",
+    "image": "01a10ee8-631a-71e8-aa09-e1135bab2ca6",
     "done": true
   },
   "treeTrunk": {
-    "preview": "01a10aca-72c3-7383-8823-b93289832227",
-    "refine": "01a10acb-6a96-755a-9d88-490b829d54ef",
+    "image": "01a10ee8-6304-7670-b27c-2c5d1bc1f78c",
     "done": true
   },
   "treeBranch": {
@@ -146,8 +144,7 @@
     "done": true
   },
   "bookshelf": {
-    "preview": "01a10ad4-f124-736c-a450-06df6c4f5349",
-    "refine": "01a10ad5-eade-7292-892a-201d7ee34eb0",
+    "image": "01a10efb-f40a-7149-b610-181442b08921",
     "done": true
   },
   "coatRack": {
@@ -243,6 +240,166 @@
   "flowerClump": {
     "preview": "01a10ad6-6b7e-71ef-aa8e-4e4ecad4837a",
     "refine": "01a10ad7-8d39-73f2-bcee-702e39f6be48",
+    "done": true
+  },
+  "roofChimney": {
+    "preview": "01a10edd-138d-7489-9198-ad2380fc377d",
+    "refine": "01a10ede-0f95-7008-9772-13079f292146",
+    "done": true
+  },
+  "roofVent": {
+    "preview": "01a10edd-1369-7040-9367-d97a913003c1",
+    "refine": "01a10edd-e8f3-73d4-8f60-4b2a5a65dc0b",
+    "done": true
+  },
+  "rustyChair": {
+    "preview": "01a10edd-135a-75e7-9aa8-ad90bfea5cb5",
+    "refine": "01a10edd-e409-7253-84cf-e91b12d6b9a0",
+    "done": true
+  },
+  "oldPots": {
+    "preview": "01a10edf-369f-7280-86dd-8f3e5496d7a1",
+    "refine": "01a10ee0-3584-77b9-95a9-6b0d1a7e982f",
+    "done": true
+  },
+  "laundryLine": {
+    "preview": "01a10edf-393d-75d5-91fa-81407ed672eb",
+    "refine": "01a10ee0-378b-778c-a83a-aeeaacfb1041",
+    "done": true
+  },
+  "waterTank": {
+    "preview": "01a10edf-3de6-7602-8d5f-ce42156018e7",
+    "refine": "01a10ee0-5d06-7076-b066-7d794c04ca1c",
+    "done": true
+  },
+  "roofBucket": {
+    "preview": "01a10edf-89ef-72e5-a1e1-a506d723d9ae",
+    "refine": "01a10ee0-b1b3-74de-ad0d-e5abf823868d",
+    "done": true
+  },
+  "sheetBookshelf": {
+    "image": "01a10ef8-2205-73c0-adb1-477a37637b8c",
+    "done": true
+  },
+  "sheetSofa": {
+    "image": "01a10ef8-2234-736a-b2a1-2cb1227d9fb2",
+    "done": true
+  },
+  "lampHQ": {
+    "image": "01a10f19-537a-7136-9a68-8c1b4c3eaf0c",
+    "done": true
+  },
+  "photoHQ": {
+    "image": "01a10f19-5387-7438-843a-be36ea91056d",
+    "done": true
+  },
+  "radioHQ": {
+    "image": "01a10f19-53c0-77c3-8d64-58135427ee06",
+    "done": true
+  },
+  "machineHQ": {
+    "image": "01a10f19-5374-7218-af43-4c464e5e880c",
+    "done": true
+  },
+  "housekeyHQ": {
+    "image": "01a10f1a-a6f2-7354-bfe1-a751488aa2b4",
+    "done": true
+  },
+  "canHQ": {
+    "image": "01a10f1a-b861-7787-834d-43aa9de3bd0e",
+    "done": true
+  },
+  "slippersHQ": {
+    "image": "01a10f1a-c751-7379-b815-49e0c47201b0",
+    "done": true
+  },
+  "pendantHQ": {
+    "preview": "01a10f1a-dc73-7310-b589-959bcef2a463",
+    "refine": "01a10f1b-a6cf-7062-8f58-293549fc40b5",
+    "done": true
+  },
+  "homeDoorHQ": {
+    "preview": "01a10f1b-95a6-74b4-b880-2341601c44aa",
+    "refine": "01a10f1c-48d7-74a0-a508-5f7eea9c48f5",
+    "done": true
+  },
+  "housePlant": {
+    "preview": "01a10f1b-cd55-700f-b935-debe1f93542e",
+    "refine": "01a10f1c-ebe7-75fa-b313-a16e20aca75a",
+    "done": true
+  },
+  "sideTableHQ": {
+    "image": "01a10f1f-3d1c-7766-97c9-5557e49e0616",
+    "done": true
+  },
+  "shelfHQ": {
+    "image": "01a10f1f-3ced-7374-baa6-24c121106143",
+    "done": true
+  },
+  "boxesHQ": {
+    "image": "01a10f1f-3d0a-704a-9dff-b6b83ba9950e",
+    "done": true
+  },
+  "phoneTableHQ": {
+    "image": "01a10f1f-3cf9-770b-b357-358bcdce9465",
+    "done": true
+  },
+  "benchHQ": {
+    "image": "01a10f20-41f2-7014-a9f9-7b9c30ef02a5",
+    "done": true
+  },
+  "lowCabinetHQ": {
+    "image": "01a10f20-94b1-75ef-beaa-c0744e6eea3b",
+    "done": true
+  },
+  "telescopeHQ": {
+    "preview": "01a10f20-ce26-7345-a57e-a94d6fc71d57",
+    "refine": "01a10f21-b383-7750-ab69-0b9d3eaf3871",
+    "done": true
+  },
+  "sofaHQ": {
+    "preview": "01a10f20-e080-74e9-9684-6fee6ef6e5c6",
+    "refine": "01a10f21-b3b2-76ef-8f92-d1dfc228e6ed",
+    "done": true
+  },
+  "armchairHQ": {
+    "preview": "01a10f21-2cbe-7159-a642-af9b1cdcb945",
+    "refine": "01a10f22-0343-71ce-90f9-3571076f3e01",
+    "done": true
+  },
+  "floorLampHQ": {
+    "preview": "01a10f21-b2f6-713b-8747-dc51defd9ccd",
+    "refine": "01a10f22-7e34-7783-9cb1-e52f10b11da3",
+    "done": true
+  },
+  "coatRackHQ": {
+    "preview": "01a10f22-8cd3-740e-aa58-affa01269dc5",
+    "refine": "01a10f23-3f07-70fe-8fe8-9eddd05dd96a",
+    "done": true
+  },
+  "diningTableHQ": {
+    "preview": "01a10f22-b125-74e9-9765-2e910b62fb4e",
+    "refine": "01a10f23-8e19-73dc-82dc-3a2204060be2",
+    "done": true
+  },
+  "diningChairHQ": {
+    "preview": "01a10f22-c14f-709a-9397-0da9443fb576",
+    "refine": "01a10f23-bb32-756a-b5ef-519dd841d958",
+    "done": true
+  },
+  "wallClockHQ": {
+    "preview": "01a10f23-3dfe-76bb-b9bc-31562aad37de",
+    "refine": "01a10f24-18b6-7516-967c-7d1b21a06eed",
+    "done": true
+  },
+  "motherHQ": {
+    "preview": "01a10f23-f079-7471-8608-4497ca9b317a",
+    "refine": "01a10f24-e2dd-71bb-b9b2-b69db35eeabf",
+    "done": true
+  },
+  "childHQ": {
+    "preview": "01a10f24-6401-72fd-8123-60b36337f520",
+    "refine": "01a10f25-7348-72b2-892b-1a787af796f5",
     "done": true
   }
 }

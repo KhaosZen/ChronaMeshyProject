@@ -9,7 +9,7 @@
 // assets.json 里每条资产二选一：
 //   "image": "refs/lamp.png"  → Image-to-3D（从概念图裁出来的参考图，造型和配色跟概念图一致）
 //   "prompt": "…"             → Text-to-3D（preview + refine）
-// 可选 "ai_model": "latest" 指定 Meshy 模型版本；"texture": 1024 指定贴图尺寸。
+// 可选 "ai_model": "latest" 指定 Meshy 模型版本；"remesh": false 保留原始网格（薄板类不容易变形，之后自己减面）；"texture": 1024 指定贴图尺寸。
 // 认证：云环境里由代理自动给 api.meshy.ai 加认证头（环境设置 → API credentials）；本地运行时设 MESHY_API_KEY。
 // 任务 id 记在 tools/meshy/tasks.json，中断后重跑会接着轮询，不会重复扣费。
 import fs from 'node:fs';
@@ -63,7 +63,7 @@ async function generate(a) {
     if (!rec.image) {
       const img = 'data:image/png;base64,' + fs.readFileSync(path.join(HERE, a.image)).toString('base64');
       rec.image = (await api('POST', `${API}/v1/image-to-3d`, {
-        image_url: img, topology: 'triangle', target_polycount: poly, should_remesh: true, should_texture: true, enable_pbr: false,
+        image_url: img, topology: 'triangle', target_polycount: poly, should_remesh: a.remesh ?? true, should_texture: true, enable_pbr: false,
         ...(a.ai_model && { ai_model: a.ai_model }),
       })).result;
       saveTasks();
@@ -73,7 +73,7 @@ async function generate(a) {
     const prompt = `${a.prompt}, ${cfg.style}`.slice(0, 600);
     if (!rec.preview) {
       rec.preview = (await api('POST', `${API}/v2/text-to-3d`, {
-        mode: 'preview', prompt, art_style: 'realistic', topology: 'triangle', should_remesh: true, target_polycount: poly,
+        mode: 'preview', prompt, art_style: 'realistic', topology: 'triangle', should_remesh: a.remesh ?? true, target_polycount: poly,
         ...(a.ai_model && { ai_model: a.ai_model }),
       })).result;
       saveTasks();
@@ -91,7 +91,15 @@ async function generate(a) {
   fs.mkdirSync(path.dirname(raw), { recursive: true });
   fs.writeFileSync(raw, Buffer.from(await (await fetch(url)).arrayBuffer()));
   const size = String(a.texture ?? 512);
-  execFileSync(GT, ['resize', raw, out, '--width', size, '--height', size], { stdio: 'ignore' });
+  if (a.remesh === false) { // 原始网格面数很高：weld → simplify（误差上限保住形状）→ 压贴图 → 清理 → 量化
+    const tmp = n => path.join(HERE, '.raw', `${a.key}.${n}.glb`);
+    execFileSync(GT, ['weld', raw, tmp('w')], { stdio: 'ignore' });
+    execFileSync(GT, ['simplify', tmp('w'), tmp('s'), '--ratio', String(a.simplify ?? 0.02), '--error', String(a.simplifyError ?? 0.003)], { stdio: 'ignore' });
+    execFileSync(GT, ['resize', tmp('s'), tmp('r'), '--width', size, '--height', size], { stdio: 'ignore' });
+    execFileSync(GT, ['prune', tmp('r'), tmp('p')], { stdio: 'ignore' });
+    execFileSync(GT, ['quantize', tmp('p'), out], { stdio: 'ignore' });
+    for (const n of ['w', 's', 'r', 'p']) fs.rmSync(tmp(n), { force: true });
+  } else execFileSync(GT, ['resize', raw, out, '--width', size, '--height', size], { stdio: 'ignore' });
   rec.done = true; saveTasks();
   console.log(`✓ ${a.key} → assets/${a.key}.glb (${(fs.statSync(out).size / 1024).toFixed(0)} KB)`);
 }

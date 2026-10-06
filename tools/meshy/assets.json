@@ -6,57 +6,73 @@
   "assets": [
     {
       "key": "lamp",
-      "image": "refs/lamp.png",
-      "target_polycount": 1500,
       "note": "2 楼「钥匙」：窗边一直亮着的台灯",
-      "texture": 1024
+      "image": "refs/lamp.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "photo",
-      "image": "refs/photo.png",
-      "target_polycount": 800,
       "note": "1 楼「钥匙」：全家福相框（照片画面用贴图替换）",
-      "texture": 1024
+      "image": "refs/photo.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "radio",
-      "image": "refs/radio.png",
-      "target_polycount": 2000,
       "note": "2 楼「钥匙」：80 年代收录机",
-      "texture": 1024
+      "image": "refs/radio.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "machine",
-      "image": "refs/machine.png",
-      "target_polycount": 1500,
       "note": "3 楼「钥匙」：磁带答录机",
-      "texture": 1024
+      "image": "refs/machine.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "housekey",
-      "image": "refs/housekey.png",
-      "target_polycount": 800,
       "note": "4 楼「钥匙」：系在绳上的家门钥匙",
-      "texture": 1024
+      "image": "refs/housekey.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "can",
-      "image": "refs/can.png",
-      "target_polycount": 1500,
       "note": "4 楼「钥匙」：喷壶",
-      "texture": 1024
+      "image": "refs/can.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "pendant",
       "prompt": "a hanging industrial pendant ceiling lamp, dark metal cone shade, short metal rod, round ceiling mount, bulb visible underneath",
-      "target_polycount": 800,
-      "texture": 1024
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "homeDoor",
       "prompt": "a Dutch apartment front door standing alone in a thin wooden door frame, dark brown wooden panel door with a brass house number plate and a brass letterbox slot, door slightly open",
-      "target_polycount": 1500,
-      "texture": 1024
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "potCracked",
@@ -148,26 +164,28 @@
     },
     {
       "key": "slippers",
-      "image": "refs/slippers.png",
-      "target_polycount": 800,
       "note": "4 楼房间门口的两双拖鞋",
-      "texture": 1024
+      "image": "refs/slippers.png",
+      "ai_model": "latest",
+      "texture": 1024,
+      "remesh": false,
+      "simplify": 0.02
     },
     {
       "key": "treeCrown",
       "note": "大树：树冠（天台上方）",
-      "prompt": "a large wide rounded tree canopy made of clustered green leaf masses with a few thick branches underneath forking out from a short cut-off stub, no trunk, no roots, summer oak",
-      "target_polycount": 6000,
+      "image": "refs/treeCrown2.png",
+      "target_polycount": 8000,
       "ai_model": "latest",
-      "texture": 1024
+      "texture": 2048
     },
     {
       "key": "treeTrunk",
       "note": "大树：树干段（上下接起来贯穿楼层）",
-      "prompt": "a straight vertical section of a very thick old tree trunk, cylindrical, cut flat at the top and flat at the bottom, no roots, no branches, rough dark brown bark",
-      "target_polycount": 2000,
+      "image": "refs/treeTrunk2.png",
+      "target_polycount": 8000,
       "ai_model": "latest",
-      "texture": 1024
+      "texture": 2048
     },
     {
       "key": "treeBranch",
@@ -204,9 +222,11 @@
     },
     {
       "key": "tvCabinet",
-      "prompt": "a 1980s CRT television with a wood-grain casing standing on a low wooden TV cabinet",
-      "target_polycount": 2500,
-      "note": "房间：木纹电视 + 电视柜"
+      "note": "房间：木纹电视 + 电视柜",
+      "image": "refs/tvCabinet2.png",
+      "target_polycount": 6000,
+      "ai_model": "latest",
+      "texture": 1024
     },
     {
       "key": "floorLamp",
@@ -216,10 +236,11 @@
     },
     {
       "key": "bookshelf",
-      "note": "房间：书架",
-      "prompt": "a classic tall pine bookcase, simple box frame with four flat horizontal shelves, rows of upright hardback books, a blue and white plate leaning on the top shelf",
-      "target_polycount": 4000,
-      "ai_model": "latest"
+      "note": "房间：书架（不重拓扑生成，之后 weld + simplify 到约 6 万面）",
+      "image": "refs/bookshelf2.png",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024
     },
     {
       "key": "coatRack",
@@ -351,6 +372,225 @@
       "ai_model": "latest",
       "texture": 1024,
       "note": "4 楼的花丛"
+    },
+    {
+      "key": "roofChimney",
+      "prompt": "a square red-brick chimney stack with two clay chimney pots on top, soot stains, a little moss at the base",
+      "target_polycount": 2000,
+      "note": "天台：烟囱",
+      "ai_model": "latest"
+    },
+    {
+      "key": "roofVent",
+      "prompt": "a rusty metal ventilation pipe sticking out of a flat roof with a mushroom-shaped cap, bent and weathered",
+      "target_polycount": 1200,
+      "note": "天台：通风管",
+      "ai_model": "latest"
+    },
+    {
+      "key": "rustyChair",
+      "prompt": "an old rusty metal garden chair with peeling green paint, slightly tipped",
+      "target_polycount": 1500,
+      "note": "天台：生锈的椅子",
+      "ai_model": "latest"
+    },
+    {
+      "key": "oldPots",
+      "prompt": "a group of three old terracotta flower pots of different sizes with dry dead plants and weeds, one pot tipped over",
+      "target_polycount": 2000,
+      "note": "天台：一组旧花盆",
+      "ai_model": "latest"
+    },
+    {
+      "key": "laundryLine",
+      "prompt": "a laundry line strung between two metal posts with three white sheets and a shirt hanging and pinned, gently swaying",
+      "target_polycount": 2500,
+      "texture": 1024,
+      "note": "天台：晾衣绳",
+      "ai_model": "latest"
+    },
+    {
+      "key": "waterTank",
+      "prompt": "a small rusty cylindrical rooftop water tank on four short metal legs with a ladder on the side",
+      "target_polycount": 2000,
+      "note": "天台：水箱",
+      "ai_model": "latest"
+    },
+    {
+      "key": "roofBucket",
+      "prompt": "an old galvanised metal bucket and a wooden crate with rain water, puddle around them",
+      "target_polycount": 1200,
+      "note": "天台：水桶和木箱",
+      "ai_model": "latest"
+    },
+    {
+      "key": "sheetBookshelf",
+      "image": "refs/sheetBookshelf.png",
+      "target_polycount": 5000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "1 楼：盖白布的书架"
+    },
+    {
+      "key": "sheetSofa",
+      "image": "refs/sheetSofa.png",
+      "target_polycount": 5000,
+      "ai_model": "latest",
+      "texture": 1024,
+      "note": "1 楼：盖白布的沙发"
+    },
+    {
+      "key": "housePlant",
+      "prompt": "a leafy green houseplant (monstera and pothos) in a round terracotta pot on a small saucer, healthy and lush",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "房间：盆栽（浇水壶放在旁边）"
+    },
+    {
+      "key": "sideTableHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "image": "refs/sideTable.png"
+    },
+    {
+      "key": "shelfHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "image": "refs/shelf.png"
+    },
+    {
+      "key": "boxesHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "image": "refs/boxes.png"
+    },
+    {
+      "key": "phoneTableHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "image": "refs/phoneTable.png"
+    },
+    {
+      "key": "benchHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "image": "refs/bench.png"
+    },
+    {
+      "key": "lowCabinetHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "image": "refs/lowCabinet.png"
+    },
+    {
+      "key": "telescopeHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "an old brass telescope on a wooden tripod, pointing slightly upward"
+    },
+    {
+      "key": "sofaHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a 1980s three-seat sofa with brown corduroy upholstery, wooden legs"
+    },
+    {
+      "key": "armchairHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a 1980s armchair with mustard yellow fabric and wooden armrests"
+    },
+    {
+      "key": "floorLampHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a 1980s floor lamp with a tall brass pole and a pleated cream fabric shade"
+    },
+    {
+      "key": "coatRackHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a wooden standing coat rack with one straight central pole, three curved feet at the bottom and four hooks at the top, a beige trench coat hanging from one hook"
+    },
+    {
+      "key": "diningTableHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a small square wooden dining table with four straight legs and a plain white tablecloth lying flat on top and hanging a little over the edges, nothing on the table"
+    },
+    {
+      "key": "diningChairHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a simple wooden dining chair with a woven rush seat"
+    },
+    {
+      "key": "wallClockHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a round wall clock with a wooden frame and a cream face"
+    },
+    {
+      "key": "motherHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a full body woman in her late thirties, 1980s Dutch fashion, curly brown shoulder-length hair, white blouse with a small floral print, high-waisted light blue jeans, white sneakers, standing straight, arms relaxed at her sides, gentle face, game character"
+    },
+    {
+      "key": "childHQ",
+      "remesh": false,
+      "ai_model": "latest",
+      "texture": 1024,
+      "simplify": 0.02,
+      "note": "候选：高精度重做",
+      "prompt": "a full body teenager about sixteen years old, short messy brown hair, white t-shirt with red and blue stripes, navy jacket, blue jeans, white sneakers, a backpack on one shoulder, standing straight, arms relaxed at sides, game character"
     }
   ]
 }
