@@ -12,6 +12,11 @@
   #start { display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: rgba(18,18,18,.9); pointer-events: auto; cursor: pointer; text-align: center; gap: 18px; }
   #start { background: linear-gradient(rgba(8,9,12,.8), rgba(8,9,12,.88)), url(assets/tex/keyart.jpg) center / cover, #121212; }
+  #start.paused, #start.open.paused { background: rgba(10,11,14,.42); -webkit-backdrop-filter: blur(10px) brightness(.85); backdrop-filter: blur(10px) brightness(.85); }
+  #restart { display: none; font: inherit; color: inherit; background: none; border: 1px solid rgba(214,208,194,.45); padding: 7px 18px; cursor: pointer; letter-spacing: .12em; font-size: 14px; }
+  #restart:hover { border-color: rgba(214,208,194,.9); }
+  #start.paused #restart { display: block; }
+  #pauseBtn { position: absolute; right: 18px; top: 14px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(214,208,194,.5); background: rgba(0,0,0,.3); display: flex; align-items: center; justify-content: center; font-size: 16px; letter-spacing: 2px; }
   #start.open { background: linear-gradient(rgba(8,9,12,.25), rgba(8,9,12,.6)), url(assets/tex/keyart.jpg) center / cover, #121212; }
   #start h1 { font-weight: 400; letter-spacing: .6em; margin: 0; font-size: 28px; }
   #start p { margin: 0; opacity: .7; font-size: 14px; line-height: 1.9; }
@@ -65,6 +70,7 @@
   <h1>ROOT</h1>
   <p id="help">WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause</p>
   <p class="go" id="startText">Loading…</p>
+  <button id="restart">Restart from the beginning</button>
   <div id="mp"><button id="mpHost">Invite someone to play as the mother</button><button id="mpJoin">Join as the mother</button><div id="mpPanel"></div></div>
 </div>
 <div id="crosshair"></div>
@@ -76,7 +82,7 @@
 <div id="fade" class="layer"></div>
 <div id="end" class="layer"><div id="monologue"></div><div class="t">HOME</div><div id="stats"></div><div id="again"></div></div>
 <div id="hud" class="layer"></div>
-<div id="touch" class="layer"><div id="stickBase"><div id="stickKnob"></div></div><div id="useBtn">USE</div></div>
+<div id="touch" class="layer"><div id="stickBase"><div id="stickKnob"></div></div><div id="useBtn">USE</div><div id="pauseBtn">II</div></div>
 <div id="rotate" class="layer"><div>ROOT</div><div style="opacity:.7;font-size:14px">Turn your phone sideways to play</div></div>
 
 <script type="module">
@@ -1525,7 +1531,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
 // 天台近处的几栋远景楼：桌面上用高精度版本（每栋 10–20 万面），手机上用 2.5 万面的
-if (!TOUCH) Object.assign(MODEL_SIZE, { cityRowHi: MODEL_SIZE.cityRow, cityWarehouseHi: MODEL_SIZE.cityWarehouse, cityChurchHi: MODEL_SIZE.cityChurch, cityBridgeHi: MODEL_SIZE.cityBridge });
+if (!TOUCH) Object.assign(MODEL_SIZE, { cityRowHi: MODEL_SIZE.cityRow, cityWarehouseHi: MODEL_SIZE.cityWarehouse, cityChurchHi: MODEL_SIZE.cityChurch, cityBridgeHi: MODEL_SIZE.cityBridge, cityFlatHi: MODEL_SIZE.cityFlat, cityTowerHi: MODEL_SIZE.cityTower });
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
@@ -2091,7 +2097,7 @@ addEventListener('mousemove', e => {   // 拖动转视角只在按住时算；�
 canvas.addEventListener('mousedown', e => { if (dragLook) dragging = true; if (playing && e.button === 0) tryInteract(); });
 addEventListener('mouseup', () => { dragging = false; });
 $('start').addEventListener('click', e => {
-  if (!ready || state.ended || e.target.closest('#mp button, #mp input') || (net.role === 'mother' && !net.synced)) return;
+  if (!ready || state.ended || e.target.closest('#mp button, #mp input, #restart') || (net.role === 'mother' && !net.synced)) return;
   initAudio();
   if (!menuOpen) { menuOpen = true; music.start(); $('start').classList.add('open'); $('startText').textContent = CLICK + ' to begin'; return; }   // 第一下：音乐响起，主视觉亮起来
   if (TOUCH) { startPlaying(); return; }
@@ -2099,7 +2105,7 @@ $('start').addEventListener('click', e => {
   startPlaying();
 });
 function startPlaying() {
-  playing = true; $('start').style.display = 'none'; $('mp').style.display = 'none'; music.fade(0, 8);
+  playing = true; $('start').style.display = 'none'; $('start').classList.remove('paused'); $('mp').style.display = 'none'; music.fade(0, 8);
   if (TOUCH) $('touch').style.display = 'block';
   if (net.role === 'mother' && !net.toldRole) { net.toldRole = true; say('You are their mother. You can see what they have lost. Look at it and ' + (TOUCH ? 'tap Use' : 'press E') + ' to show them.', 6000); }
   if (!started) {
@@ -2108,6 +2114,13 @@ function startPlaying() {
   }
 }
 function enableDragLook() { dragLook = true; startPlaying(); }
+// 暂停：游戏画面模糊压暗当背景，可以继续或从头开始
+function pauseGame() {
+  playing = false; $('start').classList.add('paused'); $('start').style.display = 'flex'; $('startText').textContent = CLICK + ' to continue';
+  if (TOUCH) $('touch').style.display = 'none';
+}
+$('restart').addEventListener('click', e => { e.stopPropagation(); $('restart').textContent = 'Restarting…'; $('startText').textContent = ''; setTimeout(() => location.reload(), 300); });
+addEventListener('keydown', e => { if (e.code === 'Escape' && playing && (dragLook || TOUCH)) pauseGame(); });   // 没锁鼠标时 Esc 也能暂停
 
 // 触屏：左半屏按下的位置出现摇杆（松手回到左下角），右半屏拖动转视角，Use 按钮 = E
 const stick = { on: false, x: 0, y: 0 };
@@ -2122,6 +2135,7 @@ if (TOUCH) {
     e.preventDefault();
     for (const t of e.changedTouches) {
       if (t.target.id === 'useBtn') { tryInteract(); continue; }
+      if (t.target.id === 'pauseBtn') { pauseGame(); continue; }
       if (t.clientX < innerWidth / 2 && stickId === null) {
         stickId = t.identifier; sx = t.clientX; sy = t.clientY; stick.on = true;
         base.style.left = sx + 'px'; base.style.top = sy + 'px'; base.style.opacity = 1;
@@ -2148,7 +2162,7 @@ if (TOUCH) {
 }
 document.addEventListener('pointerlockerror', enableDragLook);
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement !== canvas && !dragLook && !state.ended) { playing = false; $('start').style.display = 'flex'; $('startText').textContent = 'Click to continue'; }
+  if (document.pointerLockElement !== canvas && !dragLook && !state.ended) pauseGame();
 });
 
 const DOWN = V(0, -1, 0), ray = new THREE.Raycaster();
@@ -2418,9 +2432,11 @@ function buildCity(R, fRing, live) {
   const add = (id, x, z, sink) => { id = MODELS[id + 'Hi'] ? id + 'Hi' : id; const S = MODELS[id]?.size; if (!S) return;
     (inst[id] ||= []).push({ x, z, ry: Math.atan2(12 - x, -9 - z) + (rr() - 0.5) * 0.4, y: SEA_Y - S.y * sink, tx: (rr() - 0.5) * 0.03, tz: (rr() - 0.5) * 0.03 });
     rings.push([x, z, Math.max(S.x, S.z) * 0.55]); };
-  for (const [id, x, z, sink] of [['cityRow', 128, -86, 0.24], ['cityBridge', 104, -110, 0.18], ['cityChurch', 172, 28, 0.2], ['cityWarehouse', -18, -150, 0.24]]) add(id, x, z, sink);
+  const NEAR = [['cityRow', 128, -86, 0.24], ['cityBridge', 104, -110, 0.18], ['cityChurch', 172, 28, 0.2], ['cityWarehouse', -18, -150, 0.24],
+    ['cityFlat', 150, -150, 0.3], ['cityRow', 30, -175, 0.26], ['cityTower', 205, -40, 0.32], ['cityWarehouse', 158, 82, 0.25], ['cityRow', -10, 175, 0.26]];
+  for (const [id, x, z, sink] of NEAR.slice(0, TOUCH ? 6 : NEAR.length)) add(id, x, z, sink);
   live.boards = [];
-  for (const [id, x, z, h] of [['cityFlat', 70, -250, 40], ['cityTower', 280, -190, 56], ['cityRow', -130, -180, 20], ['cityFlat', -100, 250, 42], ['cityTower', 80, 285, 52], ['cityChurch', -170, 205, 42]]) {
+  for (const [id, x, z, h] of [['cityFlat', 40, -285, 40], ['cityTower', 300, -210, 56], ['cityRow', -130, -200, 20], ['cityFlat', -110, 265, 42], ['cityTower', 95, 300, 52], ['cityChurch', -175, 220, 42]]) {
     const im = IMG['bb_' + id]; if (!im) continue;
     const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
     const w = h * im.width / im.height, m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), new THREE.MeshBasicMaterial({ map: t, alphaTest: 0.35, side: THREE.DoubleSide }));
