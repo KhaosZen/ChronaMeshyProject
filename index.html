@@ -696,7 +696,7 @@ function buildBuilding() {
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
 function loadImages() {
-  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door'];
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
   return Promise.all(names.map(f => new Promise(res => {
     const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
     im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
@@ -803,17 +803,34 @@ function buildStoryProps() {
   building.add(world.slippers);
 }
 // 外圈窗外的雾：几层半透明的雾片，越远越大，看不清外面（望远镜里会撤掉）
-let _fogTex = null;
+let _fogTex = null, _glassTex = null;
 function fogLayers(center, normal, w, h) {
-  _fogTex ||= canvasTex(256, 256, (g, W, H2) => { const gr = g.createRadialGradient(W / 2, H2 / 2, 10, W / 2, H2 / 2, W / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.6, 'rgba(255,255,255,.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H2); });
-  [[0.9, 0.45, 1.6], [2.6, 0.45, 3], [6, 0.5, 6]].forEach(([d, op, k]) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w * k, h * k), new THREE.MeshBasicMaterial({ map: _fogTex, transparent: true, opacity: op, depthWrite: false, fog: false }));
+  // 1) 窗上的旧玻璃：一层蒙着水汽和灰的半透明玻璃（中间稍亮、四角积灰、几道往下淌的水痕）
+  _glassTex ||= canvasTex(256, 256, (g, W, H2) => {
+    const rng = mulberry32(61); g.fillStyle = 'rgba(205,212,218,.4)'; g.fillRect(0, 0, W, H2);
+    for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(${rng() < 0.5 ? '235,238,240' : '160,165,160'},${0.05 + rng() * 0.12})`; blob(g, rng() * W, rng() * H2, 10 + rng() * 40, rng); g.fill(); }
+    for (let i = 0; i < 14; i++) { const x = rng() * W, gr = g.createLinearGradient(0, 0, 0, H2); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.3 + rng() * 0.4, 'rgba(120,125,120,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x, rng() * 60, 1.5 + rng() * 2, H2); }
+    const e = g.createRadialGradient(W / 2, H2 / 2, W * 0.25, W / 2, H2 / 2, W * 0.75); e.addColorStop(0, 'rgba(90,80,65,0)'); e.addColorStop(1, 'rgba(90,80,65,.6)'); g.fillStyle = e; g.fillRect(0, 0, W, H2);
+  });
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: _glassTex, transparent: true, depthWrite: false, roughness: 0.3, side: THREE.DoubleSide }));
+  glass.position.copy(center).addScaledVector(normal, -0.1); glass.lookAt(V().copy(glass.position).add(normal)); glass.renderOrder = 11; building.add(glass); world.glass.push(glass);
+  const fr = new THREE.Group(), wood = std('#3a2a20'), t = 0.05;   // 深色木窗框 + 十字窗棂
+  for (const [bw, bh, x, y] of [[w, t, 0, h / 2 - t / 2], [w, t, 0, -h / 2 + t / 2], [t, h, -w / 2 + t / 2, 0], [t, h, w / 2 - t / 2, 0], [t * 0.7, h, 0, 0], [w, t * 0.7, 0, h * 0.12]]) box(bw, bh, 0.05, wood, x, y, 0, fr);
+  fr.position.copy(glass.position); fr.quaternion.copy(glass.quaternion); building.add(fr); world.glass.push(fr);
+  // 2) 窗外：两层很大的、浓淡均匀的云雾，铺满整个窗口看出去的范围（没有边），外面只剩一点轮廓
+  _fogTex ||= canvasTex(512, 512, (g, W, H2) => {
+    const rng = mulberry32(62); g.fillStyle = 'rgba(255,255,255,.72)'; g.fillRect(0, 0, W, H2); g.filter = 'blur(18px)';
+    for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${rng() < 0.5 ? 0.35 : 0})`; if (rng() < 0.5) g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(rng() * W, rng() * H2, 30 + rng() * 70, 0, 7); g.fillStyle = 'rgba(255,255,255,.18)'; g.fill(); g.globalCompositeOperation = 'source-over'; }
+    g.filter = 'none';
+  });
+  [[1.4, 0.6, 7], [4.5, 0.75, 14]].forEach(([d, op, k]) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(k, k * 0.75), new THREE.MeshBasicMaterial({ map: _fogTex, transparent: true, opacity: op, depthWrite: false, fog: false }));
     m.position.copy(center).addScaledVector(normal, d); m.lookAt(center); building.add(m); world.fogPlanes.push(m);
   });
 }
 // 窗外雾里的废楼（3 楼起看得见）+「窗外」谜题用的窗、望远镜
 function buildRuins() {
-  world.ruins = []; world.windows = []; world.fogPlanes = [];
+  world.ruins = []; world.windows = []; world.fogPlanes = []; world.glass = [];
   for (const [c, n] of world.closetFog) fogLayers(c, n, 1.0, 0.9);
   fogLayers(V(22.5, 1.5, 3.2), V(0, 0, 1), 1.5, 1.2); fogLayers(V(24.2, 1.5, 0.825), V(1, 0, 0), 1.25, 1.2);   // 转角两扇朝海的窗
   const body = std('#8f8a7e', { emissive: '#2c2924' }), holeMat = std('#2a2c2e'), litMat = new THREE.MeshBasicMaterial({ color: '#ffd98a', fog: false, transparent: true });   // 透明 + 后画：穿过窗外的雾层也看得见
@@ -1226,14 +1243,11 @@ function buildRoof() {
   const sink = (o, id, f) => o.position.y = SEA_Y - MODELS[id].size.y * f;
   const place = (id, x, z, ry, f, ring = 0) => { const o = model(id); if (!o) return null; o.position.set(x, 0, z); o.rotation.y = ry; sink(o, id, f); R.add(o);
     if (ring) live.rings.push(foamRing(R, fRing, x, z, ring)); return o; };
-  // 远处沉没的城市：运河把海面分成一个个街区，按离天台的远近分三圈 ——
-  // 近处是沿运河排开的运河屋和仓库、运河口的吊桥；中间是外廊式公寓楼；最远是写字楼，和几座教堂尖塔一起组成天际线。
-  // 西面（推开家门看出去的方向）留一片开阔的海。每种楼用一个 InstancedMesh 画，远处的用减面版本
+  // 远处沉没的城镇（每种楼用一个 InstancedMesh 画）
   buildCity(R, fRing, live);
   // 标志性的远景：灯塔（家门后方）、半沉的渡轮、断掉的堤坝
   place('lighthouse', -230, -40, 0.4, 0.06, 6);
   const ferry = place('ferry', 95, 105, 2.2, 0.35, 14); if (ferry) ferry.rotation.set(0.12, 2.2, 0.28);
-  place('dyke', -60, 150, 0.3, 0.45); place('dyke', -150, 118, 0.62, 0.5); place('dyke', 40, 175, -0.1, 0.55);
   // 水面上的碎片：漂着的木箱、一排只露出灯头的路灯（下面是条街）、水里长出的树、半露的自行车
   for (const [x, z] of [[36, 16], [-15, -32], [44, -38], [-8, 22]]) { const o = place('debrisCrate', x, z, rng() * 6, 0.3); if (o) live.bob.push(o); }
   for (let k = 0; k < 5; k++) place('streetLamp', -13 + k * 0.4, 18 - k * 14, rng() * 6, 0.45, 0.5);
@@ -1473,7 +1487,8 @@ function updateLook(dt, instant) {
   applyPalette(look.f);
   scene.background.copy(look.sky); scene.fog.color.copy(look.sky); scene.fog.near = look.near; scene.fog.far = look.far;
   if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
-  for (const m of world.fogPlanes || []) { m.visible = !state.scope; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }
+  for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
+  for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
@@ -1505,11 +1520,12 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   lowCabinet: { w: 0.9 }, slippers: { w: 0.32 },
   sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.15 }, sheetSofa: { w: 2.3 }, housePlant: { h: 0.8 }, sheetBookshelf: { h: 2.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
   wallClock: { w: 0.36 }, diningTable: { h: 0.74 }, diningChair: { h: 0.92 },
-  cityRow: { w: 32 }, cityRow_lo: { w: 32 }, cityFlat: { w: 56 }, cityFlat_lo: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityWarehouse_lo: { h: 24 },
-  cityTower: { h: 50 }, cityTower_lo: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, dyke: { w: 70 }, cloudB: { w: 70 },
+  cityRow: { w: 32 }, cityFlat: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityTower: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, cloudB: { w: 70 },
   debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
+// 天台近处的几栋远景楼：桌面上用高精度版本（每栋 10–20 万面），手机上用 2.5 万面的
+if (!TOUCH) Object.assign(MODEL_SIZE, { cityRowHi: MODEL_SIZE.cityRow, cityWarehouseHi: MODEL_SIZE.cityWarehouse, cityChurchHi: MODEL_SIZE.cityChurch, cityBridgeHi: MODEL_SIZE.cityBridge });
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
@@ -2397,30 +2413,18 @@ function debugCollectAll() { (FLOORS[state.floor].keys || []).forEach(k => state
  * ===================================================================*/
 const clock = new THREE.Clock();
 function buildCity(R, fRing, live) {
-  const rr = mulberry32(99), CELL = 46, CANAL = 12, half = (CELL - CANAL) / 2, inst = {}, rings = [];
-  const add = (id, x, z, ry, sink) => { const S = MODELS[id]?.size; if (!S) return;
-    (inst[id] ||= []).push({ x, z, ry, y: SEA_Y - S.y * sink, tx: (rr() - 0.5) * 0.05, tz: (rr() - 0.5) * 0.05 });
-    if (Math.hypot(x - 12, z + 9) < 210) rings.push([x, z, Math.max(S.x, S.z) * 0.55]); };
-  const churches = [[2, -2], [-1, 3], [6, 2]];   // 教堂所在的街区（网格坐标），这几块不放别的楼
-  for (const [gx, gz] of churches) add('cityChurch', 12 + gx * CELL, -9 + gz * CELL, rr() * 6.3, 0.18 + rr() * 0.08);
-  for (let gx = -10; gx <= 10; gx++) for (let gz = -10; gz <= 10; gz++) {
-    if (churches.some(([a, b]) => a === gx && b === gz)) continue;
-    const cx = 12 + gx * CELL, cz = -9 + gz * CELL, d = Math.hypot(cx - 12, cz + 9), ang = Math.atan2(cz + 9, cx - 12);
-    if (d < 60 || d > (TOUCH ? 300 : 400)) continue;
-    if (Math.abs(Math.atan2(Math.sin(ang - Math.PI), Math.cos(ang - Math.PI))) < 0.5 && d < 330) continue;   // 西面的开阔海
-    if (rr() < 0.2) continue;   // 整片沉下去了的街区
-    const lo = d > 130 ? '_lo' : '', zone = d < 150 ? 0 : d < 290 ? 1 : 2;
-    const edges = [[0, -half + 4, Math.PI], [0, half - 4, 0], [-half + 4, 0, -Math.PI / 2], [half - 4, 0, Math.PI / 2]];
-    if (zone === 0) {
-      for (const [ox, oz, ry] of edges) { if (rr() < 0.2) continue; add((rr() < 0.18 ? 'cityWarehouse' : 'cityRow') + lo, cx + ox, cz + oz, ry + (rr() - 0.5) * 0.06, 0.22 + rr() * 0.15); }
-      if (rr() < 0.35) add('cityBridge', cx + CELL / 2, cz + (rr() - 0.5) * 10, Math.PI / 2 * (rr() < 0.5 ? 0 : 1), 0.2);   // 运河上的吊桥
-    } else if (zone === 1) {
-      const [ox, oz, ry] = edges[Math.floor(rr() * 4)]; add('cityFlat' + lo, cx + ox * 0.6, cz + oz * 0.6, ry + (rr() - 0.5) * 0.05, 0.3 + rr() * 0.12);
-      if (rr() < 0.5) { const e = edges[Math.floor(rr() * 4)]; add((rr() < 0.3 ? 'cityWarehouse' : 'cityRow') + lo, cx + e[0], cz + e[1], e[2], 0.25 + rr() * 0.15); }
-    } else {
-      if (rr() < 0.55) add('cityTower' + lo, cx + (rr() - 0.5) * 12, cz + (rr() - 0.5) * 12, rr() * 6.3, 0.3 + rr() * 0.2);
-      else add('cityFlat' + lo, cx, cz, Math.floor(rr() * 4) * Math.PI / 2, 0.35 + rr() * 0.1);
-    }
+  // 远处沉没的城镇：近处 4 栋是 3D 模型（120–200 米），更远的 6 栋是概念图做的立牌（230–330 米，始终朝着玩家），西面灯塔那边留空
+  const rr = mulberry32(99), inst = {}, rings = [];
+  const add = (id, x, z, sink) => { id = MODELS[id + 'Hi'] ? id + 'Hi' : id; const S = MODELS[id]?.size; if (!S) return;
+    (inst[id] ||= []).push({ x, z, ry: Math.atan2(12 - x, -9 - z) + (rr() - 0.5) * 0.4, y: SEA_Y - S.y * sink, tx: (rr() - 0.5) * 0.03, tz: (rr() - 0.5) * 0.03 });
+    rings.push([x, z, Math.max(S.x, S.z) * 0.55]); };
+  for (const [id, x, z, sink] of [['cityRow', 128, -86, 0.24], ['cityBridge', 104, -110, 0.18], ['cityChurch', 172, 28, 0.2], ['cityWarehouse', -18, -150, 0.24]]) add(id, x, z, sink);
+  live.boards = [];
+  for (const [id, x, z, h] of [['cityFlat', 70, -250, 40], ['cityTower', 280, -190, 56], ['cityRow', -130, -180, 20], ['cityFlat', -100, 250, 42], ['cityTower', 80, 285, 52], ['cityChurch', -170, 205, 42]]) {
+    const im = IMG['bb_' + id]; if (!im) continue;
+    const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
+    const w = h * im.width / im.height, m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), new THREE.MeshBasicMaterial({ map: t, alphaTest: 0.35, side: THREE.DoubleSide }));
+    m.position.set(x, SEA_Y - h * 0.04, z); R.add(m); live.boards.push(m); rings.push([x, z, w * 0.5]);
   }
   const e = new THREE.Euler(), q = new THREE.Quaternion(), one = V(1, 1, 1);
   for (const id in inst) {
@@ -2447,6 +2451,7 @@ function updateRoof(dt) {
     u.wings[0].rotation.z = flap; u.wings[1].rotation.z = -flap;
   }
   for (const r of L.rings) r.rotation.y += dt * 0.03;
+  for (const b of L.boards || []) b.rotation.y = Math.atan2(camera.position.x - b.position.x, camera.position.z - b.position.z);   // 立牌转向玩家
   foamMats.forEach((m, i) => { m.opacity = 0.6 + 0.25 * Math.sin(t * 1.2 + i * 2); if (i === 0) m.map.offset.x = t * 0.02; });
 }
 // 过渡房间里一直提示该做什么；站着不动 3 秒左上角浮出操作说明

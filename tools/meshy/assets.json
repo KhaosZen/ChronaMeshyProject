@@ -293,12 +293,6 @@
       "texture": 1024
     },
     {
-      "key": "dyke",
-      "prompt": "a long broken section of a concrete sea dyke wall with a crack and missing chunks, moss on top",
-      "target_polycount": 1500,
-      "note": "远景：堤坝残段"
-    },
-    {
       "key": "cloudB",
       "note": "天空：云",
       "prompt": "a long flat soft cloud made of smooth round white puffs merged in a row",
@@ -431,51 +425,63 @@
     },
     {
       "key": "cityRow",
+      "note": "远景：运河屋一排",
       "image": "refs/cityRow.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：运河屋一排"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityFlat",
+      "note": "远景：外廊式公寓楼",
       "image": "refs/cityFlat.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：外廊式公寓楼"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityChurch",
+      "note": "远景：教堂",
       "image": "refs/cityChurch.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：教堂"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityWarehouse",
+      "note": "远景：仓库",
       "image": "refs/cityWarehouse.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：仓库"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityTower",
+      "note": "远景：写字楼",
       "image": "refs/cityTower.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：写字楼"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     },
     {
       "key": "cityBridge",
+      "note": "远景：吊桥",
       "image": "refs/cityBridge.png",
-      "target_polycount": 6000,
       "ai_model": "latest",
-      "texture": 1024,
-      "note": "远景：吊桥"
+      "texture": 2048,
+      "remesh": false,
+      "simplify": 0.03,
+      "simplifyError": 0.002
     }
   ]
 }
