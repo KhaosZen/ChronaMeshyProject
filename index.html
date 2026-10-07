@@ -199,7 +199,7 @@ const LOOK = {
   2: { f: 0.25, lamp: 5.4, lampColor: '#dcd6c8', sun: 0.60, hemi: 0.50, env: 0.34, fog: [7, 32] },
   3: { f: 0.55, lamp: 5.6, lampColor: '#f3d3a4', sun: 0.90, hemi: 0.54, env: 0.38, fog: [8, 42] },
   4: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 1.20, hemi: 0.60, env: 0.42, fog: [9, 55] },
-  5: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 3.80, hemi: 0.62, env: 0.38, fog: [25, 430], sky: '#c6d0de' },   // 清晨：暖色低太阳、冷色天光和雾
+  5: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 3.60, hemi: 0.55, env: 0.32, fog: [25, 430], sky: '#dcae90' },   // 夕阳：橙色低太阳、紫蓝天光、暖色的雾和地平线
 };
 // 每把「钥匙」只出现在跟它有关的摆放点（鞋柜=门口，电话桌、边桌、纸箱……）
 const KEY_SPOTS = { photo: [3, 2, 6], lamp: [2, 4, 8], radio: [6, 2, 4], poster: [5, 7, 3],
@@ -248,12 +248,12 @@ const hemi = new THREE.HemisphereLight('#c8ccd0', '#2a2622', 0.3); scene.add(hem
 scene.environmentIntensity = 0.25;
 // 楼内用正上方的平行光：墙面不受朝向影响，楼梯两端的复制品才看起来完全一样
 const sun = new THREE.DirectionalLight('#fff1d8', 0.3); sun.position.set(0, 50, 0); scene.add(sun, sun.target);
-// 天台：清晨，太阳从东边低低地照过来（暖），天光偏冷；桌面端开实时阴影（只有天台上的东西投/接阴影）
-const ROOF_SUN = new THREE.Vector3(60, 20, -10), ROOF_C = new THREE.Vector3(13, 3, -8);
+// 天台：夕阳，太阳从西边（家门那一侧）低低地照过来，橙色的光、偏紫蓝的天光；桌面端开实时阴影（只有天台上的东西投/接阴影）
+const ROOF_SUN = new THREE.Vector3(-70, 13, 14), ROOF_C = new THREE.Vector3(13, 3, -8);
 if (!TOUCH) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; sun.castShadow = true;
   Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 160 }); sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04; }
 function sunFor(roofOn) {
-  if (roofOn) { sun.position.copy(ROOF_C).addScaledVector(ROOF_SUN.clone().normalize(), 80); sun.target.position.copy(ROOF_C); sun.color.set('#ffb070'); }
+  if (roofOn) { sun.position.copy(ROOF_C).addScaledVector(ROOF_SUN.clone().normalize(), 80); sun.target.position.copy(ROOF_C); sun.color.set('#ff8f50'); }
   else { sun.position.set(0, 50, 0); sun.target.position.set(0, 0, 0); sun.color.set('#fff1d8'); }
 }
 
@@ -1041,10 +1041,10 @@ function anchorTop(res, dx = 0.2) {
 }
 
 // 带树皮贴图的枝条：沿曲线的锥形管，u 绕一圈、v 按长度走（和树干同一张贴图、同样的密度）
-function barkTube(points, r0, r1, mat, seg = 28, radial = 12) {
+function barkTube(points, r0, r1, mat, seg = 28, radial = 12, rFn = null) {   // rFn(t)：自定义粗细（0 = 起点，1 = 枝头）
   const curve = new THREE.CatmullRomCurve3(points), L = curve.getLength(), frames = curve.computeFrenetFrames(seg, false), pos = [], uv = [], idx = [];
   for (let i = 0; i <= seg; i++) {
-    const t = i / seg, p = curve.getPointAt(t), r = r0 + (r1 - r0) * Math.pow(t, 0.75), N = frames.normals[i], B = frames.binormals[i];
+    const t = i / seg, p = curve.getPointAt(t), r = rFn ? rFn(t) : r0 + (r1 - r0) * Math.pow(t, 0.75), N = frames.normals[i], B = frames.binormals[i];
     for (let j = 0; j <= radial; j++) { const a = j / radial * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
       pos.push(p.x + r * (c * N.x + s * B.x), p.y + r * (c * N.y + s * B.y), p.z + r * (c * N.z + s * B.z)); uv.push(j / radial, t * L / (2 * Math.PI * r0 / 1.5)); }
   }
@@ -1097,11 +1097,15 @@ function buildGreenery() {
     const w = V(x, 1.6, z), from = w.clone().sub(TREE).setY(0).normalize(), start = TREE.clone().addScaledVector(from, 1.2).setY(2.9);
     const tip = w.clone().addScaledVector(n, 1.4).add(V(n.z * 0.3, 0.3, n.x * 0.3));
     const g = new THREE.Group(), bm = world.barkMat, lb = !bm && MODELS.longBranch && model('longBranch'), br = !bm && !lb && model('treeBranch');
-    if (bm) { // 一根从树干里长出来的枝：起点埋在树干里，低低地穿过窗洞，进走廊后往上弯，越来越细；中途分出一根小枝，枝头长叶
-      const dir = w.clone().sub(TREE).setY(0).normalize(), side = V(-dir.z, 0, dir.x), wy = 1.25;
-      const pts = [TREE.clone().addScaledVector(dir, 0.6).setY(0.6), TREE.clone().addScaledVector(dir, 2.6).setY(0.95), w.clone().addScaledVector(n, -1.2).setY(1.15).addScaledVector(side, 0.15),
-        w.clone().setY(wy), w.clone().addScaledVector(n, 0.9).setY(1.55).addScaledVector(side, -0.12), w.clone().addScaledVector(n, 1.7).setY(2.15).addScaledVector(side, 0.1)];
-      g.add(barkTube(pts, 0.34, 0.035, bm, 40));
+    if (bm) { // 一根从树干里长出来的枝：从窗下方两三米的主干上长出（根部粗、带一圈鼓起的枝领），斜着往上穿过窗洞，进走廊后继续上扬、越来越细；中途分出小枝，枝头长叶
+      const dir = w.clone().sub(TREE).setY(0).normalize(), side = V(-dir.z, 0, dir.x), D = Math.hypot(w.x - TREE.x, w.z - TREE.z), sw = (Math.round(x) % 2 ? 1 : -1) * 0.25;
+      const pts = [TREE.clone().addScaledVector(dir, 1.6).setY(-3.5), TREE.clone().addScaledVector(dir, 3.1).setY(-2.6), TREE.clone().addScaledVector(dir, D * 0.55).setY(-0.7).addScaledVector(side, sw),
+        w.clone().addScaledVector(n, -1.0).setY(0.85).addScaledVector(side, sw * 0.5), w.clone().setY(1.3), w.clone().addScaledVector(n, 0.8).setY(1.65).addScaledVector(side, -0.12), w.clone().addScaledVector(n, 1.6).setY(2.15).addScaledVector(side, 0.1)];
+      const rFn = t => (0.032 + 0.6 * Math.pow(1 - t, 1.6) + 0.45 * Math.exp(-t * 16)) * (1 + 0.07 * Math.sin(t * 23 + x));   // 根部粗、往外收细，粗细略有起伏
+      g.add(barkTube(pts, 0.6, 0.03, bm, 56, 12, rFn));   // r0 只用来定树皮贴图的纵向比例
+      { const a = pts[2], c = a.clone().addScaledVector(side, -sw * 4 - 0.6).add(V(0, 1.4, 0)).addScaledVector(dir, 0.6), e = c.clone().addScaledVector(side, -0.5).add(V(0, 1.0, 0)).addScaledVector(dir, 0.3);   // 天井里分出的一根侧枝
+        g.add(barkTube([a.clone().addScaledVector(dir, -0.2), c, e], 0.13, 0.02, bm, 16, 8));
+        const l = modelShared('ivyClump'); if (l) { l.position.copy(e); l.scale.setScalar(0.9); l.rotation.set(0.3, x, 0.2); g.add(l); } }
       const fork = w.clone().addScaledVector(n, 0.55).setY(1.4);
       g.add(barkTube([fork.clone().addScaledVector(n, -0.15), fork.clone().addScaledVector(side, 0.35).addScaledVector(n, 0.3).setY(1.65), fork.clone().addScaledVector(side, 0.6).addScaledVector(n, 0.75).setY(1.75)], 0.07, 0.02, bm, 12, 8));
       const tips = [pts[5], fork.clone().addScaledVector(side, 0.6).addScaledVector(n, 0.75).setY(1.75), pts[4]];
@@ -1188,16 +1192,26 @@ function roofTreeFit(o, forkY) {
 function leafCards(crown, parent) {
   const im = IMG.leafCluster; if (!im) return;
   const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
-  const mat = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); greenMats.push(mat);
-  mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n  if (abs(dot(normalize(vNormal), normalize(vViewPosition))) < 0.35) discard;'); };
+  const mat = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, emissive: '#ffffff', emissiveMap: t, emissiveIntensity: 0.12 }); greenMats.push(mat);
+  // 法线用「从树冠中心往外」的方向（每片卡片在 JS 里算好），两面一样亮：从下面看不会一片片发黑；擦边的薄片用真实面法线判断后丢掉
+  mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader
+    .replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n  { vec3 fn = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition))); if (abs(dot(fn, normalize(vViewPosition))) < 0.3) discard; }')
+    .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);'); };
   crown.updateMatrixWorld(true); const pts = [], v = V(0, 0, 0), f = crown.userData.fork, top = crown.userData.top, cx = crown.position.x, cz = crown.position.z, H = top - f;
   crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y > f - H * 0.05) pts.push(v.clone()); } });
   const rr = mulberry32(77), chosen = [], plane = new THREE.PlaneGeometry(1, 1);
   for (let t = 0; t < 5000 && chosen.length < 60; t++) { const p = pts[Math.floor(rr() * pts.length)]; if (Math.hypot(p.x - cx, p.z - cz) < 3.2 && p.y < f + H * 0.6) continue; if (chosen.some(q => q.distanceTo(p) < H * 0.13)) continue; chosen.push(p); }
+  const C = V(cx, f + H * 0.4, cz), q = new THREE.Quaternion();
   for (const p of chosen) {
     const g = new THREE.Group(), out = V(p.x - cx, 0, p.z - cz).normalize().multiplyScalar(H * 0.05);
     for (let k = 0; k < 3; k++) { const m = new THREE.Mesh(plane, mat); if (k === 2) m.rotation.x = -Math.PI / 2; else m.rotation.y = k * Math.PI / 2 + rr(); g.add(m); }
     g.position.copy(p).add(out).add(V(0, H * 0.04, 0)); g.rotation.set(rr() * 0.6, rr() * 6, rr() * 0.6); g.scale.setScalar(H * (0.24 + rr() * 0.14)); parent.add(g);
+    const dir = g.position.clone().sub(C).normalize();
+    for (const m of g.children) {   // 每片卡片自己的法线：树冠外向 + 一点按顶点位置的弧度
+      q.copy(g.quaternion).multiply(m.quaternion).invert(); const d = dir.clone().applyQuaternion(q), geo = plane.clone(), P = geo.attributes.position, N = geo.attributes.normal;
+      for (let i = 0; i < P.count; i++) { const n = V(P.getX(i), P.getY(i), 0).multiplyScalar(0.6).add(d).normalize(); N.setXYZ(i, n.x, n.y, n.z); }
+      m.geometry = geo;
+    }
   }
 }
 function barkTrunk(crown, at, y0) {
@@ -1254,15 +1268,16 @@ function barkTrunk(crown, at, y0) {
   return new THREE.Mesh(g, mat);
 }
 // 树冠模型里的树干和枝条换成和程序树干同一张树皮（按世界坐标三面投影），叶子（偏绿的像素）保持原样：整棵树看起来是一体的
-function barkBlend(mat, bark) {
+function barkBlend(mat, bark, dropAbove = null) {   // dropAbove：这个高度（世界坐标）以上，模型自带的绿叶碎片直接丢掉
   mat.onBeforeCompile = sh => {
-    sh.uniforms.barkMap = { value: bark };
+    sh.uniforms.barkMap = { value: bark }; sh.uniforms.dropY = { value: dropAbove ?? 1e9 };
     sh.vertexShader = 'varying vec3 vBWP; varying vec3 vBWN;\n' + sh.vertexShader.replace('#include <worldpos_vertex>',
       '#include <worldpos_vertex>\n vBWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vBWN = normalize(mat3(modelMatrix) * objectNormal);');
-    sh.fragmentShader = 'uniform sampler2D barkMap; varying vec3 vBWP; varying vec3 vBWN;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = 'uniform sampler2D barkMap; uniform float dropY; varying vec3 vBWP; varying vec3 vBWN;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       { vec3 w = abs(vBWN); w = pow(w, vec3(4.0)); w /= (w.x + w.y + w.z); vec3 q = vBWP * 0.33;
         vec3 bk = texture2D(barkMap, q.zy).rgb * w.x + texture2D(barkMap, q.xz).rgb * w.y + texture2D(barkMap, q.xy).rgb * w.z;
         vec3 c = diffuseColor.rgb; float leaf = smoothstep(0.004, 0.03, c.g - max(c.r, c.b) * 0.92);
+        if (vBWP.y > dropY && c.g > c.r * 0.95 && c.g > c.b * 1.15) discard;
         diffuseColor.rgb = mix(bk * 0.95, c, leaf); }`);
   };
   mat.needsUpdate = true;
@@ -1294,14 +1309,14 @@ function buildCourtyard() {
   if (MODELS.roofTree && IMG.bark) { // 天台专用的整棵树（Meshy）：自带一长截圆柱主干，下面接程序生成的主干，两段一样粗、一样的树皮，接口埋在楼下
     const crown = model('roofTree'); roofTreeFit(crown, 9.5); crown.position.x += T0.x; crown.position.z += T0.z; tree.add(crown);
     const trunk = barkTrunk(crown, T0, -32); tree.add(trunk);
-    crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, trunk.material.normalMap); });
+    crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, crown.userData.fork + 1.0); });   // 分叉以上模型自带的零碎树叶不要（看起来像碎片）
     leafCards(crown, tree);   // 多视图生成的模型树叶很少：枝头补叶团
     return;
   }
   if (MODELS.treeTrunk && MODELS.treeCrown) { // Meshy：几段树干从水下接到楼顶以上，顶上是树冠
     const crown = model('treeCrown'); crown.position.set(T0.x, 8.5, T0.z); tree.add(crown);
     const trunk = IMG.bark && barkTrunk(crown, T0, -32);
-    if (trunk) crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, trunk.material.normalMap); });   // 一整根连续的树干（没有接缝），顶端收进树冠底部
+    if (trunk) crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map); });   // 一整根连续的树干（没有接缝），顶端收进树冠底部
     if (trunk) tree.add(trunk);
     if (trunk && MODELS.ivyClump) { // 接口缠一圈常春藤，再往下垂几串：盖住主干和树冠的接缝
       const J = world.trunkJoin, rr = mulberry32(41);
@@ -1351,14 +1366,14 @@ function buildRoof() {
   // 天空：程序生成的渐变穹顶（地平线 = 雾色，和海面远处接上）+ 太阳
   R.add(new THREE.Mesh(new THREE.SphereGeometry(820, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { horizon: { value: scene.fog.color }, zenith: { value: new THREE.Color('#4a76b4') }, sunDir: { value: ROOF_SUN.clone().normalize() } },
+    uniforms: { horizon: { value: scene.fog.color }, zenith: { value: new THREE.Color('#34508a') }, sunDir: { value: ROOF_SUN.clone().normalize() } },
     vertexShader: 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `uniform vec3 horizon, zenith, sunDir; varying vec3 vDir;
       void main() {
         vec3 d = normalize(vDir); float h = max(d.y, 0.0), s = max(dot(d, sunDir), 0.0);
         vec3 col = mix(horizon, zenith, pow(h, 0.55));
-        col = mix(col, vec3(1.0, 0.72, 0.5), pow(s, 3.0) * 0.55 * (1.0 - h));   // 太阳那一侧的地平线是晨光的橙粉色
-        col += vec3(1.0, 0.82, 0.58) * (pow(s, 6.0) * 0.25 + pow(s, 120.0) * 0.8) + vec3(1.0, 0.97, 0.9) * smoothstep(0.9986, 0.9993, s) * 3.0;
+        col = mix(col, vec3(1.0, 0.55, 0.3), pow(s, 2.5) * 0.75 * (1.0 - h));   // 太阳那一侧的天边烧成橙红
+        col += vec3(1.0, 0.7, 0.42) * (pow(s, 6.0) * 0.3 + pow(s, 120.0) * 0.9) + vec3(1.0, 0.97, 0.9) * smoothstep(0.9986, 0.9993, s) * 3.0;
         gl_FragColor = vec4(d.y < 0.0 ? horizon : col, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -1620,7 +1635,7 @@ function applyRoomNotes(n) {
 
 const _fogWhite = new THREE.Color('#c9d0d6');
 const look = { f: 0, lamp: 5.4, hemi: 0.48, sun: 0.4, env: 0.3, near: 5, far: 22, sky: new THREE.Color(PAL0.sky), lampColor: new THREE.Color('#b4c6de') };
-const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1), _hRoof = new THREE.Color('#9fb6d8');
+const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1), _hRoof = new THREE.Color('#8d8fbd');
 let lookTo = null;
 function lookTarget(n) {
   const L = LOOK[n];
@@ -1638,7 +1653,7 @@ function updateLook(dt, instant) {
   for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
   for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
   for (const g of world.innerWin || []) g.visible = g.userData.on !== false && !state.roofMode;
-  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
+  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = state.roofMode ? look.sun : state.lightsOn ? look.sun * 0.35 : 0;   // 室内的太阳是穿过天花板的假光：只留一点补光，关灯时归零
   if (state.roofMode) hemi.color.copy(_hRoof); document.body.classList.toggle('cine', state.roofMode); renderer.shadowMap.autoUpdate = state.roofMode;   // 天台：冷色天光 + 暗角
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
@@ -2045,6 +2060,15 @@ const sfx = {
     for (let i = 0; i < k; i++) { const t = t0 + i * 0.32, o = audio.createOscillator(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 1800, Q: 3 }), g = audio.createGain();
       o.type = 'sawtooth'; o.frequency.setValueAtTime(1500 + Math.random() * 300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.25); env(g, t, 0.02, 0.35, 0.22); o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + 0.3); }
   },
+  bird(pos, gain = 0.22) { // 小鸟：一串快速上下滑的啁啾（偶尔带颤音），每次随机换一种叫法
+    const t0 = audio.currentTime, out = outNode(pos, gain), k = 2 + Math.floor(Math.random() * 5), base = 2600 + Math.random() * 1600, trill = Math.random() < 0.35;
+    for (let i = 0; i < k; i++) {
+      const t = t0 + i * (0.09 + Math.random() * 0.08), o = audio.createOscillator(), g = audio.createGain(), up = Math.random() < 0.5, f0 = base * (0.85 + Math.random() * 0.3);
+      o.frequency.setValueAtTime(up ? f0 * 0.75 : f0 * 1.2, t); o.frequency.exponentialRampToValueAtTime(up ? f0 * 1.25 : f0 * 0.7, t + 0.07);
+      if (trill) { const l = audio.createOscillator(), lg = audio.createGain(); l.frequency.value = 38; lg.gain.value = f0 * 0.08; l.connect(lg).connect(o.frequency); l.start(t); l.stop(t + 0.1); }
+      env(g, t, 0.006, 0.3, 0.07); o.connect(g).connect(out); o.start(t); o.stop(t + 0.12);
+    }
+  },
   sea() { // 天台：持续的海浪 + 风（低通噪声，音量缓慢起伏）；返回总音量节点，结局时淡出
     const out = audio.createGain(); out.gain.value = 0; out.connect(audio.destination); out.gain.linearRampToValueAtTime(1, audio.currentTime + 3);
     for (const [fq, gain, rate] of [[420, 0.10, 0.11], [1600, 0.025, 0.07]]) {
@@ -2098,10 +2122,12 @@ function startSound(pos, kind = 'blip') {
 }
 function stopSound(s) { if (s) { clearInterval(s.timer); sounds.delete(s); } }
 // 楼层氛围声：2 楼远处的撤离广播，4 楼有人哼歌
-let seaBed = null, gullT = 3;
+let seaBed = null, gullT = 3, birdT = 1.5;
 function ambience(dt) {
   if (audio && state.phase === 'roof') { // 天台：海浪和风一直在，海鸥时不时叫几声
     if (!seaBed) seaBed = sfx.sea();
+    if ((birdT -= dt) < 0) { birdT = 1.2 + Math.random() * 4; const a = Math.random() * 6.3;   // 树冠里的小鸟
+      sfx.bird(V(TREE.x + Math.cos(a) * 6, 12 + Math.random() * 6, TREE.z + Math.sin(a) * 6), 0.18 + Math.random() * 0.12); }
     if ((gullT -= dt) < 0) { gullT = 4 + Math.random() * 7; const g = world.roofLive.gulls[Math.floor(Math.random() * world.roofLive.gulls.length)]; sfx.gull(g?.getWorldPosition(V(0, 0, 0))); }
     return;
   }
@@ -2109,6 +2135,7 @@ function ambience(dt) {
   state.ambT += dt;
   if (state.floor === 2 && state.ambT > 16) { state.ambT = 0; sfx.broadcast(null, 5, 0.04); }
   if (state.floor === 4 && state.ambT > 14) { state.ambT = 0; sfx.hum(); }
+  if (state.floor >= 3 && (birdT -= dt) < 0) { birdT = 7 + Math.random() * 9; sfx.bird(V(TREE.x, 2.5, TREE.z), 0.08); }   // 3 楼起，天井的树上偶尔有鸟叫
 }
 function updateListener() {
   if (!audio) return; const L = audio.listener, f = V(0, 0, -1).applyQuaternion(camera.quaternion);
