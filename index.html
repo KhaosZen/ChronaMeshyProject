@@ -57,6 +57,8 @@
   #mp input { font: inherit; width: 6em; text-align: center; letter-spacing: .3em; text-transform: uppercase; background: rgba(0,0,0,.3); color: inherit; border: 1px solid rgba(214,208,194,.5); padding: 5px; }
   #mpPanel { max-width: 30em; line-height: 1.7; text-align: left; opacity: .85; }
   #mpPanel b { font-size: 20px; letter-spacing: .3em; }
+  #mpPanel:empty { display: none; }
+  #mp > #mpBack { opacity: .65; font-size: 14px; }
   /* 触屏：左半屏拖出摇杆，右半屏拖动转视角，能交互时出现 Use 按钮；竖屏时提示横过来 */
   #touch { display: none; pointer-events: auto; touch-action: none; }
   #stickBase { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
@@ -90,7 +92,7 @@
     <button class="mi" id="mSolo" disabled>Loading…</button>
     <button class="mi" id="restart"></button>
     <button class="mi exp" id="mCoop"></button>
-    <div class="sub" id="mp"><button id="mpJoin"></button><button id="mpHost"></button><div id="mpPanel"></div></div>
+    <div class="sub" id="mp"><button id="mpJoin"></button><button id="mpHost"></button><div id="mpPanel"></div><button id="mpBack" hidden></button></div>
     <button class="mi exp" id="mLang"></button>
     <div class="sub" id="langs"></div>
     <p id="startText"></p>
@@ -2269,7 +2271,7 @@ const MENU = {
 };
 document.querySelector('#end .t').textContent = tr('HOME', 'おかえり', '回家', '回家'); $('useBtn').textContent = tr('USE', '使う', '使用', '使用');
 $('rotateText').textContent = tr('Turn your phone sideways to play', '横向きにして遊んでください', '请横屏游玩', '請橫向遊玩');
-$('restart').textContent = MENU.restart; $('mCoop').textContent = MENU.coop; $('mpJoin').textContent = MENU.join; $('mpHost').textContent = MENU.invite; $('mLang').textContent = MENU.lang;
+$('restart').textContent = MENU.restart; $('mCoop').textContent = MENU.coop; $('mpJoin').textContent = MENU.join; $('mpHost').textContent = MENU.invite; $('mpBack').textContent = tr('← Back', '← 戻る', '← 返回', '← 返回'); $('mLang').textContent = MENU.lang;
 $('help').innerHTML = TOUCH ? tr('Left thumb move · Right thumb look<br>Tap USE to interact', '左の親指で移動 · 右の親指で見回す<br>「使う」をタップで調べる', '左手拇指移动 · 右手拇指转视角<br>点“使用”进行互动', '左手拇指移動 · 右手拇指轉視角<br>點「使用」進行互動')
   : tr('WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause', 'WASD 移動 · Shift 速く歩く · マウス 見回す<br>E / クリック 調べる · Esc 一時停止', 'WASD 移动 · Shift 快走 · 鼠标 转视角<br>E / 点击 互动 · Esc 暂停', 'WASD 移動 · Shift 快走 · 滑鼠 轉視角<br>E / 點擊 互動 · Esc 暫停');
 function menuLabels() {
@@ -2512,7 +2514,7 @@ function joinRoom(code, status) { // 母亲：用房间码找到孩子
     net.sig.send({ t: 'answer', from: net.id, to: m.from, sdp: pc.localDescription.sdp });
   });
   const hello = () => net.sig.send({ t: 'hello', from: net.id }); hello(); net.hello = setInterval(hello, 2500);
-  setTimeout(() => { if (!net.synced) status(tr("Couldn't connect. Check the code — or play on your own.", '接続できませんでした。コードを確認するか、ひとりで遊んでください。', '连接失败。请检查房间码，或者单人游戏。', '連線失敗。請檢查房間碼，或者單人遊戲。')); }, 30000);
+  setTimeout(() => { if (!net.synced && net.code === code) status(tr("Couldn't connect. Check the code — or play on your own.", '接続できませんでした。コードを確認するか、ひとりで遊んでください。', '连接失败。请检查房间码，或者单人游戏。', '連線失敗。請檢查房間碼，或者單人遊戲。')); }, 30000);
 }
 function ghostify(o, color, opacity) { // 母亲在孩子眼里：发暖光的半透明人形
   o.traverse(m => { if (!m.isMesh) return; const mt = m.material; mt.transparent = true; mt.opacity = opacity; mt.depthWrite = false;
@@ -2582,10 +2584,20 @@ function showBeam(id) {
   if (audio) sfx.chime(v);
   if (!net.told.beam) { net.told.beam = true; say(tr('A warm light… like someone is showing me the way.', 'あたたかい光……誰かが道を教えてくれているみたいだ。', '一束温暖的光……像是有人在为我指路。', '一束溫暖的光……像是有人在為我指路。'), 3500); }
 }
+// 合作的两条流程都能「返回」：断开信令和连接，回到两个选项；协助者已经同步过房主的进度时，直接重新载入回到干净的主菜单
+function leaveRoom() {
+  if (net.role === 'mother' && net.synced) { location.reload(); return; }
+  clearInterval(net.hello); net.sig?.close();
+  if (net.dc) { net.dc.onclose = null; net.dc.close(); } net.pc?.close();
+  if (net.avatar) { building.remove(net.avatar); net.avatar = null; }
+  Object.assign(net, { role: null, code: null, sig: null, pc: null, dc: null, target: null, synced: false });
+  $('mpPanel').innerHTML = ''; $('mpBack').hidden = true; $('mpJoin').style.display = $('mpHost').style.display = ''; menuLabels();
+}
+$('mpBack').addEventListener('click', e => { e.stopPropagation(); leaveRoom(); });
 $('mpHost').addEventListener('click', e => {
   e.stopPropagation(); if (net.role) return;
   const code = hostRoom();
-  $('mpJoin').style.display = 'none'; $('mpHost').style.display = 'none';
+  $('mpJoin').style.display = 'none'; $('mpHost').style.display = 'none'; $('mpBack').hidden = false;
   $('mpPanel').innerHTML = tr(`Room code <b>${code}</b><br>Your helper opens this world, chooses Co-op → “${MENU.join}” and types this code. You can start now — they can join any time.`,
     `ルームコード <b>${code}</b><br>協力者はこのワールドを開き、協力プレイ →「${MENU.join}」を選んでこのコードを入力します。先に始めても大丈夫、あとからいつでも参加できます。`,
     `房间码 <b>${code}</b><br>协助者打开这个世界，选择 合作 →“${MENU.join}”，输入这个房间码。你可以先开始，对方随时都能加入。`,
@@ -2593,7 +2605,7 @@ $('mpHost').addEventListener('click', e => {
 });
 $('mpJoin').addEventListener('click', e => {
   e.stopPropagation(); if (net.role) return;
-  $('mpHost').style.display = 'none'; $('mpJoin').style.display = 'none';
+  $('mpHost').style.display = 'none'; $('mpJoin').style.display = 'none'; $('mpBack').hidden = false;
   $('mpPanel').innerHTML = `${tr('Room code', 'ルームコード', '房间码', '房間碼')} <input id="mpCode" maxlength="4" autocomplete="off"> <button id="mpGo">${tr('Join', '参加', '加入', '加入')}</button>`;
   const go = () => { const c = $('mpCode').value.trim().toUpperCase(); if (c.length !== 4) return; joinRoom(c, t => { $('mpPanel').textContent = t; }); menuLabels(); };
   $('mpGo').addEventListener('click', go); $('mpCode').addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') go(); });
