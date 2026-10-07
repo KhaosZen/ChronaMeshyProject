@@ -556,10 +556,10 @@ function buildStairwell(ctx, withReplicaDoor, upperCtx) {   // 两侧墙从 z=-1
   if (upperCtx) {
     solid(ctx, 0.1, 0.3, -3.2, 0, -10, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 0, -10, -0.2, M.wallStair);
     solid(upperCtx, 0.1, 0.3, 0, 3.2, -10, -0.2, M.wallStair); solid(upperCtx, 2.7, 2.9, 0, 3.2, -10, -0.2, M.wallStair);
-    solid(upperCtx, 0.1, 2.9, 3, 3.2, -10, 0, M.ceil, false);
+    solid(upperCtx, 0.3, 2.7, 3, 3.2, -10, 0, M.ceil, false);   // 顶板夹在两面墙中间，不和墙顶重叠（重叠会闪）
   } else {
     solid(ctx, 0.1, 0.3, -3.2, 3.2, -10, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 3.2, -10, -0.2, M.wallStair);
-    solid(ctx, 0.1, 2.9, 3, 3.2, -10, 0, M.ceil, false);
+    solid(ctx, 0.3, 2.7, 3, 3.2, -10, 0, M.ceil, false);
   }
   if (withReplicaDoor) { // 与过渡房间西门一模一样的关着的门（门后没有房间）
     solid(ctx, 0.1, 0.9, -3.2, 3.2, -10.2, -10, M.wallStair); solid(ctx, 2.1, 2.9, -3.2, 3.2, -10.2, -10, M.wallStair);
@@ -654,6 +654,12 @@ function buildBuilding() {
     chair: placed('diningChair', 24.7, -19.5, Math.PI, () => box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B)),
     chair2: placed('diningChair', 23.8, -20.4, Math.PI / 2, () => box(0.45, 0.45, 0.45, M.furn, 23.6, 0.225, -20.4, B)), vase: new THREE.Group(),
   };
+  rf.table.traverse(m => { if (!m.isMesh) return;   // 白桌布染成深酒红：桌上半透明的放置提示才看得清（贴图只有白布和橙色木头，按饱和度分；交界的淡橙也算布）
+    m.material.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      { vec3 c = diffuseColor.rgb; float l = dot(c, vec3(0.333)), sat = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+        float cloth = 1.0 - smoothstep(0.38, 0.5, sat); diffuseColor.rgb = mix(c, vec3(0.24, 0.07, 0.055) * (0.5 + 0.3 * l), cloth); }`); };
+    m.material.roughnessMap = m.material.metalnessMap = null; m.material.roughness = 1; m.material.metalness = 0;   // 褶皱的高光会显成一道道白线
+    m.material.needsUpdate = true; });
   if (MODELS.diningTable) { // 桌面高度以模型为准：桌上的「钥匙」和花瓶放在真正的桌面上
     rf.table.updateMatrixWorld(true); const rc = new THREE.Raycaster(), top = (x, z) => { rc.set(V(x, 3, z), V(0, -1, 0)); return rc.intersectObject(rf.table, true)[0]?.point.y ?? 0.75; };
     ROOM_SPOTS.radio.p[1] = top(24.82, -20.58); ROOM_SPOTS.tickets.p[1] = top(24.52, -20.18); rf.vaseY = top(24.45, -20.62);
@@ -1224,9 +1230,10 @@ function buildCourtyard() {
 // 天台 = 这栋楼的楼顶（y=3.2）：4 楼的出口楼梯直接通上来
 function buildRoof() {
   const R = roof, ctx = { parent: R, T: I4, collide: true, owner: R }, Y = 3.25;
-  const deckMat = std('#ffffff', { map: roofTexture() }), wallMat = std('#cfc3a8'), leafMat = std('#6fa24c');
+  const deckMat = std('#ffffff', { map: roofTexture(), polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 2 }), wallMat = std('#cfc3a8'), leafMat = std('#6fa24c');
   const C = COURT, deck = [[-0.4, 27, -22.4, -20.4], [-0.4, 8.3, -20.4, -17.6], [18.5, 27, -20.4, -17.6], [-0.4, 27, -17.6, C.z0],
     [-0.4, C.x0, C.z0, C.z1], [C.x1, 27, C.z0, C.z1], [-0.4, 27, C.z1, 5.8]];
+  // 屋面板侧面和天井立面、楼梯间墙面、下一层起点的墙正好共面：deckMat 带 polygonOffset 往后让，不然会闪
   for (const [x0, x1, z0, z1] of deck) { solid(ctx, x0, x1, 3.0, Y, z0, z1, deckMat, false); walkQuad(ctx, [x0, Y, z0], [x1, Y, z0], [x1, Y, z1], [x0, Y, z1]); }
   const P = Y + 1.1; // 女儿墙
   solid(ctx, -0.6, 27.2, Y, P, -22.6, -22.4, wallMat); solid(ctx, -0.6, 27.2, Y, P, 5.8, 6.0, wallMat);
@@ -1357,7 +1364,7 @@ const state = {
 function applyContent(n, here = true) {   // here = false：玩家还在过渡房间里，楼层的墙先不换
   const f = Math.min(n, 4);
   M.wallStub.map = WALL_TEX[f]; if (here) M.wall.map = WALL_TEX[f];
-  world.tree.position.y = -(4 - f) * 3.2;                          // 楼层越低，看到的树段越低
+  world.tree.position.y = (4 - f) * 3.2;                           // 楼层越低，人越低：树相对你更高，看到的是更低的一段树干，树冠在头顶上方好几层
   world.bands.forEach(m => m.visible = m.userData.k <= 4 - f);     // 头顶还剩几层楼
   world.sea.visible = n >= 2;
   if (n === 5) { world.ruins.forEach(r => r.visible = false); return; }   // 窗外谜题的远楼在天台上用不着
