@@ -57,6 +57,8 @@
   #mp input { font: inherit; width: 6em; text-align: center; letter-spacing: .3em; text-transform: uppercase; background: rgba(0,0,0,.3); color: inherit; border: 1px solid rgba(214,208,194,.5); padding: 5px; }
   #mpPanel { max-width: 30em; line-height: 1.7; text-align: left; opacity: .85; }
   #mpPanel b { font-size: 20px; letter-spacing: .3em; }
+  #mpPanel:empty { display: none; }
+  #mp > #mpBack { opacity: .65; font-size: 14px; }
   /* 触屏：左半屏拖出摇杆，右半屏拖动转视角，能交互时出现 Use 按钮；竖屏时提示横过来 */
   #touch { display: none; pointer-events: auto; touch-action: none; }
   #stickBase { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
@@ -90,7 +92,7 @@
     <button class="mi" id="mSolo" disabled>Loading…</button>
     <button class="mi" id="restart"></button>
     <button class="mi exp" id="mCoop"></button>
-    <div class="sub" id="mp"><button id="mpJoin"></button><button id="mpHost"></button><div id="mpPanel"></div></div>
+    <div class="sub" id="mp"><button id="mpJoin"></button><button id="mpHost"></button><div id="mpPanel"></div><button id="mpBack" hidden></button></div>
     <button class="mi exp" id="mLang"></button>
     <div class="sub" id="langs"></div>
     <p id="startText"></p>
@@ -197,7 +199,7 @@ const LOOK = {
   2: { f: 0.25, lamp: 5.4, lampColor: '#dcd6c8', sun: 0.60, hemi: 0.50, env: 0.34, fog: [7, 32] },
   3: { f: 0.55, lamp: 5.6, lampColor: '#f3d3a4', sun: 0.90, hemi: 0.54, env: 0.38, fog: [8, 42] },
   4: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 1.20, hemi: 0.60, env: 0.42, fog: [9, 55] },
-  5: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 3.80, hemi: 0.62, env: 0.38, fog: [25, 430], sky: '#c6d0de' },   // 清晨：暖色低太阳、冷色天光和雾
+  5: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 3.60, hemi: 0.55, env: 0.32, fog: [25, 430], sky: '#dcae90' },   // 夕阳：橙色低太阳、紫蓝天光、暖色的雾和地平线
 };
 // 每把「钥匙」只出现在跟它有关的摆放点（鞋柜=门口，电话桌、边桌、纸箱……）
 const KEY_SPOTS = { photo: [3, 2, 6], lamp: [2, 4, 8], radio: [6, 2, 4], poster: [5, 7, 3],
@@ -246,12 +248,12 @@ const hemi = new THREE.HemisphereLight('#c8ccd0', '#2a2622', 0.3); scene.add(hem
 scene.environmentIntensity = 0.25;
 // 楼内用正上方的平行光：墙面不受朝向影响，楼梯两端的复制品才看起来完全一样
 const sun = new THREE.DirectionalLight('#fff1d8', 0.3); sun.position.set(0, 50, 0); scene.add(sun, sun.target);
-// 天台：清晨，太阳从东边低低地照过来（暖），天光偏冷；桌面端开实时阴影（只有天台上的东西投/接阴影）
-const ROOF_SUN = new THREE.Vector3(60, 20, -10), ROOF_C = new THREE.Vector3(13, 3, -8);
+// 天台：夕阳，太阳从西边（家门那一侧）低低地照过来，橙色的光、偏紫蓝的天光；桌面端开实时阴影（只有天台上的东西投/接阴影）
+const ROOF_SUN = new THREE.Vector3(-70, 13, 14), ROOF_C = new THREE.Vector3(13, 3, -8);
 if (!TOUCH) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; sun.castShadow = true;
   Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 160 }); sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04; }
 function sunFor(roofOn) {
-  if (roofOn) { sun.position.copy(ROOF_C).addScaledVector(ROOF_SUN.clone().normalize(), 80); sun.target.position.copy(ROOF_C); sun.color.set('#ffb070'); }
+  if (roofOn) { sun.position.copy(ROOF_C).addScaledVector(ROOF_SUN.clone().normalize(), 80); sun.target.position.copy(ROOF_C); sun.color.set('#ff8f50'); }
   else { sun.position.set(0, 50, 0); sun.target.position.set(0, 0, 0); sun.color.set('#fff1d8'); }
 }
 
@@ -595,6 +597,41 @@ function lampVisual(parent, x, z, idx) {
 }
 function pointLight(parent, x, y, z) { const l = new THREE.PointLight('#fff', 3, 7, 1.4); l.position.set(x, y, z); parent.add(l); return l; }
 
+// 4 楼上天台专用的折返楼梯（世界坐标，只在 roofMode 显示；其他楼层仍是那一段直跑楼梯，保证楼层首尾无缝）：
+// 从房间西门进来 → 南侧一跑往西上到一半 → 平台折返 → 北侧一跑往东上到屋面高度 → 北墙上的门出到天台
+function buildRoofStair(B, c) {
+  const g = world.roofStair = new THREE.Group(); g.visible = false; B.add(g);
+  const ctx = { parent: g, T: I4, collide: false, owner: g }, Y = 3.25, M2 = Y / 2, N = 13, xa = 16.3, xb = 11.3, zA = [-20.2, -19.0], zB = [-19.0, -17.8];
+  const cols = world.roofStairCols = [], col = (...a) => { const k = collider(...a); k.enabled = false; cols.push(k); };
+  for (let i = 0; i < N; i++) {   // 两跑台阶（实心块）
+    const run = (xa - xb) / N, r = M2 / N;
+    solid(ctx, xa - (i + 1) * run, xa - i * run, -0.1, (i + 1) * r, zA[0], zA[1], M.floor, false);
+    solid(ctx, xb + i * run, xb + (i + 1) * run, -0.1, M2 + (i + 1) * r, zB[0], zB[1], M.floor, false);
+  }
+  solid(ctx, 8.5, xb, -0.1, M2, -20.2, -17.8, M.floor, false);   // 中间的平台
+  solid(ctx, xa, 18.3, Y - 0.2, Y, zB[0], zB[1], M.floor, false);   // 顶上的平台（下面留出进门的空间）
+  walkQuad(ctx, [xa, 0, -20.2], [18.5, 0, -20.2], [18.5, 0, -17.8], [xa, 0, -17.8]);
+  walkQuad(ctx, [xb, M2, zA[0]], [xa, 0, zA[0]], [xa, 0, zA[1]], [xb, M2, zA[1]]);
+  walkQuad(ctx, [8.5, M2, -20.2], [xb, M2, -20.2], [xb, M2, -17.8], [8.5, M2, -17.8]);
+  walkQuad(ctx, [xb, M2, zB[0]], [xa, Y, zB[0]], [xa, Y, zB[1]], [xb, M2, zB[1]]);
+  walkQuad(ctx, [xa, Y, zB[0]], [18.3, Y, zB[0]], [18.3, Y, -17.55], [xa, Y, -17.55]);
+  // 两跑之间的隔墙 + 顶上平台的木栏杆
+  solid(ctx, xb, xa, -0.1, Y + 1.0, -19.05, -18.95, M.wallStair, false); col(xb, xa, -19.08, -18.92, -1, Y + 1.2);
+  solid(ctx, xa, 18.3, Y, Y + 0.06, -19.04, -18.96, M.trim, false); solid(ctx, xa, 18.3, Y + 0.95, Y + 1.0, -19.04, -18.96, M.trim, false);
+  for (let x = xa + 0.25; x < 18.3; x += 0.4) solid(ctx, x - 0.025, x + 0.025, Y, Y + 0.95, -19.025, -18.975, M.trim, false);
+  col(xa, 18.3, -19.08, -18.92, Y - 0.1, Y + 1.2);
+  col(xb, xa - 0.1, zB[0], zB[1], -1, M2 - 0.08);   // 别从第二跑底下钻过去
+  // 楼梯间：两侧墙、西端封墙、顶板；北墙在顶上平台那里开一扇门通到天台
+  const W = 6.4, D0 = 16.45, D1 = 18.15, DH = Y + 2.2;
+  solid(ctx, 8.3, 18.3, 0, W, -20.4, -20.2, M.wallStair, false); solid(ctx, 8.3, 8.5, 0, W, -20.2, -17.8, M.wallStair, false);
+  solid(ctx, 8.3, D0, 0, W, -17.8, -17.6, M.wallStair, false); solid(ctx, D1, 18.3, 0, W, -17.8, -17.6, M.wallStair, false);
+  solid(ctx, D0, D1, 0, Y - 0.2, -17.8, -17.6, M.wallStair, false); solid(ctx, D0, D1, DH, W, -17.8, -17.6, M.wallStair, false);
+  solid(ctx, 8.3, 18.5, W - 0.2, W, -20.4, -17.6, M.ceil, false);
+  box(D1 - D0 + 0.12, 0.08, 0.24, M.trim, (D0 + D1) / 2, DH + 0.04, -17.7, g);   // 门框
+  for (const x of [D0 - 0.03, D1 + 0.03]) box(0.06, DH - Y + 0.08, 0.24, M.trim, x, (Y + DH) / 2, -17.7, g);
+  col(8.3, 18.3, -20.4, -20.2, Y - 0.2, W); col(8.3, 8.5, -20.4, -17.6, -1, W); col(8.3, D0, -17.8, -17.6, Y - 0.2, W); col(D1, 18.3, -17.8, -17.6, Y - 0.2, W);
+  col(18.3, 18.5, -20.4, -17.6, Y - 0.2, W);   // 东头（房间西墙往上那截）
+}
 // 楼梯（入口楼梯的局部坐标）：底端平台 z -10→-8（y=-3），梯段 z -8→0 升到 y=0，宽 x 0.3→2.7
 function buildStairwell(ctx, withReplicaDoor, upperCtx) {   // 两侧墙从 z=-10 起：出口楼梯的这一头插在房间西墙里，再往外伸就和房间墙面重叠闪烁   // upperCtx：出口楼梯 0 米以上的墙放进去（到天台时跟复制品一起隐藏）
   for (let i = 0; i < 16; i++) {
@@ -735,11 +772,12 @@ function buildBuilding() {
   }
 
   // --- 出口楼梯（= T × 入口楼梯），顶端是下一层起点的复制品
-  const exitGroup = new THREE.Group(); exitGroup.matrixAutoUpdate = false; exitGroup.matrix.copy(T); B.add(exitGroup);
+  const exitGroup = world.exitGroup = new THREE.Group(); exitGroup.matrixAutoUpdate = false; exitGroup.matrix.copy(T); B.add(exitGroup);
   const stub = new THREE.Group(); stub.matrixAutoUpdate = false; stub.matrix.copy(T); B.add(stub); world.stub = stub;
   // 出口楼梯 0 米以上那截墙和顶：一直显示 —— 到天台时它就是屋面上凸出来的楼梯间
   const stairHouse = world.stairHouse = new THREE.Group(); stairHouse.matrixAutoUpdate = false; stairHouse.matrix.copy(T); B.add(stairHouse);
-  buildStairwell({ parent: exitGroup, T, collide: true }, false, { parent: stairHouse, T, collide: false });
+  buildStairwell({ parent: exitGroup, T, collide: true, owner: exitGroup }, false, { parent: stairHouse, T, collide: false });
+  buildRoofStair(B, c);
   buildStart({ parent: stub, T, collide: false }, true);
 
   // --- 其余吊灯
@@ -1039,10 +1077,10 @@ function anchorTop(res, dx = 0.2) {
 }
 
 // 带树皮贴图的枝条：沿曲线的锥形管，u 绕一圈、v 按长度走（和树干同一张贴图、同样的密度）
-function barkTube(points, r0, r1, mat, seg = 28, radial = 12) {
+function barkTube(points, r0, r1, mat, seg = 28, radial = 12, rFn = null) {   // rFn(t)：自定义粗细（0 = 起点，1 = 枝头）
   const curve = new THREE.CatmullRomCurve3(points), L = curve.getLength(), frames = curve.computeFrenetFrames(seg, false), pos = [], uv = [], idx = [];
   for (let i = 0; i <= seg; i++) {
-    const t = i / seg, p = curve.getPointAt(t), r = r0 + (r1 - r0) * Math.pow(t, 0.75), N = frames.normals[i], B = frames.binormals[i];
+    const t = i / seg, p = curve.getPointAt(t), r = rFn ? rFn(t) : r0 + (r1 - r0) * Math.pow(t, 0.75), N = frames.normals[i], B = frames.binormals[i];
     for (let j = 0; j <= radial; j++) { const a = j / radial * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
       pos.push(p.x + r * (c * N.x + s * B.x), p.y + r * (c * N.y + s * B.y), p.z + r * (c * N.z + s * B.z)); uv.push(j / radial, t * L / (2 * Math.PI * r0 / 1.5)); }
   }
@@ -1095,11 +1133,15 @@ function buildGreenery() {
     const w = V(x, 1.6, z), from = w.clone().sub(TREE).setY(0).normalize(), start = TREE.clone().addScaledVector(from, 1.2).setY(2.9);
     const tip = w.clone().addScaledVector(n, 1.4).add(V(n.z * 0.3, 0.3, n.x * 0.3));
     const g = new THREE.Group(), bm = world.barkMat, lb = !bm && MODELS.longBranch && model('longBranch'), br = !bm && !lb && model('treeBranch');
-    if (bm) { // 一根从树干里长出来的枝：起点埋在树干里，低低地穿过窗洞，进走廊后往上弯，越来越细；中途分出一根小枝，枝头长叶
-      const dir = w.clone().sub(TREE).setY(0).normalize(), side = V(-dir.z, 0, dir.x), wy = 1.25;
-      const pts = [TREE.clone().addScaledVector(dir, 0.6).setY(0.6), TREE.clone().addScaledVector(dir, 2.6).setY(0.95), w.clone().addScaledVector(n, -1.2).setY(1.15).addScaledVector(side, 0.15),
-        w.clone().setY(wy), w.clone().addScaledVector(n, 0.9).setY(1.55).addScaledVector(side, -0.12), w.clone().addScaledVector(n, 1.7).setY(2.15).addScaledVector(side, 0.1)];
-      g.add(barkTube(pts, 0.34, 0.035, bm, 40));
+    if (bm) { // 一根从树干里长出来的枝：从窗下方两三米的主干上长出（根部粗、带一圈鼓起的枝领），斜着往上穿过窗洞，进走廊后继续上扬、越来越细；中途分出小枝，枝头长叶
+      const dir = w.clone().sub(TREE).setY(0).normalize(), side = V(-dir.z, 0, dir.x), D = Math.hypot(w.x - TREE.x, w.z - TREE.z), sw = (Math.round(x) % 2 ? 1 : -1) * 0.25;
+      const pts = [TREE.clone().addScaledVector(dir, 1.6).setY(-3.5), TREE.clone().addScaledVector(dir, 3.1).setY(-2.6), TREE.clone().addScaledVector(dir, D * 0.55).setY(-0.7).addScaledVector(side, sw),
+        w.clone().addScaledVector(n, -1.0).setY(0.85).addScaledVector(side, sw * 0.5), w.clone().setY(1.3), w.clone().addScaledVector(n, 0.8).setY(1.65).addScaledVector(side, -0.12), w.clone().addScaledVector(n, 1.6).setY(2.15).addScaledVector(side, 0.1)];
+      const rFn = t => (0.032 + 0.6 * Math.pow(1 - t, 1.6) + 0.45 * Math.exp(-t * 16)) * (1 + 0.07 * Math.sin(t * 23 + x));   // 根部粗、往外收细，粗细略有起伏
+      g.add(barkTube(pts, 0.6, 0.03, bm, 56, 12, rFn));   // r0 只用来定树皮贴图的纵向比例
+      { const a = pts[2], c = a.clone().addScaledVector(side, -sw * 4 - 0.6).add(V(0, 1.4, 0)).addScaledVector(dir, 0.6), e = c.clone().addScaledVector(side, -0.5).add(V(0, 1.0, 0)).addScaledVector(dir, 0.3);   // 天井里分出的一根侧枝
+        g.add(barkTube([a.clone().addScaledVector(dir, -0.2), c, e], 0.13, 0.02, bm, 16, 8));
+        const l = modelShared('ivyClump'); if (l) { l.position.copy(e); l.scale.setScalar(0.9); l.rotation.set(0.3, x, 0.2); g.add(l); } }
       const fork = w.clone().addScaledVector(n, 0.55).setY(1.4);
       g.add(barkTube([fork.clone().addScaledVector(n, -0.15), fork.clone().addScaledVector(side, 0.35).addScaledVector(n, 0.3).setY(1.65), fork.clone().addScaledVector(side, 0.6).addScaledVector(n, 0.75).setY(1.75)], 0.07, 0.02, bm, 12, 8));
       const tips = [pts[5], fork.clone().addScaledVector(side, 0.6).addScaledVector(n, 0.75).setY(1.75), pts[4]];
@@ -1186,16 +1228,26 @@ function roofTreeFit(o, forkY) {
 function leafCards(crown, parent) {
   const im = IMG.leafCluster; if (!im) return;
   const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
-  const mat = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); greenMats.push(mat);
-  mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n  if (abs(dot(normalize(vNormal), normalize(vViewPosition))) < 0.35) discard;'); };
+  const mat = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, emissive: '#ffffff', emissiveMap: t, emissiveIntensity: 0.12 }); greenMats.push(mat);
+  // 法线用「从树冠中心往外」的方向（每片卡片在 JS 里算好），两面一样亮：从下面看不会一片片发黑；擦边的薄片用真实面法线判断后丢掉
+  mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader
+    .replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n  { vec3 fn = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition))); if (abs(dot(fn, normalize(vViewPosition))) < 0.3) discard; }')
+    .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);'); };
   crown.updateMatrixWorld(true); const pts = [], v = V(0, 0, 0), f = crown.userData.fork, top = crown.userData.top, cx = crown.position.x, cz = crown.position.z, H = top - f;
   crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y > f - H * 0.05) pts.push(v.clone()); } });
   const rr = mulberry32(77), chosen = [], plane = new THREE.PlaneGeometry(1, 1);
   for (let t = 0; t < 5000 && chosen.length < 60; t++) { const p = pts[Math.floor(rr() * pts.length)]; if (Math.hypot(p.x - cx, p.z - cz) < 3.2 && p.y < f + H * 0.6) continue; if (chosen.some(q => q.distanceTo(p) < H * 0.13)) continue; chosen.push(p); }
+  const C = V(cx, f + H * 0.4, cz), q = new THREE.Quaternion();
   for (const p of chosen) {
     const g = new THREE.Group(), out = V(p.x - cx, 0, p.z - cz).normalize().multiplyScalar(H * 0.05);
     for (let k = 0; k < 3; k++) { const m = new THREE.Mesh(plane, mat); if (k === 2) m.rotation.x = -Math.PI / 2; else m.rotation.y = k * Math.PI / 2 + rr(); g.add(m); }
     g.position.copy(p).add(out).add(V(0, H * 0.04, 0)); g.rotation.set(rr() * 0.6, rr() * 6, rr() * 0.6); g.scale.setScalar(H * (0.24 + rr() * 0.14)); parent.add(g);
+    const dir = g.position.clone().sub(C).normalize();
+    for (const m of g.children) {   // 每片卡片自己的法线：树冠外向 + 一点按顶点位置的弧度
+      q.copy(g.quaternion).multiply(m.quaternion).invert(); const d = dir.clone().applyQuaternion(q), geo = plane.clone(), P = geo.attributes.position, N = geo.attributes.normal;
+      for (let i = 0; i < P.count; i++) { const n = V(P.getX(i), P.getY(i), 0).multiplyScalar(0.6).add(d).normalize(); N.setXYZ(i, n.x, n.y, n.z); }
+      m.geometry = geo;
+    }
   }
 }
 function barkTrunk(crown, at, y0) {
@@ -1252,15 +1304,16 @@ function barkTrunk(crown, at, y0) {
   return new THREE.Mesh(g, mat);
 }
 // 树冠模型里的树干和枝条换成和程序树干同一张树皮（按世界坐标三面投影），叶子（偏绿的像素）保持原样：整棵树看起来是一体的
-function barkBlend(mat, bark) {
+function barkBlend(mat, bark, dropAbove = null) {   // dropAbove：这个高度（世界坐标）以上，模型自带的绿叶碎片直接丢掉
   mat.onBeforeCompile = sh => {
-    sh.uniforms.barkMap = { value: bark };
+    sh.uniforms.barkMap = { value: bark }; sh.uniforms.dropY = { value: dropAbove ?? 1e9 };
     sh.vertexShader = 'varying vec3 vBWP; varying vec3 vBWN;\n' + sh.vertexShader.replace('#include <worldpos_vertex>',
       '#include <worldpos_vertex>\n vBWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vBWN = normalize(mat3(modelMatrix) * objectNormal);');
-    sh.fragmentShader = 'uniform sampler2D barkMap; varying vec3 vBWP; varying vec3 vBWN;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = 'uniform sampler2D barkMap; uniform float dropY; varying vec3 vBWP; varying vec3 vBWN;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       { vec3 w = abs(vBWN); w = pow(w, vec3(4.0)); w /= (w.x + w.y + w.z); vec3 q = vBWP * 0.33;
         vec3 bk = texture2D(barkMap, q.zy).rgb * w.x + texture2D(barkMap, q.xz).rgb * w.y + texture2D(barkMap, q.xy).rgb * w.z;
         vec3 c = diffuseColor.rgb; float leaf = smoothstep(0.004, 0.03, c.g - max(c.r, c.b) * 0.92);
+        if (vBWP.y > dropY && c.g > c.r * 0.95 && c.g > c.b * 1.15) discard;
         diffuseColor.rgb = mix(bk * 0.95, c, leaf); }`);
   };
   mat.needsUpdate = true;
@@ -1292,14 +1345,14 @@ function buildCourtyard() {
   if (MODELS.roofTree && IMG.bark) { // 天台专用的整棵树（Meshy）：自带一长截圆柱主干，下面接程序生成的主干，两段一样粗、一样的树皮，接口埋在楼下
     const crown = model('roofTree'); roofTreeFit(crown, 9.5); crown.position.x += T0.x; crown.position.z += T0.z; tree.add(crown);
     const trunk = barkTrunk(crown, T0, -32); tree.add(trunk);
-    crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, trunk.material.normalMap); });
+    crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, crown.userData.fork + 1.0); });   // 分叉以上模型自带的零碎树叶不要（看起来像碎片）
     leafCards(crown, tree);   // 多视图生成的模型树叶很少：枝头补叶团
     return;
   }
   if (MODELS.treeTrunk && MODELS.treeCrown) { // Meshy：几段树干从水下接到楼顶以上，顶上是树冠
     const crown = model('treeCrown'); crown.position.set(T0.x, 8.5, T0.z); tree.add(crown);
     const trunk = IMG.bark && barkTrunk(crown, T0, -32);
-    if (trunk) crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, trunk.material.normalMap); });   // 一整根连续的树干（没有接缝），顶端收进树冠底部
+    if (trunk) crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map); });   // 一整根连续的树干（没有接缝），顶端收进树冠底部
     if (trunk) tree.add(trunk);
     if (trunk && MODELS.ivyClump) { // 接口缠一圈常春藤，再往下垂几串：盖住主干和树冠的接缝
       const J = world.trunkJoin, rr = mulberry32(41);
@@ -1349,14 +1402,14 @@ function buildRoof() {
   // 天空：程序生成的渐变穹顶（地平线 = 雾色，和海面远处接上）+ 太阳
   R.add(new THREE.Mesh(new THREE.SphereGeometry(820, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { horizon: { value: scene.fog.color }, zenith: { value: new THREE.Color('#4a76b4') }, sunDir: { value: ROOF_SUN.clone().normalize() } },
+    uniforms: { horizon: { value: scene.fog.color }, zenith: { value: new THREE.Color('#34508a') }, sunDir: { value: ROOF_SUN.clone().normalize() } },
     vertexShader: 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `uniform vec3 horizon, zenith, sunDir; varying vec3 vDir;
       void main() {
         vec3 d = normalize(vDir); float h = max(d.y, 0.0), s = max(dot(d, sunDir), 0.0);
         vec3 col = mix(horizon, zenith, pow(h, 0.55));
-        col = mix(col, vec3(1.0, 0.72, 0.5), pow(s, 3.0) * 0.55 * (1.0 - h));   // 太阳那一侧的地平线是晨光的橙粉色
-        col += vec3(1.0, 0.82, 0.58) * (pow(s, 6.0) * 0.25 + pow(s, 120.0) * 0.8) + vec3(1.0, 0.97, 0.9) * smoothstep(0.9986, 0.9993, s) * 3.0;
+        col = mix(col, vec3(1.0, 0.55, 0.3), pow(s, 2.5) * 0.75 * (1.0 - h));   // 太阳那一侧的天边烧成橙红
+        col += vec3(1.0, 0.7, 0.42) * (pow(s, 6.0) * 0.3 + pow(s, 120.0) * 0.9) + vec3(1.0, 0.97, 0.9) * smoothstep(0.9986, 0.9993, s) * 3.0;
         gl_FragColor = vec4(d.y < 0.0 ? horizon : col, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -1434,8 +1487,12 @@ function buildRoof() {
   const hd = model('homeDoor');
   if (hd) { // 模型是关着的门：门后放一块更大的白光板，光从门框四周漏出来
     hd.rotation.y = Math.PI; portal.add(hd);
-    const S = MODELS.homeDoor.size, glow = new THREE.Mesh(new THREE.PlaneGeometry(S.x + 0.18, S.y + 0.12), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
-    glow.position.set(0, S.y / 2, S.z / 2 + 0.03); glow.rotation.y = Math.PI; portal.add(glow);   // 只朝玩家走来的那面发光，从门背后看不到
+    // 门后：一块和门一样大的白板（只从门缝透出来），外面再罩一圈边缘柔和的光晕（叠加混合）——斜着看也只是一团光，不会露出一块白板的边
+    const S = MODELS.homeDoor.size, glow = new THREE.Mesh(new THREE.PlaneGeometry(S.x * 0.96, S.y * 0.98), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+    glow.position.set(0, S.y / 2, S.z / 2 + 0.01); glow.rotation.y = Math.PI; portal.add(glow);   // 只朝玩家走来的那面发光，从门背后看不到
+    const haloTex = canvasTex(256, 384, (g, w, h) => { g.filter = 'blur(22px)'; g.fillStyle = '#fff8e8'; g.fillRect(w * 0.27, h * 0.2, w * 0.46, h * 0.62); g.filter = 'none'; });
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(S.x * 2.2, S.y * 1.6), new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    halo.position.set(0, S.y / 2, S.z / 2 + 0.02); halo.rotation.y = Math.PI; portal.add(halo);
   } else {
   const frameMat = std('#8a6a4a'), doorMat = std('#a8794c');
   box(0.1, 2.25, 0.16, frameMat, -0.55, 1.125, 0, portal); box(0.1, 2.25, 0.16, frameMat, 0.55, 1.125, 0, portal); box(1.2, 0.1, 0.16, frameMat, 0, 2.2, 0, portal);
@@ -1614,7 +1671,7 @@ function applyRoomNotes(n) {
 
 const _fogWhite = new THREE.Color('#c9d0d6');
 const look = { f: 0, lamp: 5.4, hemi: 0.48, sun: 0.4, env: 0.3, near: 5, far: 22, sky: new THREE.Color(PAL0.sky), lampColor: new THREE.Color('#b4c6de') };
-const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1), _hRoof = new THREE.Color('#9fb6d8');
+const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1), _hRoof = new THREE.Color('#8d8fbd');
 let lookTo = null;
 function lookTarget(n) {
   const L = LOOK[n];
@@ -1632,7 +1689,8 @@ function updateLook(dt, instant) {
   for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
   for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
   for (const g of world.innerWin || []) g.visible = g.userData.on !== false && !state.roofMode;
-  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
+  if (world.roofStair) { world.roofStair.visible = state.roofMode; world.exitGroup.visible = world.stairHouse.visible = !state.roofMode; for (const k of world.roofStairCols) k.enabled = state.roofMode; }   // 上天台那一趟换成折返楼梯
+  hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = state.roofMode ? look.sun : state.lightsOn ? look.sun * 0.35 : 0;   // 室内的太阳是穿过天花板的假光：只留一点补光，关灯时归零
   if (state.roofMode) hemi.color.copy(_hRoof); document.body.classList.toggle('cine', state.roofMode); renderer.shadowMap.autoUpdate = state.roofMode;   // 天台：冷色天光 + 暗角
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
@@ -2014,13 +2072,19 @@ function noiseSrc() {
 function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
 const sfx = {
   blip(pos) { const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain(); o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(620, t + 0.18); env(g, t, 0.02, 0.35, 0.23); o.connect(g).connect(outNode(pos, 1)); o.start(t); o.stop(t + 0.3); },
-  crackle(pos) { const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 1400 + Math.random() * 800, Q: 1.5 }), g = audio.createGain(); env(g, t, 0.05, 0.12, 0.5); n.connect(f).connect(g).connect(outNode(pos, 1)); n.start(t, Math.random()); n.stop(t + 0.6); },
+  crackle(pos) { // 收音机的沙沙声：起落都很缓、前后接得上的一层低通噪声（不要短促的「嗖」——听着像抽鞭子），偶尔一两下很轻的爆音
+    const t = audio.currentTime, out = outNode(pos, 1), n = noiseSrc(), lp = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 2400 }), hp = new BiquadFilterNode(audio, { type: 'highpass', frequency: 500 }), g = audio.createGain();
+    env(g, t, 0.3, 0.045, 0.5); n.connect(hp).connect(lp).connect(g).connect(out); n.start(t, Math.random()); n.stop(t + 0.85);
+    if (Math.random() < 0.4) { const c = noiseSrc(), cg = audio.createGain(), tt = t + Math.random() * 0.5; env(cg, tt, 0.001, 0.03, 0.015); c.connect(cg).connect(out); c.start(tt, Math.random()); c.stop(tt + 0.03); } },
   broadcast(pos, dur, gain) { // 撤离广播：提示音 + 带杂音的"人声"起伏
     const t = audio.currentTime, out = outNode(pos, gain);
-    [660, 520].forEach((fq, i) => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = fq; env(g, t + i * 0.35, 0.02, 0.5, 0.3); o.connect(g).connect(out); o.start(t + i * 0.35); o.stop(t + i * 0.35 + 0.4); });
-    const n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 900, Q: 2 }), g = audio.createGain(), lfo = audio.createOscillator(), lg = audio.createGain();
-    g.gain.value = 0.25; lfo.frequency.value = 3.5; lg.gain.value = 0.2; lfo.connect(lg).connect(g.gain);
-    n.connect(f).connect(g).connect(out); n.start(t + 0.8); n.stop(t + 0.8 + dur); lfo.start(t + 0.8); lfo.stop(t + 0.8 + dur);
+    // 不再用两声下行的提示音（听着像布谷鸟钟）：只剩隔着墙、模模糊糊的广播人声——按音节一顿一顿地起伏
+    const n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 700, Q: 1.2 }), lp = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 1300 }), g = audio.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    for (let u = t + 0.2; u < t + dur; ) { const d = 0.12 + Math.random() * 0.16, pk = Math.random() < 0.2 ? 0.02 : 0.12 + Math.random() * 0.12;   // 一个个「音节」，中间偶尔停顿
+      g.gain.linearRampToValueAtTime(pk, u + d * 0.35); g.gain.linearRampToValueAtTime(0.02, u + d); u += d + (Math.random() < 0.15 ? 0.25 : 0.02); }
+    g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.3);
+    n.connect(f).connect(lp).connect(g).connect(out); n.start(t); n.stop(t + dur + 0.4);
   },
   beeps(pos, k) { for (let i = 0; i < k; i++) { const t = audio.currentTime + i * 0.3, o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 1000; env(g, t, 0.01, 0.3, 0.12); o.connect(g).connect(outNode(pos, 1)); o.start(t); o.stop(t + 0.2); } },
   horn() { const t = audio.currentTime, f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 380 }), g = audio.createGain(); env(g, t, 0.6, 0.3, 2.2); f.connect(g).connect(outNode(null, 1));
@@ -2038,6 +2102,15 @@ const sfx = {
     const t0 = audio.currentTime, out = outNode(pos, 0.5), k = 2 + Math.floor(Math.random() * 2);
     for (let i = 0; i < k; i++) { const t = t0 + i * 0.32, o = audio.createOscillator(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 1800, Q: 3 }), g = audio.createGain();
       o.type = 'sawtooth'; o.frequency.setValueAtTime(1500 + Math.random() * 300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.25); env(g, t, 0.02, 0.35, 0.22); o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + 0.3); }
+  },
+  bird(pos, gain = 0.22) { // 小鸟：一串快速上下滑的啁啾（偶尔带颤音），每次随机换一种叫法
+    const t0 = audio.currentTime, out = outNode(pos, gain), k = 2 + Math.floor(Math.random() * 5), base = 2600 + Math.random() * 1600, trill = Math.random() < 0.35;
+    for (let i = 0; i < k; i++) {
+      const t = t0 + i * (0.09 + Math.random() * 0.08), o = audio.createOscillator(), g = audio.createGain(), up = Math.random() < 0.5, f0 = base * (0.85 + Math.random() * 0.3);
+      o.frequency.setValueAtTime(up ? f0 * 0.75 : f0 * 1.2, t); o.frequency.exponentialRampToValueAtTime(up ? f0 * 1.25 : f0 * 0.7, t + 0.07);
+      if (trill) { const l = audio.createOscillator(), lg = audio.createGain(); l.frequency.value = 38; lg.gain.value = f0 * 0.08; l.connect(lg).connect(o.frequency); l.start(t); l.stop(t + 0.1); }
+      env(g, t, 0.006, 0.3, 0.07); o.connect(g).connect(out); o.start(t); o.stop(t + 0.12);
+    }
   },
   sea() { // 天台：持续的海浪 + 风（低通噪声，音量缓慢起伏）；返回总音量节点，结局时淡出
     const out = audio.createGain(); out.gain.value = 0; out.connect(audio.destination); out.gain.linearRampToValueAtTime(1, audio.currentTime + 3);
@@ -2092,10 +2165,12 @@ function startSound(pos, kind = 'blip') {
 }
 function stopSound(s) { if (s) { clearInterval(s.timer); sounds.delete(s); } }
 // 楼层氛围声：2 楼远处的撤离广播，4 楼有人哼歌
-let seaBed = null, gullT = 3;
+let seaBed = null, gullT = 3, birdT = 1.5;
 function ambience(dt) {
   if (audio && state.phase === 'roof') { // 天台：海浪和风一直在，海鸥时不时叫几声
     if (!seaBed) seaBed = sfx.sea();
+    if ((birdT -= dt) < 0) { birdT = 1.2 + Math.random() * 4; const a = Math.random() * 6.3;   // 树冠里的小鸟
+      sfx.bird(V(TREE.x + Math.cos(a) * 6, 12 + Math.random() * 6, TREE.z + Math.sin(a) * 6), 0.18 + Math.random() * 0.12); }
     if ((gullT -= dt) < 0) { gullT = 4 + Math.random() * 7; const g = world.roofLive.gulls[Math.floor(Math.random() * world.roofLive.gulls.length)]; sfx.gull(g?.getWorldPosition(V(0, 0, 0))); }
     return;
   }
@@ -2103,6 +2178,7 @@ function ambience(dt) {
   state.ambT += dt;
   if (state.floor === 2 && state.ambT > 16) { state.ambT = 0; sfx.broadcast(null, 5, 0.04); }
   if (state.floor === 4 && state.ambT > 14) { state.ambT = 0; sfx.hum(); }
+  if (state.floor >= 3 && (birdT -= dt) < 0) { birdT = 7 + Math.random() * 9; sfx.bird(V(TREE.x, 2.5, TREE.z), 0.08); }   // 3 楼起，天井的树上偶尔有鸟叫
 }
 function updateListener() {
   if (!audio) return; const L = audio.listener, f = V(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -2269,7 +2345,7 @@ const MENU = {
 };
 document.querySelector('#end .t').textContent = tr('HOME', 'おかえり', '回家', '回家'); $('useBtn').textContent = tr('USE', '使う', '使用', '使用');
 $('rotateText').textContent = tr('Turn your phone sideways to play', '横向きにして遊んでください', '请横屏游玩', '請橫向遊玩');
-$('restart').textContent = MENU.restart; $('mCoop').textContent = MENU.coop; $('mpJoin').textContent = MENU.join; $('mpHost').textContent = MENU.invite; $('mLang').textContent = MENU.lang;
+$('restart').textContent = MENU.restart; $('mCoop').textContent = MENU.coop; $('mpJoin').textContent = MENU.join; $('mpHost').textContent = MENU.invite; $('mpBack').textContent = tr('← Back', '← 戻る', '← 返回', '← 返回'); $('mLang').textContent = MENU.lang;
 $('help').innerHTML = TOUCH ? tr('Left thumb move · Right thumb look<br>Tap USE to interact', '左の親指で移動 · 右の親指で見回す<br>「使う」をタップで調べる', '左手拇指移动 · 右手拇指转视角<br>点“使用”进行互动', '左手拇指移動 · 右手拇指轉視角<br>點「使用」進行互動')
   : tr('WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause', 'WASD 移動 · Shift 速く歩く · マウス 見回す<br>E / クリック 調べる · Esc 一時停止', 'WASD 移动 · Shift 快走 · 鼠标 转视角<br>E / 点击 互动 · Esc 暂停', 'WASD 移動 · Shift 快走 · 滑鼠 轉視角<br>E / 點擊 互動 · Esc 暫停');
 function menuLabels() {
@@ -2404,7 +2480,7 @@ function updatePlayer(dt) {
     if (world.farLeaf.userData.col.enabled === false && p.x < 17.6) setDoor(world.farLeaf, false, true);  // 身后的门关上
     if (!state.roofMode && world.farLeaf.userData.closed && p.x < 12.7) stairWarp();
   }
-  if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sunFor(true); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }
+  if (state.roofMode && state.phase === 'stairs' && p.y > 3.1 && p.x > 15.5) { state.floor = 5; state.phase = 'roof'; sunFor(true); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }   // 折返楼梯走到顶上的平台
   if (state.phase === 'roof') { const l = world.portal.worldToLocal(p.clone().setY(world.portal.position.y)); if (Math.abs(l.x) < 0.6 && l.z > -0.95 && l.z < 0.3 && p.y > world.portal.position.y - 0.5) endGame(); }  // 走到门前就被白光吞没
 }
 
@@ -2512,7 +2588,7 @@ function joinRoom(code, status) { // 母亲：用房间码找到孩子
     net.sig.send({ t: 'answer', from: net.id, to: m.from, sdp: pc.localDescription.sdp });
   });
   const hello = () => net.sig.send({ t: 'hello', from: net.id }); hello(); net.hello = setInterval(hello, 2500);
-  setTimeout(() => { if (!net.synced) status(tr("Couldn't connect. Check the code — or play on your own.", '接続できませんでした。コードを確認するか、ひとりで遊んでください。', '连接失败。请检查房间码，或者单人游戏。', '連線失敗。請檢查房間碼，或者單人遊戲。')); }, 30000);
+  setTimeout(() => { if (!net.synced && net.code === code) status(tr("Couldn't connect. Check the code — or play on your own.", '接続できませんでした。コードを確認するか、ひとりで遊んでください。', '连接失败。请检查房间码，或者单人游戏。', '連線失敗。請檢查房間碼，或者單人遊戲。')); }, 30000);
 }
 function ghostify(o, color, opacity) { // 母亲在孩子眼里：发暖光的半透明人形
   o.traverse(m => { if (!m.isMesh) return; const mt = m.material; mt.transparent = true; mt.opacity = opacity; mt.depthWrite = false;
@@ -2582,10 +2658,20 @@ function showBeam(id) {
   if (audio) sfx.chime(v);
   if (!net.told.beam) { net.told.beam = true; say(tr('A warm light… like someone is showing me the way.', 'あたたかい光……誰かが道を教えてくれているみたいだ。', '一束温暖的光……像是有人在为我指路。', '一束溫暖的光……像是有人在為我指路。'), 3500); }
 }
+// 合作的两条流程都能「返回」：断开信令和连接，回到两个选项；协助者已经同步过房主的进度时，直接重新载入回到干净的主菜单
+function leaveRoom() {
+  if (net.role === 'mother' && net.synced) { location.reload(); return; }
+  clearInterval(net.hello); net.sig?.close();
+  if (net.dc) { net.dc.onclose = null; net.dc.close(); } net.pc?.close();
+  if (net.avatar) { building.remove(net.avatar); net.avatar = null; }
+  Object.assign(net, { role: null, code: null, sig: null, pc: null, dc: null, target: null, synced: false });
+  $('mpPanel').innerHTML = ''; $('mpBack').hidden = true; $('mpJoin').style.display = $('mpHost').style.display = ''; menuLabels();
+}
+$('mpBack').addEventListener('click', e => { e.stopPropagation(); leaveRoom(); });
 $('mpHost').addEventListener('click', e => {
   e.stopPropagation(); if (net.role) return;
   const code = hostRoom();
-  $('mpJoin').style.display = 'none'; $('mpHost').style.display = 'none';
+  $('mpJoin').style.display = 'none'; $('mpHost').style.display = 'none'; $('mpBack').hidden = false;
   $('mpPanel').innerHTML = tr(`Room code <b>${code}</b><br>Your helper opens this world, chooses Co-op → “${MENU.join}” and types this code. You can start now — they can join any time.`,
     `ルームコード <b>${code}</b><br>協力者はこのワールドを開き、協力プレイ →「${MENU.join}」を選んでこのコードを入力します。先に始めても大丈夫、あとからいつでも参加できます。`,
     `房间码 <b>${code}</b><br>协助者打开这个世界，选择 合作 →“${MENU.join}”，输入这个房间码。你可以先开始，对方随时都能加入。`,
@@ -2593,7 +2679,7 @@ $('mpHost').addEventListener('click', e => {
 });
 $('mpJoin').addEventListener('click', e => {
   e.stopPropagation(); if (net.role) return;
-  $('mpHost').style.display = 'none'; $('mpJoin').style.display = 'none';
+  $('mpHost').style.display = 'none'; $('mpJoin').style.display = 'none'; $('mpBack').hidden = false;
   $('mpPanel').innerHTML = `${tr('Room code', 'ルームコード', '房间码', '房間碼')} <input id="mpCode" maxlength="4" autocomplete="off"> <button id="mpGo">${tr('Join', '参加', '加入', '加入')}</button>`;
   const go = () => { const c = $('mpCode').value.trim().toUpperCase(); if (c.length !== 4) return; joinRoom(c, t => { $('mpPanel').textContent = t; }); menuLabels(); };
   $('mpGo').addEventListener('click', go); $('mpCode').addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') go(); });
@@ -2706,7 +2792,7 @@ function tick() {
   if (!TOUCH) { // 天台的实时阴影：近处的实体投影、接影（透明的雾、天空、远景不参与）；大树和楼梯间也投影
     const near = V(), ok = m => m.isMesh && !m.material.transparent && !(m.material.isShaderMaterial || m.material.isMeshBasicMaterial);
     roof.traverse(m => { if (ok(m) && m.getWorldPosition(near).distanceTo(ROOF_C) < 45) m.castShadow = m.receiveShadow = true; });
-    for (const g of [world.tree, world.stairHouse]) g.traverse(m => { if (ok(m)) { m.castShadow = true; m.receiveShadow = g === world.stairHouse; } });
+    for (const g of [world.tree, world.stairHouse, world.roofStair]) g.traverse(m => { if (ok(m)) { m.castShadow = true; m.receiveShadow = g !== world.tree; } });
   }
   { // 预先编译所有着色器（含天台、楼梯口复制品等平时看不到的部分），避免第一次看到时卡一下
     const hidden = []; scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
