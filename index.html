@@ -708,7 +708,7 @@ function buildBuilding() {
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
 function loadImages() {
-  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'parapet', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
   return Promise.all(names.map(f => new Promise(res => {
     const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
     im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
@@ -1236,11 +1236,17 @@ function buildRoof() {
   // 屋面板侧面和天井立面、楼梯间墙面、下一层起点的墙正好共面：deckMat 带 polygonOffset 往后让，不然会闪
   for (const [x0, x1, z0, z1] of deck) { solid(ctx, x0, x1, 3.0, Y, z0, z1, deckMat, false); walkQuad(ctx, [x0, Y, z0], [x1, Y, z0], [x1, Y, z1], [x0, Y, z1]); }
   const P = Y + 1.1; // 女儿墙
-  solid(ctx, -0.6, 27.2, Y, P, -22.6, -22.4, wallMat); solid(ctx, -0.6, 27.2, Y, P, 5.8, 6.0, wallMat);
-  solid(ctx, -0.6, -0.4, Y, P, -22.6, 6.0, wallMat); solid(ctx, 27, 27.2, Y, P, -22.6, 6.0, wallMat);
+  // 墙面贴图（顶上一道压顶、往下流的水渍、墙脚的苔藓）：竖直方向正好铺满一面墙高，横向 1.8 米一铺；墙顶另用素色压顶
+  const capMat = std('#a39a88'), plasterMat = h => { if (!IMG.parapet) return null;
+    const t = new THREE.Texture(IMG.parapet); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+    t.repeat.set(1 / 1.8, 1 / h); t.offset.y = -Y / h; t.needsUpdate = true; return std('#ffffff', { map: t }); };
+  const parMat = plasterMat(P - Y) || wallMat, rimMat = plasterMat(1.0) || std('#8a7a62');
+  const wall = (x0, x1, y1, z0, z1, mat) => { const m = solid(ctx, x0, x1, Y, y1, z0, z1, mat); m.material = [mat, mat, capMat, capMat, mat, mat]; };
+  wall(-0.6, 27.2, P, -22.6, -22.4, parMat); wall(-0.6, 27.2, P, 5.8, 6.0, parMat);
+  wall(-0.6, -0.4, P, -22.6, 6.0, parMat); wall(27, 27.2, P, -22.6, 6.0, parMat);
   // 天井边沿的矮墙（大树在 buildCourtyard 里，属于楼本身）
   for (const [x0, x1, z0, z1] of [[C.x0, C.x1, C.z0 - 0.1, C.z0], [C.x0, C.x1, C.z1, C.z1 + 0.1], [C.x0 - 0.1, C.x0, C.z0, C.z1], [C.x1, C.x1 + 0.1, C.z0, C.z1]])
-    solid(ctx, x0, x1, Y, Y + 1.0, z0, z1, std('#8a7a62'));
+    wall(x0, x1, Y + 1.0, z0, z1, rimMat);
   const rng = mulberry32(11), live = world.roofLive = { clouds: [], bob: [], gulls: [], rings: [] };
   // 天空：程序生成的渐变穹顶（地平线 = 雾色，和海面远处接上）+ 太阳
   R.add(new THREE.Mesh(new THREE.SphereGeometry(820, 32, 16), new THREE.ShaderMaterial({
