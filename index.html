@@ -708,7 +708,7 @@ function buildBuilding() {
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
 function loadImages() {
-  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'parapet', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'parapet', 'leafCluster.png', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
   return Promise.all(names.map(f => new Promise(res => {
     const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
     im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
@@ -845,6 +845,14 @@ function buildRuins() {
   world.ruins = []; world.windows = []; world.fogPlanes = []; world.glass = [];
   for (const [c, n] of world.closetFog) fogLayers(c, n, 1.0, 0.9);
   fogLayers(V(22.5, 1.5, 3.2), V(0, 0, 1), 1.5, 1.2); fogLayers(V(24.2, 1.5, 0.825), V(1, 0, 0), 1.25, 1.2);   // 转角两扇朝海的窗
+  // 朝天井的内窗：深色木框 + 几乎透明的玻璃。有树枝穿进来的那三扇，从 3 楼起玻璃和窗框都被树枝撞没了
+  world.innerWin = [];
+  const glassMat = new THREE.MeshStandardMaterial({ color: '#d6e4ea', transparent: true, opacity: 0.12, roughness: 0.05, depthWrite: false, side: THREE.DoubleSide }), wood = std('#3a2a20'), t = 0.05;
+  for (const [x, z, n, branch] of [[7.35, -0.1, V(0, 0, -1), false], [10.55, -0.1, V(0, 0, -1), true], [16.15, -0.1, V(0, 0, -1), true], [20.9, -3.15, V(-1, 0, 0), false], [20.9, -10.75, V(-1, 0, 0), true]]) {
+    const w = 1.5, h = 1.2, g = new THREE.Group(), gl = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glassMat); gl.renderOrder = 11; g.add(gl);
+    for (const [bw, bh, bx, by] of [[w, t, 0, h / 2 - t / 2], [w, t, 0, -h / 2 + t / 2], [t, h, -w / 2 + t / 2, 0], [t, h, w / 2 - t / 2, 0], [t * 0.7, h, 0, 0], [w, t * 0.7, 0, h * 0.12]]) box(bw, bh, 0.05, wood, bx, by, 0, g);
+    g.position.set(x, 1.5, z); g.lookAt(V(x, 1.5, z).add(n)); g.userData.branch = branch; building.add(g); world.innerWin.push(g);
+  }
   const body = std('#8f8a7e', { emissive: '#2c2924' }), holeMat = std('#2a2c2e'), litMat = new THREE.MeshBasicMaterial({ color: '#ffd98a', fog: false, transparent: true });   // 透明 + 后画：穿过窗外的雾层也看得见
   const ruin = (x, z, ry, tilt) => {
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.set(0, ry, tilt); building.add(g); world.ruins.push(g);
@@ -945,7 +953,7 @@ function buildFurniture(a) {
   }
   if (fm) res.spots = surfaceSpots(g, MODELS[a.furn === 'cabinet' ? 'lowCabinet' : a.furn].size);
   const bb = new THREE.Box3().setFromObject(g);
-  if (a.furn !== 'shelf') collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, bb.max.y);
+  collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, bb.max.y);   // 墙上的架子也挡人（从地面算起，不能从架子底下钻过去）
   return res;
 }
 // 模型台面上空着的地方：网格采样往下打射线，出现最多的高度是台面，四周也平的点才算空位（避开台面上的花瓶、电话、书）
@@ -1107,6 +1115,34 @@ function facadeTexture(variant) {
   tex.wrapS = THREE.RepeatWrapping; tex.anisotropy = 8; return tex;
 }
 // 大树树干：程序生成的一整根，扭着长、表面有几道纵向的棱；树皮贴图横向绕 3 圈，法线贴图从贴图亮度算出来
+// 天台树：把主干轴线挪到原点，按主干粗细缩放到和下面的程序主干一样粗（RT），分叉放到 forkY 高度
+function roofTreeFit(o, forkY) {
+  o.updateMatrixWorld(true); const pts = [], v = V(0, 0, 0);
+  o.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i++) pts.push(v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld).clone()); });
+  const H = Math.max(...pts.map(p => p.y)), band = (y0, y1) => pts.filter(p => p.y >= y0 && p.y < y1);
+  const low = band(0, H * 0.08), cx = low.reduce((a, p) => a + p.x, 0) / low.length, cz = low.reduce((a, p) => a + p.z, 0) / low.length;
+  const med = a => { a.sort((x, y) => x - y); return a[a.length >> 1] || 0; }, rad = ps => med(ps.map(p => Math.hypot(p.x - cx, p.z - cz)));
+  const Rt = rad(band(H * 0.05, H * 0.3));
+  let fy = H * 0.3; while (fy < H * 0.8 && rad(band(fy, fy + H * 0.02)) < Rt * 1.6) fy += H * 0.02;   // 往上找：截面突然变宽的地方就是分叉
+  const k = 2.9 / Rt; o.children[0].position.x -= cx; o.children[0].position.z -= cz; o.scale.setScalar(k); o.position.y = forkY - fy * k;
+  o.userData.fork = forkY; o.userData.top = o.position.y + H * k;
+}
+// 在枝干上半截挂叶团卡片（概念图里截出来的一团叶子，三片交叉；视线擦边时丢弃，避免看到一条条薄片）
+function leafCards(crown, parent) {
+  const im = IMG.leafCluster; if (!im) return;
+  const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
+  const mat = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); greenMats.push(mat);
+  mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n  if (abs(dot(normalize(vNormal), normalize(vViewPosition))) < 0.35) discard;'); };
+  crown.updateMatrixWorld(true); const pts = [], v = V(0, 0, 0), f = crown.userData.fork, top = crown.userData.top, cx = crown.position.x, cz = crown.position.z, H = top - f;
+  crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y > f - H * 0.05) pts.push(v.clone()); } });
+  const rr = mulberry32(77), chosen = [], plane = new THREE.PlaneGeometry(1, 1);
+  for (let t = 0; t < 5000 && chosen.length < 60; t++) { const p = pts[Math.floor(rr() * pts.length)]; if (Math.hypot(p.x - cx, p.z - cz) < 3.2 && p.y < f + H * 0.6) continue; if (chosen.some(q => q.distanceTo(p) < H * 0.13)) continue; chosen.push(p); }
+  for (const p of chosen) {
+    const g = new THREE.Group(), out = V(p.x - cx, 0, p.z - cz).normalize().multiplyScalar(H * 0.05);
+    for (let k = 0; k < 3; k++) { const m = new THREE.Mesh(plane, mat); if (k === 2) m.rotation.x = -Math.PI / 2; else m.rotation.y = k * Math.PI / 2 + rr(); g.add(m); }
+    g.position.copy(p).add(out).add(V(0, H * 0.04, 0)); g.rotation.set(rr() * 0.6, rr() * 6, rr() * 0.6); g.scale.setScalar(H * (0.24 + rr() * 0.14)); parent.add(g);
+  }
+}
 function barkTrunk(crown, at, y0) {
   // 量树冠模型自带的那截树干：底部外扩（R0）和往上到分叉前的粗细（Rmid）。
   // 把整个树冠放大，让它的树干和下面的主干（RT）一样粗；主干只长到树冠底部，接口前 1.6 米慢慢鼓到和树冠根部一样粗，再插进去一点 ——
@@ -1198,6 +1234,13 @@ function buildCourtyard() {
   // 大树：从水下长上来，高过楼顶；整棵树按楼层上下移动（站在 n 楼，看到的是这一段）
   const tree = world.tree = new THREE.Group(); building.add(tree);
   const T0 = TREE;
+  if (MODELS.roofTree && IMG.bark) { // 天台专用的整棵树（Meshy）：自带一长截圆柱主干，下面接程序生成的主干，两段一样粗、一样的树皮，接口埋在楼下
+    const crown = model('roofTree'); roofTreeFit(crown, 9.5); crown.position.x += T0.x; crown.position.z += T0.z; tree.add(crown);
+    const trunk = barkTrunk(crown, T0, -32); tree.add(trunk);
+    crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, trunk.material.normalMap); });
+    leafCards(crown, tree);   // 多视图生成的模型树叶很少：枝头补叶团
+    return;
+  }
   if (MODELS.treeTrunk && MODELS.treeCrown) { // Meshy：几段树干从水下接到楼顶以上，顶上是树冠
     const crown = model('treeCrown'); crown.position.set(T0.x, 8.5, T0.z); tree.add(crown);
     const trunk = IMG.bark && barkTrunk(crown, T0, -32);
@@ -1378,6 +1421,7 @@ function applyContent(n, here = true) {   // here = false：玩家还在过渡�
   world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
   world.moss?.forEach((m, i) => m.visible = i < [4, 10, 18, 26][n - 1]);
   world.branches.forEach(b => b.visible = n >= 3);
+  world.innerWin.forEach(g => g.userData.on = !(g.userData.branch && n >= 3));
   world.ruins.forEach(r => r.visible = n >= 3);
   setPhotosClear(state.recovered.has('photo'));
   world.notices.forEach(m => m.visible = n >= 2);
@@ -1531,6 +1575,7 @@ function updateLook(dt, instant) {
   if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
   for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
   for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
+  for (const g of world.innerWin || []) g.visible = g.userData.on !== false && !state.roofMode;
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
@@ -1563,7 +1608,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.15 }, sheetSofa: { w: 2.3 }, housePlant: { h: 0.8 }, sheetBookshelf: { h: 2.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
   wallClock: { w: 0.36 }, diningTable: { h: 0.74 }, diningChair: { h: 0.92 },
   cityRow: { w: 32 }, cityFlat: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityTower: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, cloudB: { w: 70 },
-  debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
+  debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, roofTree: { h: 30 }, treeBranch: { w: 3.4 },
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
 // 天台近处的几栋远景楼：桌面上用高精度版本（每栋 10–20 万面），手机上用 2.5 万面的

@@ -493,6 +493,15 @@
       "target_polycount": 12000,
       "ai_model": "latest",
       "texture": 2048
+    },
+    {
+      "key": "roofTreeS",
+      "note": "天台大树（单图版，不重拓扑保住树叶）",
+      "image": "refs/roofTree_front.png",
+      "remesh": false,
+      "target_polycount": 30000,
+      "ai_model": "latest",
+      "texture": 2048
     }
   ]
 }

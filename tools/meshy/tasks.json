@@ -359,5 +359,9 @@
   "roofTree": {
     "multi": "01a114d3-b579-776f-a07b-e24526d96d00",
     "done": true
+  },
+  "roofTreeS": {
+    "image": "01a114e1-699a-735c-a125-4e5d1662d887",
+    "done": true
   }
 }
