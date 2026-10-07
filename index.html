@@ -597,6 +597,41 @@ function lampVisual(parent, x, z, idx) {
 }
 function pointLight(parent, x, y, z) { const l = new THREE.PointLight('#fff', 3, 7, 1.4); l.position.set(x, y, z); parent.add(l); return l; }
 
+// 4 楼上天台专用的折返楼梯（世界坐标，只在 roofMode 显示；其他楼层仍是那一段直跑楼梯，保证楼层首尾无缝）：
+// 从房间西门进来 → 南侧一跑往西上到一半 → 平台折返 → 北侧一跑往东上到屋面高度 → 北墙上的门出到天台
+function buildRoofStair(B, c) {
+  const g = world.roofStair = new THREE.Group(); g.visible = false; B.add(g);
+  const ctx = { parent: g, T: I4, collide: false, owner: g }, Y = 3.25, M2 = Y / 2, N = 13, xa = 16.3, xb = 11.3, zA = [-20.2, -19.0], zB = [-19.0, -17.8];
+  const cols = world.roofStairCols = [], col = (...a) => { const k = collider(...a); k.enabled = false; cols.push(k); };
+  for (let i = 0; i < N; i++) {   // 两跑台阶（实心块）
+    const run = (xa - xb) / N, r = M2 / N;
+    solid(ctx, xa - (i + 1) * run, xa - i * run, -0.1, (i + 1) * r, zA[0], zA[1], M.floor, false);
+    solid(ctx, xb + i * run, xb + (i + 1) * run, -0.1, M2 + (i + 1) * r, zB[0], zB[1], M.floor, false);
+  }
+  solid(ctx, 8.5, xb, -0.1, M2, -20.2, -17.8, M.floor, false);   // 中间的平台
+  solid(ctx, xa, 18.3, Y - 0.2, Y, zB[0], zB[1], M.floor, false);   // 顶上的平台（下面留出进门的空间）
+  walkQuad(ctx, [xa, 0, -20.2], [18.5, 0, -20.2], [18.5, 0, -17.8], [xa, 0, -17.8]);
+  walkQuad(ctx, [xb, M2, zA[0]], [xa, 0, zA[0]], [xa, 0, zA[1]], [xb, M2, zA[1]]);
+  walkQuad(ctx, [8.5, M2, -20.2], [xb, M2, -20.2], [xb, M2, -17.8], [8.5, M2, -17.8]);
+  walkQuad(ctx, [xb, M2, zB[0]], [xa, Y, zB[0]], [xa, Y, zB[1]], [xb, M2, zB[1]]);
+  walkQuad(ctx, [xa, Y, zB[0]], [18.3, Y, zB[0]], [18.3, Y, -17.55], [xa, Y, -17.55]);
+  // 两跑之间的隔墙 + 顶上平台的木栏杆
+  solid(ctx, xb, xa, -0.1, Y + 1.0, -19.05, -18.95, M.wallStair, false); col(xb, xa, -19.08, -18.92, -1, Y + 1.2);
+  solid(ctx, xa, 18.3, Y, Y + 0.06, -19.04, -18.96, M.trim, false); solid(ctx, xa, 18.3, Y + 0.95, Y + 1.0, -19.04, -18.96, M.trim, false);
+  for (let x = xa + 0.25; x < 18.3; x += 0.4) solid(ctx, x - 0.025, x + 0.025, Y, Y + 0.95, -19.025, -18.975, M.trim, false);
+  col(xa, 18.3, -19.08, -18.92, Y - 0.1, Y + 1.2);
+  col(xb, xa - 0.1, zB[0], zB[1], -1, M2 - 0.08);   // 别从第二跑底下钻过去
+  // 楼梯间：两侧墙、西端封墙、顶板；北墙在顶上平台那里开一扇门通到天台
+  const W = 6.4, D0 = 16.45, D1 = 18.15, DH = Y + 2.2;
+  solid(ctx, 8.3, 18.3, 0, W, -20.4, -20.2, M.wallStair, false); solid(ctx, 8.3, 8.5, 0, W, -20.2, -17.8, M.wallStair, false);
+  solid(ctx, 8.3, D0, 0, W, -17.8, -17.6, M.wallStair, false); solid(ctx, D1, 18.3, 0, W, -17.8, -17.6, M.wallStair, false);
+  solid(ctx, D0, D1, 0, Y - 0.2, -17.8, -17.6, M.wallStair, false); solid(ctx, D0, D1, DH, W, -17.8, -17.6, M.wallStair, false);
+  solid(ctx, 8.3, 18.5, W - 0.2, W, -20.4, -17.6, M.ceil, false);
+  box(D1 - D0 + 0.12, 0.08, 0.24, M.trim, (D0 + D1) / 2, DH + 0.04, -17.7, g);   // 门框
+  for (const x of [D0 - 0.03, D1 + 0.03]) box(0.06, DH - Y + 0.08, 0.24, M.trim, x, (Y + DH) / 2, -17.7, g);
+  col(8.3, 18.3, -20.4, -20.2, Y - 0.2, W); col(8.3, 8.5, -20.4, -17.6, -1, W); col(8.3, D0, -17.8, -17.6, Y - 0.2, W); col(D1, 18.3, -17.8, -17.6, Y - 0.2, W);
+  col(18.3, 18.5, -20.4, -17.6, Y - 0.2, W);   // 东头（房间西墙往上那截）
+}
 // 楼梯（入口楼梯的局部坐标）：底端平台 z -10→-8（y=-3），梯段 z -8→0 升到 y=0，宽 x 0.3→2.7
 function buildStairwell(ctx, withReplicaDoor, upperCtx) {   // 两侧墙从 z=-10 起：出口楼梯的这一头插在房间西墙里，再往外伸就和房间墙面重叠闪烁   // upperCtx：出口楼梯 0 米以上的墙放进去（到天台时跟复制品一起隐藏）
   for (let i = 0; i < 16; i++) {
@@ -737,11 +772,12 @@ function buildBuilding() {
   }
 
   // --- 出口楼梯（= T × 入口楼梯），顶端是下一层起点的复制品
-  const exitGroup = new THREE.Group(); exitGroup.matrixAutoUpdate = false; exitGroup.matrix.copy(T); B.add(exitGroup);
+  const exitGroup = world.exitGroup = new THREE.Group(); exitGroup.matrixAutoUpdate = false; exitGroup.matrix.copy(T); B.add(exitGroup);
   const stub = new THREE.Group(); stub.matrixAutoUpdate = false; stub.matrix.copy(T); B.add(stub); world.stub = stub;
   // 出口楼梯 0 米以上那截墙和顶：一直显示 —— 到天台时它就是屋面上凸出来的楼梯间
   const stairHouse = world.stairHouse = new THREE.Group(); stairHouse.matrixAutoUpdate = false; stairHouse.matrix.copy(T); B.add(stairHouse);
-  buildStairwell({ parent: exitGroup, T, collide: true }, false, { parent: stairHouse, T, collide: false });
+  buildStairwell({ parent: exitGroup, T, collide: true, owner: exitGroup }, false, { parent: stairHouse, T, collide: false });
+  buildRoofStair(B, c);
   buildStart({ parent: stub, T, collide: false }, true);
 
   // --- 其余吊灯
@@ -1653,6 +1689,7 @@ function updateLook(dt, instant) {
   for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
   for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
   for (const g of world.innerWin || []) g.visible = g.userData.on !== false && !state.roofMode;
+  if (world.roofStair) { world.roofStair.visible = state.roofMode; world.exitGroup.visible = world.stairHouse.visible = !state.roofMode; for (const k of world.roofStairCols) k.enabled = state.roofMode; }   // 上天台那一趟换成折返楼梯
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = state.roofMode ? look.sun : state.lightsOn ? look.sun * 0.35 : 0;   // 室内的太阳是穿过天花板的假光：只留一点补光，关灯时归零
   if (state.roofMode) hemi.color.copy(_hRoof); document.body.classList.toggle('cine', state.roofMode); renderer.shadowMap.autoUpdate = state.roofMode;   // 天台：冷色天光 + 暗角
   const flick = t.flicker && state.floor === 1;
@@ -2035,13 +2072,19 @@ function noiseSrc() {
 function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
 const sfx = {
   blip(pos) { const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain(); o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(620, t + 0.18); env(g, t, 0.02, 0.35, 0.23); o.connect(g).connect(outNode(pos, 1)); o.start(t); o.stop(t + 0.3); },
-  crackle(pos) { const t = audio.currentTime, n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 1400 + Math.random() * 800, Q: 1.5 }), g = audio.createGain(); env(g, t, 0.05, 0.12, 0.5); n.connect(f).connect(g).connect(outNode(pos, 1)); n.start(t, Math.random()); n.stop(t + 0.6); },
+  crackle(pos) { // 收音机的沙沙声：起落都很缓、前后接得上的一层低通噪声（不要短促的「嗖」——听着像抽鞭子），偶尔一两下很轻的爆音
+    const t = audio.currentTime, out = outNode(pos, 1), n = noiseSrc(), lp = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 2400 }), hp = new BiquadFilterNode(audio, { type: 'highpass', frequency: 500 }), g = audio.createGain();
+    env(g, t, 0.3, 0.045, 0.5); n.connect(hp).connect(lp).connect(g).connect(out); n.start(t, Math.random()); n.stop(t + 0.85);
+    if (Math.random() < 0.4) { const c = noiseSrc(), cg = audio.createGain(), tt = t + Math.random() * 0.5; env(cg, tt, 0.001, 0.03, 0.015); c.connect(cg).connect(out); c.start(tt, Math.random()); c.stop(tt + 0.03); } },
   broadcast(pos, dur, gain) { // 撤离广播：提示音 + 带杂音的"人声"起伏
     const t = audio.currentTime, out = outNode(pos, gain);
-    [660, 520].forEach((fq, i) => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = fq; env(g, t + i * 0.35, 0.02, 0.5, 0.3); o.connect(g).connect(out); o.start(t + i * 0.35); o.stop(t + i * 0.35 + 0.4); });
-    const n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 900, Q: 2 }), g = audio.createGain(), lfo = audio.createOscillator(), lg = audio.createGain();
-    g.gain.value = 0.25; lfo.frequency.value = 3.5; lg.gain.value = 0.2; lfo.connect(lg).connect(g.gain);
-    n.connect(f).connect(g).connect(out); n.start(t + 0.8); n.stop(t + 0.8 + dur); lfo.start(t + 0.8); lfo.stop(t + 0.8 + dur);
+    // 不再用两声下行的提示音（听着像布谷鸟钟）：只剩隔着墙、模模糊糊的广播人声——按音节一顿一顿地起伏
+    const n = noiseSrc(), f = new BiquadFilterNode(audio, { type: 'bandpass', frequency: 700, Q: 1.2 }), lp = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 1300 }), g = audio.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    for (let u = t + 0.2; u < t + dur; ) { const d = 0.12 + Math.random() * 0.16, pk = Math.random() < 0.2 ? 0.02 : 0.12 + Math.random() * 0.12;   // 一个个「音节」，中间偶尔停顿
+      g.gain.linearRampToValueAtTime(pk, u + d * 0.35); g.gain.linearRampToValueAtTime(0.02, u + d); u += d + (Math.random() < 0.15 ? 0.25 : 0.02); }
+    g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.3);
+    n.connect(f).connect(lp).connect(g).connect(out); n.start(t); n.stop(t + dur + 0.4);
   },
   beeps(pos, k) { for (let i = 0; i < k; i++) { const t = audio.currentTime + i * 0.3, o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 1000; env(g, t, 0.01, 0.3, 0.12); o.connect(g).connect(outNode(pos, 1)); o.start(t); o.stop(t + 0.2); } },
   horn() { const t = audio.currentTime, f = new BiquadFilterNode(audio, { type: 'lowpass', frequency: 380 }), g = audio.createGain(); env(g, t, 0.6, 0.3, 2.2); f.connect(g).connect(outNode(null, 1));
@@ -2437,7 +2480,7 @@ function updatePlayer(dt) {
     if (world.farLeaf.userData.col.enabled === false && p.x < 17.6) setDoor(world.farLeaf, false, true);  // 身后的门关上
     if (!state.roofMode && world.farLeaf.userData.closed && p.x < 12.7) stairWarp();
   }
-  if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sunFor(true); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }
+  if (state.roofMode && state.phase === 'stairs' && p.y > 3.1 && p.x > 15.5) { state.floor = 5; state.phase = 'roof'; sunFor(true); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }   // 折返楼梯走到顶上的平台
   if (state.phase === 'roof') { const l = world.portal.worldToLocal(p.clone().setY(world.portal.position.y)); if (Math.abs(l.x) < 0.6 && l.z > -0.95 && l.z < 0.3 && p.y > world.portal.position.y - 0.5) endGame(); }  // 走到门前就被白光吞没
 }
 
@@ -2749,7 +2792,7 @@ function tick() {
   if (!TOUCH) { // 天台的实时阴影：近处的实体投影、接影（透明的雾、天空、远景不参与）；大树和楼梯间也投影
     const near = V(), ok = m => m.isMesh && !m.material.transparent && !(m.material.isShaderMaterial || m.material.isMeshBasicMaterial);
     roof.traverse(m => { if (ok(m) && m.getWorldPosition(near).distanceTo(ROOF_C) < 45) m.castShadow = m.receiveShadow = true; });
-    for (const g of [world.tree, world.stairHouse]) g.traverse(m => { if (ok(m)) { m.castShadow = true; m.receiveShadow = g === world.stairHouse; } });
+    for (const g of [world.tree, world.stairHouse, world.roofStair]) g.traverse(m => { if (ok(m)) { m.castShadow = true; m.receiveShadow = g !== world.tree; } });
   }
   { // 预先编译所有着色器（含天台、楼梯口复制品等平时看不到的部分），避免第一次看到时卡一下
     const hidden = []; scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
