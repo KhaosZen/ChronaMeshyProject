@@ -8,6 +8,7 @@
 //
 // assets.json 里每条资产二选一：
 //   "image": "refs/lamp.png"  → Image-to-3D（从概念图裁出来的参考图，造型和配色跟概念图一致）
+//   "images": ["refs/a_front.png", "refs/a_side.png"] → Multi-Image-to-3D（同一物体 2–4 个角度）
 //   "prompt": "…"             → Text-to-3D（preview + refine）
 // 可选 "ai_model": "latest" 指定 Meshy 模型版本；"remesh": false 保留原始网格（薄板类不容易变形，之后自己减面）；"texture": 1024 指定贴图尺寸。
 // 认证：云环境里由代理自动给 api.meshy.ai 加认证头（环境设置 → API credentials）；本地运行时设 MESHY_API_KEY。
@@ -59,7 +60,17 @@ async function generate(a) {
   const rec = tasks[a.key] ||= {};
   const poly = a.target_polycount ?? cfg.defaults.target_polycount;
   let done;
-  if (a.image) {
+  if (a.images) { // 同一物体的 2–4 张不同角度图 → Multi-Image-to-3D（背面、侧面不靠猜）
+    if (!rec.multi) {
+      const urls = a.images.map(f => `data:image/${f.endsWith('.jpg') ? 'jpeg' : 'png'};base64,` + fs.readFileSync(path.join(HERE, f)).toString('base64'));
+      rec.multi = (await api('POST', `${API}/v1/multi-image-to-3d`, {
+        image_urls: urls, topology: 'triangle', target_polycount: poly, should_remesh: a.remesh ?? true, should_texture: true, enable_pbr: false,
+        ...(a.ai_model && { ai_model: a.ai_model }),
+      })).result;
+      saveTasks();
+    }
+    done = await poll(`${API}/v1/multi-image-to-3d/${rec.multi}`, `${a.key}/multi`);
+  } else if (a.image) {
     if (!rec.image) {
       const img = 'data:image/png;base64,' + fs.readFileSync(path.join(HERE, a.image)).toString('base64');
       rec.image = (await api('POST', `${API}/v1/image-to-3d`, {
