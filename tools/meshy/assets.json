@@ -482,6 +482,26 @@
       "remesh": false,
       "simplify": 0.03,
       "simplifyError": 0.002
+    },
+    {
+      "key": "roofTree",
+      "note": "天台专用的大树：圆柱主干 + 树冠（多视图）",
+      "images": [
+        "refs/roofTree_front.png",
+        "refs/roofTree_side.png"
+      ],
+      "target_polycount": 12000,
+      "ai_model": "latest",
+      "texture": 2048
+    },
+    {
+      "key": "roofTreeS",
+      "note": "天台大树（单图版，不重拓扑保住树叶）",
+      "image": "refs/roofTree_front.png",
+      "remesh": false,
+      "target_polycount": 30000,
+      "ai_model": "latest",
+      "texture": 2048
     }
   ]
 }

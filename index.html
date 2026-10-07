@@ -9,16 +9,35 @@
     font-family: Georgia, "Times New Roman", serif; user-select: none; }
   canvas { display: block; }
   .layer { position: fixed; inset: 0; pointer-events: none; }
-  #start { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(18,18,18,.9); pointer-events: auto; cursor: pointer; text-align: center; gap: 18px; }
-  #start { background: linear-gradient(rgba(8,9,12,.8), rgba(8,9,12,.88)), url(assets/tex/keyart.jpg) center / cover, #121212; }
+  /* 主菜单：标题和选项靠左，左边压暗、右边露出主视觉 */
+  #start { display: flex; align-items: center; justify-content: flex-start; padding-left: 9vw; pointer-events: auto; text-align: left;
+    background: linear-gradient(rgba(8,9,12,.4), rgba(8,9,12,.4)), linear-gradient(90deg, rgba(8,9,12,.9) 0%, rgba(8,9,12,.72) 30%, rgba(8,9,12,.12) 62%, rgba(8,9,12,0) 100%), url(assets/tex/keyart.jpg) center / cover, #121212; }
+  /* 一级选项：带底色和左边条的按钮行；能展开的（合作、语言）右边有 ▸/▾；二级选项：缩进、更小，左侧一条细线串起来 */
+  #menu { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: min(22em, 80vw); }
+  #start #menu h1 { font-size: 44px; letter-spacing: .5em; margin: 0 0 26px; }
+  .mi { font: inherit; color: #ece6d8; background: rgba(214,208,194,.06); border: none; border-left: 2px solid rgba(214,208,194,.35); padding: 11px 16px; font-size: 18px; letter-spacing: .16em;
+    cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; transition: background .2s, border-color .2s, padding .2s; }
+  .mi:hover, .mi:focus-visible { background: rgba(214,208,194,.16); border-left-color: #f0d9a8; padding-left: 22px; outline: none; }
+  .mi.exp::after { content: '▸'; font-size: 13px; opacity: .7; transition: transform .2s; }
+  .mi.exp.on::after { transform: rotate(90deg); }
+  .mi.on { background: rgba(214,208,194,.12); border-left-color: #f0d9a8; }
+  .mi:disabled { cursor: default; opacity: .55; padding-left: 16px; background: rgba(214,208,194,.04); border-left-color: rgba(214,208,194,.2); }
+  .sub { display: none; flex-direction: column; align-items: stretch; gap: 2px; margin: 0 0 6px 18px; padding-left: 10px; border-left: 1px solid rgba(214,208,194,.25); font-size: 15px; }
+  .sub.on { display: flex; }
+  .sub > button { font: inherit; color: #d6d0c2; background: none; border: none; padding: 7px 12px; cursor: pointer; letter-spacing: .1em; text-align: left; opacity: .8; transition: background .2s, opacity .2s; }
+  .sub > button:hover { background: rgba(214,208,194,.1); opacity: 1; }
+  .sub > button.cur { opacity: 1; color: #f0d9a8; }
+  .sub > button.cur::after { content: '  ✓'; }
+  #mpPanel { padding: 4px 12px; font-size: 14px; }
+  #menu #help { margin-top: 22px; padding-top: 14px; border-top: 1px solid rgba(214,208,194,.18); font-size: 13px; opacity: .55; }
+  #menu #startText:empty { display: none; }
   #start.paused, #start.open.paused { background: rgba(10,11,14,.42); -webkit-backdrop-filter: blur(10px) brightness(.85); backdrop-filter: blur(10px) brightness(.85); }
-  #restart { display: none; font: inherit; color: inherit; background: none; border: 1px solid rgba(214,208,194,.45); padding: 7px 18px; cursor: pointer; letter-spacing: .12em; font-size: 14px; }
-  #restart:hover { border-color: rgba(214,208,194,.9); }
+  #restart { display: none; }
   #start.paused #restart { display: block; }
+  #start.paused #mCoop, #start.paused #mp, #start.started #mCoop, #start.started #mp, #start.paused #mLang, #start.paused #langs { display: none; }   /* 换语言要重新载入：游戏中途不给换 */
   #pauseBtn { position: absolute; right: 18px; top: 14px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(214,208,194,.5); background: rgba(0,0,0,.3); display: flex; align-items: center; justify-content: center; font-size: 16px; letter-spacing: 2px; }
-  #start.open { background: linear-gradient(rgba(8,9,12,.25), rgba(8,9,12,.6)), url(assets/tex/keyart.jpg) center / cover, #121212; }
-  #start h1 { font-weight: 400; letter-spacing: .6em; margin: 0; font-size: 28px; }
+  #start.open { background: linear-gradient(90deg, rgba(8,9,12,.88) 0%, rgba(8,9,12,.62) 30%, rgba(8,9,12,.08) 62%, rgba(8,9,12,0) 100%), url(assets/tex/keyart.jpg) center / cover, #121212; }
+  #start h1 { font-weight: 400; letter-spacing: .6em; margin: 0; font-size: 34px; }
   #start p { margin: 0; opacity: .7; font-size: 14px; line-height: 1.9; }
   #start .go { opacity: .95; font-size: 16px; letter-spacing: .3em; }
   #crosshair { left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; inset: auto;
@@ -34,11 +53,9 @@
   #end #again { font-size: 14px; letter-spacing: .25em; cursor: pointer; pointer-events: auto; }
   #monologue { position: absolute; left: 12%; right: 12%; top: 50%; transform: translateY(-50%); text-align: center; font-size: 21px; line-height: 1.8; letter-spacing: .06em; opacity: 0; transition: opacity 1.4s; }
   #scope { background: radial-gradient(circle at 50% 50%, transparent 0 33vmin, #000 34vmin); opacity: 0; transition: opacity .5s; }
-  #mp { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; opacity: .8; }
-  #mp button { font: inherit; color: inherit; background: none; border: 1px solid rgba(214,208,194,.35); padding: 6px 14px; cursor: pointer; letter-spacing: .08em; }
-  #mp button:hover { border-color: rgba(214,208,194,.8); }
+  #mpGo { border: 1px solid rgba(214,208,194,.5) !important; padding: 4px 12px !important; margin-left: 6px; }
   #mp input { font: inherit; width: 6em; text-align: center; letter-spacing: .3em; text-transform: uppercase; background: rgba(0,0,0,.3); color: inherit; border: 1px solid rgba(214,208,194,.5); padding: 5px; }
-  #mpPanel { max-width: 30em; line-height: 1.7; text-align: center; }
+  #mpPanel { max-width: 30em; line-height: 1.7; text-align: left; opacity: .85; }
   #mpPanel b { font-size: 20px; letter-spacing: .3em; }
   /* 触屏：左半屏拖出摇杆，右半屏拖动转视角，能交互时出现 Use 按钮；竖屏时提示横过来 */
   #touch { display: none; pointer-events: auto; touch-action: none; }
@@ -55,6 +72,7 @@
   body.touch #prompt { bottom: 30%; }
   #hint { top: 7%; bottom: auto; text-align: center; font-size: 15px; letter-spacing: .12em; opacity: 0; transition: opacity .6s; text-shadow: 0 0 6px #000; }
   #controls { inset: 18px auto auto 20px; font-size: 13px; line-height: 1.9; letter-spacing: .08em; opacity: 0; transition: opacity 1s; text-shadow: 0 0 6px #000; }
+  body.cine::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(20,12,8,.42) 100%); }
   #hud { inset: 8px auto auto 8px; font: 12px/1.5 ui-monospace, monospace; color: #9f9; white-space: pre; display: none; }
 </style>
 <!-- Three.js 走 CDN；npm run pack 打包时会换成 ZIP 内的本地文件 -->
@@ -67,11 +85,17 @@
 </head>
 <body>
 <div id="start" class="layer">
-  <h1>ROOT</h1>
-  <p id="help">WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause</p>
-  <p class="go" id="startText">Loading…</p>
-  <button id="restart">Restart from the beginning</button>
-  <div id="mp"><button id="mpHost">Invite someone to play as the mother</button><button id="mpJoin">Join as the mother</button><div id="mpPanel"></div></div>
+  <div id="menu">
+    <h1>ROOT</h1>
+    <button class="mi" id="mSolo" disabled>Loading…</button>
+    <button class="mi" id="restart"></button>
+    <button class="mi exp" id="mCoop"></button>
+    <div class="sub" id="mp"><button id="mpJoin"></button><button id="mpHost"></button><div id="mpPanel"></div></div>
+    <button class="mi exp" id="mLang"></button>
+    <div class="sub" id="langs"></div>
+    <p id="startText"></p>
+    <p id="help"></p>
+  </div>
 </div>
 <div id="crosshair"></div>
 <div id="prompt" class="layer"></div>
@@ -83,7 +107,7 @@
 <div id="end" class="layer"><div id="monologue"></div><div class="t">HOME</div><div id="stats"></div><div id="again"></div></div>
 <div id="hud" class="layer"></div>
 <div id="touch" class="layer"><div id="stickBase"><div id="stickKnob"></div></div><div id="useBtn">USE</div><div id="pauseBtn">II</div></div>
-<div id="rotate" class="layer"><div>ROOT</div><div style="opacity:.7;font-size:14px">Turn your phone sideways to play</div></div>
+<div id="rotate" class="layer"><div>ROOT</div><div style="opacity:.7;font-size:14px" id="rotateText">Turn your phone sideways to play</div></div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -93,6 +117,17 @@ const DEBUG = new URLSearchParams(location.search).has('debug');
 // 触屏设备（手机、平板）：换成虚拟摇杆操作，并降低画质保流畅；?touch 可在桌面上强制打开
 const TOUCH = new URLSearchParams(location.search).has('touch') || (matchMedia('(pointer: coarse)').matches && 'ontouchstart' in window);
 const CLICK = TOUCH ? 'Tap' : 'Click';
+// 多语言：?lang= > 上次选的 > 浏览器语言。切换语言会带着 ?lang= 重新载入（贴图里的字在载入时画好）
+const LANGS = { en: 'English', ja: '日本語', 'zh-Hans': '简体中文', 'zh-Hant': '繁體中文' };
+const LANG = (() => {
+  const q = new URLSearchParams(location.search).get('lang'); if (LANGS[q]) return q;
+  try { const v = localStorage.getItem('root.lang'); if (LANGS[v]) return v; } catch {}
+  const n = (navigator.language || 'en').toLowerCase();
+  return n.startsWith('ja') ? 'ja' : /^zh-(tw|hk|mo)|hant/.test(n) ? 'zh-Hant' : n.startsWith('zh') ? 'zh-Hans' : 'en';
+})();
+document.documentElement.lang = LANG;
+const tr = (en, ja, hans, hant) => ({ en, ja, 'zh-Hans': hans, 'zh-Hant': hant ?? hans })[LANG] ?? en;
+const CLK = tr(CLICK, TOUCH ? 'タップ' : 'クリック', '点击', '點擊');
 
 /* =====================================================================
  * 1. 设计数据（对应设计文档）
@@ -112,31 +147,43 @@ const FLOORS = {
 };
 // name：交互提示里的名字；text：拿到时的字幕；note：过渡房间墙上对应的便条（没拿到时字迹模糊）
 const KEYS = {
-  photo:    { name: 'family photo',      note: ['Photo:', 'hung'],         text: 'One face is missing from the photo.' },
-  lamp:     { name: 'lamp',              note: ['Lamp:', 'on'],            text: 'A lamp left on in the window. Someone is waiting.' },
-  radio:    { name: 'radio',             note: ['Radio:', 'on'],           text: '"…the dykes have failed. All residents must evacuate immediately…"' },
-  poster:   { name: 'flyer',             note: ['Flyers:', 'again'],       text: '"MISSING. Last seen age 16…" The name has washed away.' },
-  tickets:  { name: 'ferry tickets',     note: ['Tickets:', 'kept'],       text: 'On the back: "Went to the ferry again today. Still no word from you."' },
-  machine:  { name: 'answering machine', note: ['Message:', 'heard'],      text: '"Everyone\'s left. I\'m staying — in case you come home and can\'t find us."' },
-  housekey: { name: 'house key',         note: ['Key:', 'on the string'],  text: 'The key on the string. Still there.' },
-  can:      { name: 'watering can',      note: ['Can:', 'filled'],         text: 'A note on it: "I planted the seed you found when you were little. When it\'s grown, come home."' },
+  photo:    { name: tr('family photo', '家族写真', '全家福', '全家福'), note: tr(['Photo:', 'hung'], ['写真：', '飾った'], ['照片：', '挂好了'], ['照片：', '掛好了']),
+    text: tr('One face is missing from the photo.', '写真から、ひとりの顔が消えている。', '照片上少了一张脸。', '照片上少了一張臉。') },
+  lamp:     { name: tr('lamp', 'ランプ', '台灯', '檯燈'), note: tr(['Lamp:', 'on'], ['ランプ：', 'つけた'], ['台灯：', '开着'], ['檯燈：', '開著']),
+    text: tr('A lamp left on in the window. Someone is waiting.', '窓辺に灯ったままのランプ。誰かが待っている。', '窗边一直亮着的台灯。有人在等。', '窗邊一直亮著的檯燈。有人在等。') },
+  radio:    { name: tr('radio', 'ラジオ', '收音机', '收音機'), note: tr(['Radio:', 'on'], ['ラジオ：', 'つけた'], ['收音机：', '开着'], ['收音機：', '開著']),
+    text: tr('"…the dykes have failed. All residents must evacuate immediately…"', '「……堤防が決壊しました。住民の皆さんは直ちに避難してください……」', '“……堤坝已经决口。请全体居民立即撤离……”', '「……堤壩已經潰決。請全體居民立即撤離……」') },
+  poster:   { name: tr('flyer', 'チラシ', '寻人启事', '尋人啟事'), note: tr(['Flyers:', 'again'], ['チラシ：', 'また貼った'], ['启事：', '又贴了'], ['啟事：', '又貼了']),
+    text: tr('"MISSING. Last seen age 16…" The name has washed away.', '「行方不明。最後に見かけたのは16歳……」名前は水でにじんで読めない。', '“寻人。最后一次见到时16岁……”名字已经被水泡没了。', '「尋人。最後一次見到時16歲……」名字已經被水泡糊了。') },
+  tickets:  { name: tr('ferry tickets', 'フェリーの切符', '渡轮船票', '渡輪船票'), note: tr(['Tickets:', 'kept'], ['切符：', 'とってある'], ['船票：', '留着'], ['船票：', '留著']),
+    text: tr('On the back: "Went to the ferry again today. Still no word from you."', '裏に一行：「今日もフェリー乗り場へ。まだ何の便りもない。」', '背面写着：“今天又去了渡口。还是没有你的消息。”', '背面寫著：「今天又去了渡口。還是沒有你的消息。」') },
+  machine:  { name: tr('answering machine', '留守番電話', '答录机', '答錄機'), note: tr(['Message:', 'heard'], ['伝言：', '聞いた'], ['留言：', '听过了'], ['留言：', '聽過了']),
+    text: tr('"Everyone\'s left. I\'m staying — in case you come home and can\'t find us."', '「みんな出ていったわ。私は残る——あなたが帰ってきて、誰もいなかったら困るでしょう。」', '“大家都走了。我留下来——万一你回来了，却找不到我们。”', '「大家都走了。我留下來——萬一你回來了，卻找不到我們。」') },
+  housekey: { name: tr('house key', '家の鍵', '家门钥匙', '家門鑰匙'), note: tr(['Key:', 'on the string'], ['鍵：', '紐に下げた'], ['钥匙：', '挂在绳上'], ['鑰匙：', '掛在繩上']),
+    text: tr('The key on the string. Still there.', '紐に下がった鍵。まだここにある。', '绳子上的钥匙。还在。', '繩子上的鑰匙。還在。') },
+  can:      { name: tr('watering can', 'じょうろ', '洒水壶', '澆水壺'), note: tr(['Can:', 'filled'], ['じょうろ：', '水を入れた'], ['水壶：', '装满了'], ['水壺：', '裝滿了']),
+    text: tr('A note on it: "I planted the seed you found when you were little. When it\'s grown, come home."', 'メモが貼ってある：「あなたが小さいころ拾った種を植えたの。大きくなったら、帰っておいで。」', '上面贴着纸条：“我种下了你小时候捡到的那颗种子。等它长大了，就回家吧。”', '上面貼著紙條：「我種下了你小時候撿到的那顆種子。等它長大了，就回家吧。」') },
 };
 const LINES = {
   success: {
-    1: 'The empty face in the photo… that\'s me. I grew up here.',
-    2: 'She left a light on for me. And outside… the whole town is under water.',
-    3: 'I thought I was the one looking for her. She was looking for me all along.',
-    4: 'The door was never locked. Someone kept watering the flowers. …Time to go home.',
+    1: tr('The empty face in the photo… that\'s me. I grew up here.', '写真の空白の顔……あれは私だ。私はここで育った。', '照片里空着的那张脸……是我。我在这里长大。', '照片裡空著的那張臉……是我。我在這裡長大。'),
+    2: tr('She left a light on for me. And outside… the whole town is under water.', '母さんは私のために灯りをつけていた。そして外は……町ごと水の底だ。', '她为我留了一盏灯。而外面……整座小镇都沉在水里。', '她為我留了一盞燈。而外面……整座小鎮都沉在水裡。'),
+    3: tr('I thought I was the one looking for her. She was looking for me all along.', '母さんを探しているのは私だと思っていた。ずっと探していたのは、母さんのほうだった。', '我以为是我在找她。原来一直在找的，是她。', '我以為是我在找她。原來一直在找的，是她。'),
+    4: tr('The door was never locked. Someone kept watering the flowers. …Time to go home.', 'ドアに鍵がかかったことは一度もなかった。誰かがずっと花に水をやっていた。……帰ろう。', '门从来没有锁过。一直有人在给花浇水。……该回家了。', '門從來沒有鎖過。一直有人在給花澆水。……該回家了。'),
   },
   hint: {
-    1: ['Something\'s missing from those photos.', 'Was this hallway always like this?'],
-    2: ['Something here isn\'t where it belongs.', 'Is that a radio?'],
-    3: ['The ferry… how many times did she go?', 'Whose face is on all those flyers?'],
-    4: ['Didn\'t we keep a key behind the letterbox?', 'The soil is still damp.'],
+    1: tr(['Something\'s missing from those photos.', 'Was this hallway always like this?'], ['あの写真、何かが足りない。', 'この廊下、前からこんなだったっけ？'], ['那些照片里少了点什么。', '这条走廊一直是这样的吗？'], ['那些照片裡少了點什麼。', '這條走廊一直是這樣的嗎？']),
+    2: tr(['Something here isn\'t where it belongs.', 'Is that a radio?'], ['ここにあるべきじゃない物がある。', 'あれはラジオ？'], ['这里有样东西不该在这儿。', '那是收音机吗？'], ['這裡有樣東西不該在這兒。', '那是收音機嗎？']),
+    3: tr(['The ferry… how many times did she go?', 'Whose face is on all those flyers?'], ['フェリー……母さんは何度通ったんだろう。', 'あのチラシ、全部同じ顔だ。誰の？'], ['渡口……她去过多少次？', '那些启事上，是谁的脸？'], ['渡口……她去過多少次？', '那些啟事上，是誰的臉？']),
+    4: tr(['Didn\'t we keep a key behind the letterbox?', 'The soil is still damp.'], ['郵便受けの裏に鍵を隠してなかったっけ？', '土がまだ湿ってる。'], ['我们是不是在信箱后面藏过一把钥匙？', '土还是湿的。'], ['我們是不是在信箱後面藏過一把鑰匙？', '土還是濕的。']),
   },
-  confused: ['…No. Not that.', 'What did I just touch?', 'It\'s getting harder to remember.', 'Have I been here before?', 'My head hurts.'],
+  confused: tr(['…No. Not that.', 'What did I just touch?', 'It\'s getting harder to remember.', 'Have I been here before?', 'My head hurts.'],
+    ['……違う。それじゃない。', '今、何に触った？', 'だんだん思い出せなくなる。', '前にもここに来た？', '頭が痛い。'],
+    ['……不对。不是这个。', '我刚才碰了什么？', '越来越想不起来了。', '我以前来过这里吗？', '头好痛。'],
+    ['……不對。不是這個。', '我剛才碰了什麼？', '越來越想不起來了。', '我以前來過這裡嗎？', '頭好痛。']),
 };
-const WALL_NOTES = ['Dear ___,', 'The door\'s open.', 'I watered the plants.', 'Come home.']; // 母亲的便条：2 楼起出现，每层多一行
+const WALL_NOTES = tr(['Dear ___,', 'The door\'s open.', 'I watered the plants.', 'Come home.'], ['＿＿＿へ', '鍵は開けてあるよ。', '植物に水をやったよ。', '帰っておいで。'],
+  ['亲爱的＿＿＿：', '门没有锁。', '花我浇过了。', '回家吧。'], ['親愛的＿＿＿：', '門沒有鎖。', '花我澆過了。', '回家吧。']); // 母亲的便条：2 楼起出现，每层多一行
 
 // 一楼暗冷的蓝灰 → 四楼温暖、鲜艳
 const PAL0 = { wall: '#4d5864', floor: '#343c46', ceil: '#59636f', trim: '#3c4550', furn: '#46505b', key: '#8d99a6',
@@ -150,7 +197,7 @@ const LOOK = {
   2: { f: 0.25, lamp: 5.4, lampColor: '#dcd6c8', sun: 0.60, hemi: 0.50, env: 0.34, fog: [7, 32] },
   3: { f: 0.55, lamp: 5.6, lampColor: '#f3d3a4', sun: 0.90, hemi: 0.54, env: 0.38, fog: [8, 42] },
   4: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 1.20, hemi: 0.60, env: 0.42, fog: [9, 55] },
-  5: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 2.20, hemi: 1.00, env: 0.70, fog: [25, 430], sky: '#b4d6e6' },
+  5: { f: 1,    lamp: 5.8, lampColor: '#ffc585', sun: 3.80, hemi: 0.62, env: 0.38, fog: [25, 430], sky: '#c6d0de' },   // 清晨：暖色低太阳、冷色天光和雾
 };
 // 每把「钥匙」只出现在跟它有关的摆放点（鞋柜=门口，电话桌、边桌、纸箱……）
 const KEY_SPOTS = { photo: [3, 2, 6], lamp: [2, 4, 8], radio: [6, 2, 4], poster: [5, 7, 3],
@@ -198,7 +245,15 @@ const hemi = new THREE.HemisphereLight('#c8ccd0', '#2a2622', 0.3); scene.add(hem
 }
 scene.environmentIntensity = 0.25;
 // 楼内用正上方的平行光：墙面不受朝向影响，楼梯两端的复制品才看起来完全一样
-const sun = new THREE.DirectionalLight('#fff1d8', 0.3); sun.position.set(0, 50, 0); scene.add(sun);
+const sun = new THREE.DirectionalLight('#fff1d8', 0.3); sun.position.set(0, 50, 0); scene.add(sun, sun.target);
+// 天台：清晨，太阳从东边低低地照过来（暖），天光偏冷；桌面端开实时阴影（只有天台上的东西投/接阴影）
+const ROOF_SUN = new THREE.Vector3(60, 20, -10), ROOF_C = new THREE.Vector3(13, 3, -8);
+if (!TOUCH) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; sun.castShadow = true;
+  Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 160 }); sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04; }
+function sunFor(roofOn) {
+  if (roofOn) { sun.position.copy(ROOF_C).addScaledVector(ROOF_SUN.clone().normalize(), 80); sun.target.position.copy(ROOF_C); sun.color.set('#ffb070'); }
+  else { sun.position.set(0, 50, 0); sun.target.position.set(0, 0, 0); sun.color.set('#fff1d8'); }
+}
 
 /* =====================================================================
  * 4. 材质与几何工具
@@ -475,7 +530,7 @@ function foamMat(kind) {
     }
   });
   tex.wrapS = THREE.RepeatWrapping;
-  const m = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.8, polygonOffset: true, polygonOffsetFactor: -2 });
+  const m = new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.8, polygonOffset: true, polygonOffsetFactor: -2, roughness: 0.6 });
   foamMats.push(m); return m;
 }
 function foamFrame(parent, mat, x0, x1, z0, z1, w) {   // 矩形一圈；w < 0 往里（天井）
@@ -556,10 +611,10 @@ function buildStairwell(ctx, withReplicaDoor, upperCtx) {   // 两侧墙从 z=-1
   if (upperCtx) {
     solid(ctx, 0.1, 0.3, -3.2, 0, -10, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 0, -10, -0.2, M.wallStair);
     solid(upperCtx, 0.1, 0.3, 0, 3.2, -10, -0.2, M.wallStair); solid(upperCtx, 2.7, 2.9, 0, 3.2, -10, -0.2, M.wallStair);
-    solid(upperCtx, 0.1, 2.9, 3, 3.2, -10, 0, M.ceil, false);
+    solid(upperCtx, 0.3, 2.7, 3, 3.2, -10, 0, M.ceil, false);   // 顶板夹在两面墙中间，不和墙顶重叠（重叠会闪）
   } else {
     solid(ctx, 0.1, 0.3, -3.2, 3.2, -10, -0.2, M.wallStair); solid(ctx, 2.7, 2.9, -3.2, 3.2, -10, -0.2, M.wallStair);
-    solid(ctx, 0.1, 2.9, 3, 3.2, -10, 0, M.ceil, false);
+    solid(ctx, 0.3, 2.7, 3, 3.2, -10, 0, M.ceil, false);
   }
   if (withReplicaDoor) { // 与过渡房间西门一模一样的关着的门（门后没有房间）
     solid(ctx, 0.1, 0.9, -3.2, 3.2, -10.2, -10, M.wallStair); solid(ctx, 2.1, 2.9, -3.2, 3.2, -10.2, -10, M.wallStair);
@@ -645,7 +700,7 @@ function buildBuilding() {
   world.farLeaf = box(0.06, 2.2, 1.2, dm, 18.4, 1.1, -19, B);
   world.farLeaf.userData.col = collider(18.25, 18.55, -19.6, -18.4, 0, H); world.farLeaf.userData.col.door = true;
   hingeDoor(world.entranceLeaf, 21.9, -16.1, 1.45); hingeDoor(world.farLeaf, 18.4, -19.6, -1.45);   // 进门往房间里开，出门往楼梯间开
-  world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? 'E   Open' : '', act: openFarDoor };
+  world.farLeaf.userData.interact = { label: () => state.phase === 'room' && !state.deciding ? tr('E   Open', 'E   開ける', 'E   开门', 'E   開門') : '', act: openFarDoor };
   permTargets.push(world.farLeaf);
   // 过渡房间逐层"恢复"：1 楼空着，2 楼有桌子，3 楼有椅子，4 楼两把椅子和一瓶花
   const placed = (id, x, z, ry, fallback) => { const o = model(id); if (!o) return fallback(); o.position.set(x, 0, z); o.rotation.y = ry; B.add(o); return o; };
@@ -654,6 +709,12 @@ function buildBuilding() {
     chair: placed('diningChair', 24.7, -19.5, Math.PI, () => box(0.45, 0.45, 0.45, M.furn, 24.6, 0.225, -19.5, B)),
     chair2: placed('diningChair', 23.8, -20.4, Math.PI / 2, () => box(0.45, 0.45, 0.45, M.furn, 23.6, 0.225, -20.4, B)), vase: new THREE.Group(),
   };
+  rf.table.traverse(m => { if (!m.isMesh) return;   // 白桌布染成深酒红：桌上半透明的放置提示才看得清（贴图只有白布和橙色木头，按饱和度分；交界的淡橙也算布）
+    m.material.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      { vec3 c = diffuseColor.rgb; float l = dot(c, vec3(0.333)), sat = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+        float cloth = 1.0 - smoothstep(0.38, 0.5, sat); diffuseColor.rgb = mix(c, vec3(0.24, 0.07, 0.055) * (0.5 + 0.3 * l), cloth); }`); };
+    m.material.roughnessMap = m.material.metalnessMap = null; m.material.roughness = 1; m.material.metalness = 0;   // 褶皱的高光会显成一道道白线
+    m.material.needsUpdate = true; });
   if (MODELS.diningTable) { // 桌面高度以模型为准：桌上的「钥匙」和花瓶放在真正的桌面上
     rf.table.updateMatrixWorld(true); const rc = new THREE.Raycaster(), top = (x, z) => { rc.set(V(x, 3, z), V(0, -1, 0)); return rc.intersectObject(rf.table, true)[0]?.point.y ?? 0.75; };
     ROOM_SPOTS.radio.p[1] = top(24.82, -20.58); ROOM_SPOTS.tickets.p[1] = top(24.52, -20.18); rf.vaseY = top(24.45, -20.62);
@@ -677,7 +738,7 @@ function buildBuilding() {
   const exitGroup = new THREE.Group(); exitGroup.matrixAutoUpdate = false; exitGroup.matrix.copy(T); B.add(exitGroup);
   const stub = new THREE.Group(); stub.matrixAutoUpdate = false; stub.matrix.copy(T); B.add(stub); world.stub = stub;
   // 出口楼梯 0 米以上那截墙和顶：一直显示 —— 到天台时它就是屋面上凸出来的楼梯间
-  const stairHouse = new THREE.Group(); stairHouse.matrixAutoUpdate = false; stairHouse.matrix.copy(T); B.add(stairHouse);
+  const stairHouse = world.stairHouse = new THREE.Group(); stairHouse.matrixAutoUpdate = false; stairHouse.matrix.copy(T); B.add(stairHouse);
   buildStairwell({ parent: exitGroup, T, collide: true }, false, { parent: stairHouse, T, collide: false });
   buildStart({ parent: stub, T, collide: false }, true);
 
@@ -689,7 +750,7 @@ function buildBuilding() {
   // --- 墙上开关（关灯谜题用；随时可按）
   const sw = group(box(0.08, 0.14, 0.03, M.trim, 0, 0, 0), box(0.03, 0.05, 0.02, M.white, 0, 0, 0.02));
   sw.position.set(21.02, 1.3, -1.5); sw.rotation.y = FACE.W; B.add(sw);
-  sw.userData.interact = { label: () => state.lightsOn ? 'E   Turn off the light' : 'E   Turn on the light', act: () => setLights(!state.lightsOn) };
+  sw.userData.interact = { label: () => state.lightsOn ? tr('E   Turn off the light', 'E   明かりを消す', 'E   关灯', 'E   關燈') : tr('E   Turn on the light', 'E   明かりをつける', 'E   开灯', 'E   開燈'), act: () => setLights(!state.lightsOn) };
   hitSphere(sw, 0.3, 0); permTargets.push(sw);   // 交互范围放大，不用对得很准
 
   for (const a of ANCHORS) world.anchors.push(buildFurniture(a));
@@ -702,7 +763,7 @@ function buildBuilding() {
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
 function loadImages() {
-  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
+  const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'parapet', 'leafCluster.png', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
   return Promise.all(names.map(f => new Promise(res => {
     const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
     im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
@@ -773,12 +834,12 @@ function posterTexture(i) {   // 画在 256×352 上（按 128×176 的坐标放
     g.fillStyle = i % 2 ? '#e4dcc6' : '#d8cfb6'; g.fillRect(0, 0, w, h);
     const im = IMG.age_teen;
     if (im) { // MISSING 传单：16 岁那张照片，黑白、模糊，名字被水泡糊
-      g.fillStyle = '#3a312b'; g.font = 'bold 24px Georgia, serif'; g.textAlign = 'center'; g.fillText('MISSING', w / 2, 30);
+      g.fillStyle = '#3a312b'; g.font = 'bold 24px Georgia, serif'; g.textAlign = 'center'; g.fillText(tr('MISSING', '行方不明', '寻人启事', '尋人啟事'), w / 2, 30);
       g.filter = 'grayscale(1) contrast(1.15) blur(1px)'; g.drawImage(im, im.width * 0.22, im.height * 0.06, im.width * 0.56, im.height * 0.42, 24, 40, 80, 76); g.filter = 'none';
       g.fillStyle = 'rgba(58,49,43,.55)'; for (let k = 0; k < 4; k++) g.fillRect(18, 128 + k * 11, w - 36 - (k % 2) * 18, 5);
       return;
     }
-    g.fillStyle = '#3a312b'; g.font = 'bold 26px \'Georgia\',\'Times New Roman\',serif'; g.textAlign = 'center'; g.fillText('MISSING', w / 2, 36);
+    g.fillStyle = '#3a312b'; g.font = 'bold 26px \'Georgia\',\'Times New Roman\',serif'; g.textAlign = 'center'; g.fillText(tr('MISSING', '行方不明', '寻人启事', '尋人啟事'), w / 2, 36);
     g.filter = 'blur(2px)'; g.beginPath(); g.arc(w / 2, 78, 16, 0, 7); g.fill(); g.fillRect(w / 2 - 20, 94, 40, 30); g.filter = 'none';
     g.fillStyle = 'rgba(58,49,43,.5)'; for (let k = 0; k < 3; k++) g.fillRect(20, 136 + k * 12, w - 40 - k * 14, 5);
   });
@@ -839,6 +900,14 @@ function buildRuins() {
   world.ruins = []; world.windows = []; world.fogPlanes = []; world.glass = [];
   for (const [c, n] of world.closetFog) fogLayers(c, n, 1.0, 0.9);
   fogLayers(V(22.5, 1.5, 3.2), V(0, 0, 1), 1.5, 1.2); fogLayers(V(24.2, 1.5, 0.825), V(1, 0, 0), 1.25, 1.2);   // 转角两扇朝海的窗
+  // 朝天井的内窗：深色木框 + 几乎透明的玻璃。有树枝穿进来的那三扇，从 3 楼起玻璃和窗框都被树枝撞没了
+  world.innerWin = [];
+  const glassMat = new THREE.MeshStandardMaterial({ color: '#d6e4ea', transparent: true, opacity: 0.12, roughness: 0.05, depthWrite: false, side: THREE.DoubleSide }), wood = std('#3a2a20'), t = 0.05;
+  for (const [x, z, n, branch] of [[7.35, -0.1, V(0, 0, -1), false], [10.55, -0.1, V(0, 0, -1), true], [16.15, -0.1, V(0, 0, -1), true], [20.9, -3.15, V(-1, 0, 0), false], [20.9, -10.75, V(-1, 0, 0), true]]) {
+    const w = 1.5, h = 1.2, g = new THREE.Group(), gl = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glassMat); gl.renderOrder = 11; g.add(gl);
+    for (const [bw, bh, bx, by] of [[w, t, 0, h / 2 - t / 2], [w, t, 0, -h / 2 + t / 2], [t, h, -w / 2 + t / 2, 0], [t, h, w / 2 - t / 2, 0], [t * 0.7, h, 0, 0], [w, t * 0.7, 0, h * 0.12]]) box(bw, bh, 0.05, wood, bx, by, 0, g);
+    g.position.set(x, 1.5, z); g.lookAt(V(x, 1.5, z).add(n)); g.userData.branch = branch; building.add(g); world.innerWin.push(g);
+  }
   const body = std('#8f8a7e', { emissive: '#2c2924' }), holeMat = std('#2a2c2e'), litMat = new THREE.MeshBasicMaterial({ color: '#ffd98a', fog: false, transparent: true });   // 透明 + 后画：穿过窗外的雾层也看得见
   const ruin = (x, z, ry, tilt) => {
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.set(0, ry, tilt); building.add(g); world.ruins.push(g);
@@ -895,13 +964,13 @@ function buildNeighborDoor(x, z, ry) {
   box(1.0, DOOR_H - 0.02, 0.05, doorMat() || M.furn, 0.5, (DOOR_H - 0.02) / 2, 0, leaf);
   box(0.04, 0.12, 0.05, M.white, 0.88, 1.05, 0.04, leaf);
   const notice = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.38), new THREE.MeshStandardMaterial({ roughness: 1,
-    map: textTexture(['EVACUATION', 'NOTICE'], { w: 128, h: 160, font: 18, bg: '#e9e4d6' }) }));
+    map: textTexture(tr(['EVACUATION', 'NOTICE'], ['避難', '勧告'], ['撤离', '通知'], ['撤離', '通知']), { w: 128, h: 160, font: 18, bg: '#e9e4d6' }) }));
   notice.position.set(0.62, 1.5, 0.03); leaf.add(notice); world.notices.push(notice);
   { const c0 = V(-0.4, 1.55, -2.6).applyMatrix4(ctx.T), c1 = V(-0.4, 1.55, -3.6).applyMatrix4(ctx.T); world.closetFog.push([c0, c1.sub(c0).normalize()]); }   // 储物间小窗外的雾（等 buildRuins 统一建）
   const bb = new THREE.Box3(V(-0.5, 0, -0.2), V(0.5, DOOR_H, 0)).applyMatrix4(ctx.T);
   const d = { g, leaf, bulb, open: false, col: Object.assign(collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, DOOR_H), { door: true }),
     keySpot: V(0.45, 0.6, -2.0).applyMatrix4(ctx.T), keyRot: ry };
-  leaf.children[0].userData.interact = { label: () => d.open ? '' : 'Locked', act() {} }; permTargets.push(leaf.children[0]);
+  leaf.children[0].userData.interact = { label: () => d.open ? '' : tr('Locked', '鍵がかかっている', '锁着', '鎖著'), act() {} }; permTargets.push(leaf.children[0]);
   return d;
 }
 function setNeighborDoor(d, open) {
@@ -939,7 +1008,7 @@ function buildFurniture(a) {
   }
   if (fm) res.spots = surfaceSpots(g, MODELS[a.furn === 'cabinet' ? 'lowCabinet' : a.furn].size);
   const bb = new THREE.Box3().setFromObject(g);
-  if (a.furn !== 'shelf') collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, bb.max.y);
+  collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, 0, bb.max.y);   // 墙上的架子也挡人（从地面算起，不能从架子底下钻过去）
   return res;
 }
 // 模型台面上空着的地方：网格采样往下打射线，出现最多的高度是台面，四周也平的点才算空位（避开台面上的花瓶、电话、书）
@@ -1101,32 +1170,70 @@ function facadeTexture(variant) {
   tex.wrapS = THREE.RepeatWrapping; tex.anisotropy = 8; return tex;
 }
 // 大树树干：程序生成的一整根，扭着长、表面有几道纵向的棱；树皮贴图横向绕 3 圈，法线贴图从贴图亮度算出来
+// 天台树：把主干轴线挪到原点，按主干粗细缩放到和下面的程序主干一样粗（RT），分叉放到 forkY 高度
+function roofTreeFit(o, forkY) {
+  o.updateMatrixWorld(true); const pts = [], v = V(0, 0, 0);
+  o.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i++) pts.push(v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld).clone()); });
+  const H = Math.max(...pts.map(p => p.y)), band = (y0, y1) => pts.filter(p => p.y >= y0 && p.y < y1);
+  const low = band(0, H * 0.08), cx = low.reduce((a, p) => a + p.x, 0) / low.length, cz = low.reduce((a, p) => a + p.z, 0) / low.length;
+  const med = a => { a.sort((x, y) => x - y); return a[a.length >> 1] || 0; }, rad = ps => med(ps.map(p => Math.hypot(p.x - cx, p.z - cz)));
+  const Rt = rad(band(H * 0.05, H * 0.3));
+  let fy = H * 0.3; while (fy < H * 0.8 && rad(band(fy, fy + H * 0.02)) < Rt * 1.6) fy += H * 0.02;   // 往上找：截面突然变宽的地方就是分叉
+  const k = 2.9 / Rt; o.children[0].position.x -= cx; o.children[0].position.z -= cz; o.scale.setScalar(k); o.position.y = forkY - fy * k;
+  o.userData.fork = forkY; o.userData.top = o.position.y + H * k;
+}
+// 在枝干上半截挂叶团卡片（概念图里截出来的一团叶子，三片交叉；视线擦边时丢弃，避免看到一条条薄片）
+function leafCards(crown, parent) {
+  const im = IMG.leafCluster; if (!im) return;
+  const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
+  const mat = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); greenMats.push(mat);
+  mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n  if (abs(dot(normalize(vNormal), normalize(vViewPosition))) < 0.35) discard;'); };
+  crown.updateMatrixWorld(true); const pts = [], v = V(0, 0, 0), f = crown.userData.fork, top = crown.userData.top, cx = crown.position.x, cz = crown.position.z, H = top - f;
+  crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y > f - H * 0.05) pts.push(v.clone()); } });
+  const rr = mulberry32(77), chosen = [], plane = new THREE.PlaneGeometry(1, 1);
+  for (let t = 0; t < 5000 && chosen.length < 60; t++) { const p = pts[Math.floor(rr() * pts.length)]; if (Math.hypot(p.x - cx, p.z - cz) < 3.2 && p.y < f + H * 0.6) continue; if (chosen.some(q => q.distanceTo(p) < H * 0.13)) continue; chosen.push(p); }
+  for (const p of chosen) {
+    const g = new THREE.Group(), out = V(p.x - cx, 0, p.z - cz).normalize().multiplyScalar(H * 0.05);
+    for (let k = 0; k < 3; k++) { const m = new THREE.Mesh(plane, mat); if (k === 2) m.rotation.x = -Math.PI / 2; else m.rotation.y = k * Math.PI / 2 + rr(); g.add(m); }
+    g.position.copy(p).add(out).add(V(0, H * 0.04, 0)); g.rotation.set(rr() * 0.6, rr() * 6, rr() * 0.6); g.scale.setScalar(H * (0.24 + rr() * 0.14)); parent.add(g);
+  }
+}
 function barkTrunk(crown, at, y0) {
-  crown.updateMatrixWorld(true);   // 量树冠模型底部那截树干有多粗，让两边接上
-  // 量树冠模型里那截树干每个高度有多粗（0.25 m 一层，取外圈的 90%）：程序树干在每层都比它粗一点，把它整个包进去，
-  // 一直长到分叉处（外圈突然变宽的那层），再收成圆顶 —— 树冠的几根粗枝就像从这根树干里直接长出来，没有台阶
-  const base = crown.position.y, v = V(0, 0, 0), BAND = 0.25, NB = 40, bands = Array.from({ length: NB }, () => []);
+  // 量树冠模型自带的那截树干：底部外扩（R0）和往上到分叉前的粗细（Rmid）。
+  // 把整个树冠放大，让它的树干和下面的主干（RT）一样粗；主干只长到树冠底部，接口前 1.6 米慢慢鼓到和树冠根部一样粗，再插进去一点 ——
+  // 粗细连续，树皮是同一张贴图（树冠那边用 barkBlend 按世界坐标投影），看不出接缝
+  const RT = 2.9, base = crown.position.y, v = V(0, 0, 0), BAND = 0.25, NB = 40, bands = Array.from({ length: NB }, () => []);
+  crown.updateMatrixWorld(true);
   crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position;
     for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); const b = Math.floor((v.y - base) / BAND); if (b >= 0 && b < NB) bands[b].push(Math.hypot(v.x - at.x, v.z - at.z)); } });
   const pct = (a, q) => { if (!a.length) return 0; a.sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(a.length * q))]; };
-  const R0 = Math.min(Math.max(pct(bands[0].concat(bands[1]), 0.9), 1.0), 3.4), prof = [];
-  for (let b = 0; b < NB; b++) prof.push(pct(bands[b].filter(d => d < R0 * 2.2), 0.9) || prof[b - 1] || R0);   // 低模顶点稀，空的那层沿用下面一层
-  let fork = 2; while (fork < NB - 1 && prof[fork] < 1.5 * prof.slice(0, fork).sort((x, y) => x - y)[fork >> 1]) fork++;   // 外圈突然变宽一大截 = 分叉
-  for (let b = 0, src = prof.slice(); b < fork; b++) prof[b] = Math.max(src[Math.max(0, b - 1)], src[b], src[Math.min(fork - 1, b + 1)]);   // 取相邻三层的最大值：抹掉采样稀疏造成的凹陷
-  const yFork = base + fork * BAND, y1 = yFork + 0.55, R = R0 * 1.05;
-  const radiusAt = y => {
-    if (y <= base) return R;
-    if (y >= yFork) return Math.max(0.05, Math.sqrt(Math.max(0, 1 - Math.pow((y - yFork) / (y1 - yFork), 2)))) * prof[Math.max(0, fork - 1)] * 1.06;   // 分叉处收成圆顶
-    const t = (y - base) / BAND, b = Math.min(fork - 1, Math.floor(t)), f = t - b, r = prof[b] + (prof[Math.min(fork - 1, b + 1)] - prof[b]) * f;
-    return Math.max(r * 1.06, R0 * 0.4);
-  };
+  const R0u = Math.min(Math.max(pct(bands[0].slice(), 0.92), 0.8), 3.8), prof = [];   // 树冠底部最外圈
+  for (let b = 0; b < NB; b++) prof.push(pct(bands[b].filter(d => d < R0u * 2.2), 0.5) || prof[b - 1] || R0u);
+  let fork = 3; while (fork < NB - 1 && prof[fork] < 1.5 * prof.slice(0, fork).sort((x, y) => x - y)[fork >> 1]) fork++;
+  const mid = prof.slice(2, Math.max(3, fork)).sort((x, y) => x - y), Rmid = mid[mid.length >> 1] || R0u;
+  const k = Math.min(1.8, Math.max(0.8, RT / Rmid));
+  crown.scale.multiplyScalar(k); crown.updateMatrixWorld(true);
+  // 切掉树冠模型最下面那截（底部外扩和底面），在往上一点、树干已经规整的地方接上：接口处两边一样粗，看不到边
+  const bc = Math.min(Math.max(3, fork - 2), 6), hc = base + bc * BAND * k, Rc = prof[bc] * k, cutR = R0u * k * 1.6;
+  crown.traverse(m => { if (!m.isMesh || !m.geometry.index) return;
+    const g = m.geometry, p = g.attributes.position, ix = g.index.array, keep = [], a = V(), b = V(), c = V();
+    for (let i = 0; i < ix.length; i += 3) {
+      a.fromBufferAttribute(p, ix[i]).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(p, ix[i + 1]).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(p, ix[i + 2]).applyMatrix4(m.matrixWorld);
+      const cy = (a.y + b.y + c.y) / 3, cr = Math.hypot((a.x + b.x + c.x) / 3 - at.x, (a.z + b.z + c.z) / 3 - at.z);
+      if (cy < hc && cr < cutR) continue; keep.push(ix[i], ix[i + 1], ix[i + 2]);
+    }
+    g.setIndex(keep);
+  });
+  const R = RT, y1 = hc + 0.6;
+  const ss = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  const radiusAt = y => y <= hc ? RT + (Rc * 0.99 - RT) * ss((y - hc + 2.5) / 2.5) : Rc * (0.99 - 0.12 * ss((y - hc) / 0.6));   // 到切口正好和树冠的树干一样粗，再往里收
   const A = 40, N = 110, pos = [], uv = [], idx = [], circ = 2 * Math.PI * R / 3;
   for (let j = 0; j <= N; j++) {
     const y = y0 + (y1 - y0) * j / N, k = (y1 - y) / (y1 - y0);   // k：0 在顶、1 在底
     const ox = 0.35 * Math.sin(y * 0.11) * Math.max(0, (base - y) / (base - y0)), oz = 0.3 * Math.cos(y * 0.09 + 1) * Math.max(0, (base - y) / (base - y0));   // 越往上越正，接上树冠
     const rr = radiusAt(y) * (y <= base ? 1 + 0.05 * Math.sin(y * 0.5) * k : 1) ;
     for (let i = 0; i <= A; i++) {
-      const a = i / A * Math.PI * 2, tw = a + y * 0.06, r = rr * (1 + 0.07 * Math.sin(3 * tw) + 0.035 * Math.sin(7 * tw + y * 0.3));
+      const a = i / A * Math.PI * 2, tw = a + y * 0.06, rg = Math.min(1, Math.max(0, (base - 1.6 - y) / 3)), r = rr * (1 + rg * (0.07 * Math.sin(3 * tw) + 0.035 * Math.sin(7 * tw + y * 0.3)));   // 接口附近棱纹淡掉，切面变圆
       pos.push(at.x + ox + Math.cos(a) * r, y, at.z + oz + Math.sin(a) * r); uv.push(i / A * 3, (y - y0) / circ);
     }
   }
@@ -1140,6 +1247,7 @@ function barkTrunk(crown, at, y0) {
     c.putImageData(out, 0, 0);
   });
   nrm.colorSpace = THREE.NoColorSpace; nrm.wrapS = nrm.wrapT = THREE.RepeatWrapping;
+  world.trunkJoin = { y: hc, r: Rc };
   const mat = world.barkMat = new THREE.MeshStandardMaterial({ map, normalMap: nrm, normalScale: new THREE.Vector2(0.7, 0.7), roughness: 0.95 });
   return new THREE.Mesh(g, mat);
 }
@@ -1181,11 +1289,30 @@ function buildCourtyard() {
   // 大树：从水下长上来，高过楼顶；整棵树按楼层上下移动（站在 n 楼，看到的是这一段）
   const tree = world.tree = new THREE.Group(); building.add(tree);
   const T0 = TREE;
+  if (MODELS.roofTree && IMG.bark) { // 天台专用的整棵树（Meshy）：自带一长截圆柱主干，下面接程序生成的主干，两段一样粗、一样的树皮，接口埋在楼下
+    const crown = model('roofTree'); roofTreeFit(crown, 9.5); crown.position.x += T0.x; crown.position.z += T0.z; tree.add(crown);
+    const trunk = barkTrunk(crown, T0, -32); tree.add(trunk);
+    crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, trunk.material.normalMap); });
+    leafCards(crown, tree);   // 多视图生成的模型树叶很少：枝头补叶团
+    return;
+  }
   if (MODELS.treeTrunk && MODELS.treeCrown) { // Meshy：几段树干从水下接到楼顶以上，顶上是树冠
     const crown = model('treeCrown'); crown.position.set(T0.x, 8.5, T0.z); tree.add(crown);
     const trunk = IMG.bark && barkTrunk(crown, T0, -32);
     if (trunk) crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, trunk.material.normalMap); });   // 一整根连续的树干（没有接缝），顶端收进树冠底部
     if (trunk) tree.add(trunk);
+    if (trunk && MODELS.ivyClump) { // 接口缠一圈常春藤，再往下垂几串：盖住主干和树冠的接缝
+      const J = world.trunkJoin, rr = mulberry32(41);
+      for (let row = 0; row < 3; row++) for (let i = 0; i < 14; i++) {   // 三圈，上下错开，一圈比一圈稀
+        if (row === 2 && i % 2) continue;
+        const a = (i + row * 0.5) / 14 * Math.PI * 2 + rr() * 0.2, l = modelShared('ivyClump'), y = J.y + [0.15, -0.55, 0.85][row] + (rr() - 0.5) * 0.3, r = J.r * (0.94 + rr() * 0.06);
+        l.position.set(T0.x + Math.cos(a) * r, y, T0.z + Math.sin(a) * r); l.rotation.set(0, -a + Math.PI / 2, Math.PI / 2 + (rr() - 0.5) * 0.5); l.scale.setScalar(3.6 + rr() * 1.6); tree.add(l);
+      }
+      for (let i = 0; i < 7; i++) {
+        const a = rr() * Math.PI * 2, l = modelShared('ivyClump'), y = J.y - 1.2 - rr() * 3.5;
+        l.position.set(T0.x + Math.cos(a) * J.r * 0.97, y, T0.z + Math.sin(a) * J.r * 0.97); l.rotation.set(0, -a + Math.PI / 2, Math.PI / 2); l.scale.set(1.6, 3 + rr() * 2, 1.6); tree.add(l);
+      }
+    }
     else for (let i = 0; i < 7; i++) { const seg = model('treeTrunk'); seg.position.set(T0.x, -30.6 + i * 5.6, T0.z); seg.rotation.y = i * 1.7; tree.add(seg); }
     return;
   }
@@ -1201,27 +1328,35 @@ function buildCourtyard() {
 // 天台 = 这栋楼的楼顶（y=3.2）：4 楼的出口楼梯直接通上来
 function buildRoof() {
   const R = roof, ctx = { parent: R, T: I4, collide: true, owner: R }, Y = 3.25;
-  const deckMat = std('#ffffff', { map: roofTexture() }), wallMat = std('#cfc3a8'), leafMat = std('#6fa24c');
+  const deckMat = std('#ffffff', { map: roofTexture(), polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 2 }), wallMat = std('#cfc3a8'), leafMat = std('#6fa24c');
   const C = COURT, deck = [[-0.4, 27, -22.4, -20.4], [-0.4, 8.3, -20.4, -17.6], [18.5, 27, -20.4, -17.6], [-0.4, 27, -17.6, C.z0],
     [-0.4, C.x0, C.z0, C.z1], [C.x1, 27, C.z0, C.z1], [-0.4, 27, C.z1, 5.8]];
+  // 屋面板侧面和天井立面、楼梯间墙面、下一层起点的墙正好共面：deckMat 带 polygonOffset 往后让，不然会闪
   for (const [x0, x1, z0, z1] of deck) { solid(ctx, x0, x1, 3.0, Y, z0, z1, deckMat, false); walkQuad(ctx, [x0, Y, z0], [x1, Y, z0], [x1, Y, z1], [x0, Y, z1]); }
   const P = Y + 1.1; // 女儿墙
-  solid(ctx, -0.6, 27.2, Y, P, -22.6, -22.4, wallMat); solid(ctx, -0.6, 27.2, Y, P, 5.8, 6.0, wallMat);
-  solid(ctx, -0.6, -0.4, Y, P, -22.6, 6.0, wallMat); solid(ctx, 27, 27.2, Y, P, -22.6, 6.0, wallMat);
+  // 墙面贴图（顶上一道压顶、往下流的水渍、墙脚的苔藓）：竖直方向正好铺满一面墙高，横向 1.8 米一铺；墙顶另用素色压顶
+  const capMat = std('#a39a88'), plasterMat = h => { if (!IMG.parapet) return null;
+    const t = new THREE.Texture(IMG.parapet); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+    t.repeat.set(1 / 1.8, 1 / h); t.offset.y = -Y / h; t.needsUpdate = true; return std('#ffffff', { map: t }); };
+  const parMat = plasterMat(P - Y) || wallMat, rimMat = plasterMat(1.0) || std('#8a7a62');
+  const wall = (x0, x1, y1, z0, z1, mat) => { const m = solid(ctx, x0, x1, Y, y1, z0, z1, mat); m.material = [mat, mat, capMat, capMat, mat, mat]; };
+  wall(-0.6, 27.2, P, -22.6, -22.4, parMat); wall(-0.6, 27.2, P, 5.8, 6.0, parMat);
+  wall(-0.6, -0.4, P, -22.6, 6.0, parMat); wall(27, 27.2, P, -22.6, 6.0, parMat);
   // 天井边沿的矮墙（大树在 buildCourtyard 里，属于楼本身）
   for (const [x0, x1, z0, z1] of [[C.x0, C.x1, C.z0 - 0.1, C.z0], [C.x0, C.x1, C.z1, C.z1 + 0.1], [C.x0 - 0.1, C.x0, C.z0, C.z1], [C.x1, C.x1 + 0.1, C.z0, C.z1]])
-    solid(ctx, x0, x1, Y, Y + 1.0, z0, z1, std('#8a7a62'));
+    wall(x0, x1, Y + 1.0, z0, z1, rimMat);
   const rng = mulberry32(11), live = world.roofLive = { clouds: [], bob: [], gulls: [], rings: [] };
   // 天空：程序生成的渐变穹顶（地平线 = 雾色，和海面远处接上）+ 太阳
   R.add(new THREE.Mesh(new THREE.SphereGeometry(820, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { horizon: { value: scene.fog.color }, zenith: { value: new THREE.Color('#3b7cc6') }, sunDir: { value: V(30, 40, 20).normalize() } },
+    uniforms: { horizon: { value: scene.fog.color }, zenith: { value: new THREE.Color('#4a76b4') }, sunDir: { value: ROOF_SUN.clone().normalize() } },
     vertexShader: 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `uniform vec3 horizon, zenith, sunDir; varying vec3 vDir;
       void main() {
         vec3 d = normalize(vDir); float h = max(d.y, 0.0), s = max(dot(d, sunDir), 0.0);
         vec3 col = mix(horizon, zenith, pow(h, 0.55));
-        col += vec3(1.0, 0.86, 0.62) * (pow(s, 6.0) * 0.22 + pow(s, 120.0) * 0.7) + vec3(1.0, 0.97, 0.9) * smoothstep(0.9986, 0.9993, s) * 3.0;
+        col = mix(col, vec3(1.0, 0.72, 0.5), pow(s, 3.0) * 0.55 * (1.0 - h));   // 太阳那一侧的地平线是晨光的橙粉色
+        col += vec3(1.0, 0.82, 0.58) * (pow(s, 6.0) * 0.25 + pow(s, 120.0) * 0.8) + vec3(1.0, 0.97, 0.9) * smoothstep(0.9986, 0.9993, s) * 3.0;
         gl_FragColor = vec4(d.y < 0.0 ? horizon : col, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -1237,7 +1372,7 @@ function buildRoof() {
   const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
   for (let i = 0; i < (TOUCH ? 7 : 13); i++) {
     const a = rng() * Math.PI * 2, d = 120 + rng() * 380, id = 'cloudB';
-    let c = model(id, 0.6, '#ffffff');
+    let c = model(id, 0.3, '#ffffff');   // 微微自发光，其余吃晨光
     if (!c) { c = new THREE.Group(); for (let k = 0; k < 3; k++) { const q = new THREE.Mesh(new THREE.IcosahedronGeometry(6 + rng() * 6, 1), cloudMat); q.position.set(k * 8, rng() * 2, rng() * 4); q.scale.y = 0.45; c.add(q); } }
     c.position.set(12 + Math.cos(a) * d, 70 + rng() * 70, -9 + Math.sin(a) * d); c.rotation.y = rng() * 6.3; const sc = 0.5 + rng() * 0.8; c.scale.set(sc * (0.7 + rng() * 0.6), sc * (0.8 + rng() * 0.5), sc);
     R.add(c); live.clouds.push(c);
@@ -1334,7 +1469,7 @@ const state = {
 function applyContent(n, here = true) {   // here = false：玩家还在过渡房间里，楼层的墙先不换
   const f = Math.min(n, 4);
   M.wallStub.map = WALL_TEX[f]; if (here) M.wall.map = WALL_TEX[f];
-  world.tree.position.y = -(4 - f) * 3.2;                          // 楼层越低，看到的树段越低
+  world.tree.position.y = (4 - f) * 3.2;                           // 楼层越低，人越低：树相对你更高，看到的是更低的一段树干，树冠在头顶上方好几层
   world.bands.forEach(m => m.visible = m.userData.k <= 4 - f);     // 头顶还剩几层楼
   world.sea.visible = n >= 2;
   if (n === 5) { world.ruins.forEach(r => r.visible = false); return; }   // 窗外谜题的远楼在天台上用不着
@@ -1342,6 +1477,7 @@ function applyContent(n, here = true) {   // here = false：玩家还在过渡�
   world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
   world.moss?.forEach((m, i) => m.visible = i < [4, 10, 18, 26][n - 1]);
   world.branches.forEach(b => b.visible = n >= 3);
+  world.innerWin.forEach(g => g.userData.on = !(g.userData.branch && n >= 3));
   world.ruins.forEach(r => r.visible = n >= 3);
   setPhotosClear(state.recovered.has('photo'));
   world.notices.forEach(m => m.visible = n >= 2);
@@ -1438,7 +1574,7 @@ function buildRoomKeys() {
       o.position.set(...s.p); o.rotation.set(s.rx || 0, s.ry, 0); o.visible = false; building.add(o);
       if (kind === 'key') { world.roomKeys[id] = o; continue; }
       o.traverse(m => { if (m.isMesh && m.material !== proxyMat) m.material = ghost; });
-      o.userData.interact = { label: () => state.phase === 'room' && state.keysGot.has(id) && !state.placed.has(id) ? `E   Put back the ${KEYS[id].name}` : '', act: () => placeKey(id) };
+      o.userData.interact = { label: () => state.phase === 'room' && state.keysGot.has(id) && !state.placed.has(id) ? tr(`E   Put back the ${KEYS[id].name}`, `E   ${KEYS[id].name}を元に戻す`, `E   放回${KEYS[id].name}`, `E   放回${KEYS[id].name}`) : '', act: () => placeKey(id) };
       permTargets.push(o); world.slots[id] = o;
     }
   }
@@ -1478,7 +1614,7 @@ function applyRoomNotes(n) {
 
 const _fogWhite = new THREE.Color('#c9d0d6');
 const look = { f: 0, lamp: 5.4, hemi: 0.48, sun: 0.4, env: 0.3, near: 5, far: 22, sky: new THREE.Color(PAL0.sky), lampColor: new THREE.Color('#b4c6de') };
-const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1);
+const _h0 = new THREE.Color(HEMI0), _h1 = new THREE.Color(HEMI1), _hRoof = new THREE.Color('#9fb6d8');
 let lookTo = null;
 function lookTarget(n) {
   const L = LOOK[n];
@@ -1495,7 +1631,9 @@ function updateLook(dt, instant) {
   if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
   for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
   for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
+  for (const g of world.innerWin || []) g.visible = g.userData.on !== false && !state.roofMode;
   hemi.intensity = state.lightsOn ? look.hemi : Math.min(look.hemi, 0.1); scene.environmentIntensity = state.lightsOn ? look.env : 0.04; hemi.color.copy(_h0).lerp(_h1, look.f); sun.intensity = look.sun;
+  if (state.roofMode) hemi.color.copy(_hRoof); document.body.classList.toggle('cine', state.roofMode); renderer.shadowMap.autoUpdate = state.roofMode;   // 天台：冷色天光 + 暗角
   const flick = t.flicker && state.floor === 1;
   world.lamps.forEach((l, i) => {
     l.light.color.copy(look.lampColor);   // 关灯用亮度 0，不隐藏：灯的数量一变所有材质都要重新编译，会卡一下
@@ -1527,7 +1665,7 @@ const MODEL_SIZE = { lamp: { h: 0.32 }, photo: { h: 0.32 }, radio: { w: 0.34 }, 
   sofa: { w: 2.0 }, armchair: { w: 0.8 }, tvCabinet: { h: 1.15 }, sheetSofa: { w: 2.3 }, housePlant: { h: 0.8 }, sheetBookshelf: { h: 2.0 }, floorLamp: { h: 1.6 }, bookshelf: { h: 1.9 }, coatRack: { h: 1.75 },
   wallClock: { w: 0.36 }, diningTable: { h: 0.74 }, diningChair: { h: 0.92 },
   cityRow: { w: 32 }, cityFlat: { w: 56 }, cityChurch: { h: 44 }, cityWarehouse: { h: 24 }, cityTower: { h: 50 }, cityBridge: { w: 24 }, lighthouse: { h: 34 }, ferry: { w: 40 }, cloudB: { w: 70 },
-  debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, treeTrunk: { h: 6.4 }, treeCrown: { h: 15 }, treeBranch: { w: 3.4 },
+  debrisCrate: { w: 0.9 }, streetLamp: { h: 2.6 }, waterTree: { h: 7 }, bicycle: { w: 1.75 }, mother: { h: 1.66 }, child: { h: 1.7 }, roofTree: { h: 30 }, treeBranch: { w: 3.4 },
   roofChimney: { h: 1.8 }, roofVent: { w: 1.1 }, rustyChair: { h: 0.9 }, oldPots: { w: 0.9 }, roofBucket: { w: 0.9 },
   longBranch: { w: 1 }, floorRoots: { w: 1.5 }, plantClump: { w: 0.55 }, ivyClump: { w: 0.7 }, flowerClump: { h: 0.45 } };
 // 天台近处的几栋远景楼：桌面上用高精度版本（每栋 10–20 万面），手机上用 2.5 万面的
@@ -1681,7 +1819,7 @@ function takeKey(obj, id) {
     housekey: () => sfx.click(P) })[id]?.();
 }
 function growPlants() { const shown = world.plants.filter(p => p.visible).length; world.plants.forEach((p, i) => { if (i < shown + 10) p.visible = true; }); }
-const takeLabel = id => () => `E   Pick up the ${KEYS[id].name}`;
+const takeLabel = id => () => tr(`E   Pick up the ${KEYS[id].name}`, `E   ${KEYS[id].name}を拾う`, `E   拿起${KEYS[id].name}`, `E   拿起${KEYS[id].name}`);
 function wrongPick(obj) { obj.visible = false; wrongBlink(); }
 function wrongBlink() { // 交互错了：灯闪一下
   state.wrong = true; Platform.emit('wrong', { floor: state.floor });
@@ -1724,7 +1862,7 @@ const TEMPLATES = {
     const tin = placeAt(group(box(0.36, 0.16, 0.26, std('#6d7f8a'), 0, 0.08, 0)), r, -0.05);
     const lid = box(0.38, 0.03, 0.28, std('#8a9ba5'), 0, 0.175, 0, tin); hitSphere(tin, 0.28, 0.1);
     const o = makeKey(id); o.visible = false; o.scale.setScalar(0.7); o.position.set(0, 0.17, 0); tin.add(o);
-    interactable(tin, () => lid.userData.open ? '' : 'E   Open the tin', () => {
+    interactable(tin, () => lid.userData.open ? '' : tr('E   Open the tin', 'E   缶を開ける', 'E   打开铁盒', 'E   打開鐵盒'), () => {
       lid.userData.open = true; lid.rotation.x = -1.3; lid.position.set(0, 0.26, -0.14); o.visible = true; stopSound(snd);
     });
     interactable(o, takeLabel(id), () => takeKey(o, id));
@@ -1736,8 +1874,8 @@ const TEMPLATES = {
     const chest = placeAt(group(box(0.44, 0.26, 0.3, M.furn, 0, 0.13, 0)), r2, 0.2);
     const lid = box(0.44, 0.04, 0.3, M.trim, 0, 0.28, 0, chest); hitSphere(chest, 0.3, 0.15);
     const o = makeKey(id); o.visible = false; o.position.set(0, 0.26, 0); chest.add(o);
-    interactable(tool, () => 'E   Pick up the handle', () => { tool.visible = false; hasTool = true; say('An old handle.', 2000); });
-    interactable(chest, () => lid.userData.open ? '' : hasTool ? 'E   Open the box with the handle' : 'The box is locked', () => {
+    interactable(tool, () => tr('E   Pick up the handle', 'E   取っ手を拾う', 'E   拿起把手', 'E   拿起把手'), () => { tool.visible = false; hasTool = true; say(tr('An old handle.', '古い取っ手だ。', '一个旧把手。', '一個舊把手。'), 2000); });
+    interactable(chest, () => lid.userData.open ? '' : hasTool ? tr('E   Open the box with the handle', 'E   取っ手で箱を開ける', 'E   用把手打开箱子', 'E   用把手打開箱子') : tr('The box is locked', '箱には鍵がかかっている', '箱子锁着', '箱子鎖著'), () => {
       if (!hasTool || lid.userData.open) return; lid.userData.open = true; lid.rotation.x = -1.2; lid.position.set(0, 0.36, -0.15); o.visible = true;
     });
     interactable(o, takeLabel(id), () => takeKey(o, id));
@@ -1764,7 +1902,7 @@ const TEMPLATES = {
     });
     let next = 0;
     const lit = (m, on) => { m.material.emissiveIntensity = on ? 0.45 : 0; m.position.z = -wall + (on ? 0.045 : 0.025); };
-    for (const m of pics) interactable(m, () => next < 4 ? `E   Touch this ${kind === 'tree' ? 'drawing' : 'photo'}` : '', () => {
+    for (const m of pics) interactable(m, () => next < 4 ? (kind === 'tree' ? tr('E   Touch this drawing', 'E   この絵に触れる', 'E   触摸这幅画', 'E   觸摸這幅畫') : tr('E   Touch this photo', 'E   この写真に触れる', 'E   触摸这张照片', 'E   觸摸這張照片')) : '', () => {
       if (m.material.emissiveIntensity > 0 || next >= 4) return;
       if (m.userData.step !== next) { pics.forEach(p => lit(p, false)); next = 0; wrongBlink(); return; }
       lit(m, true); if (audio) sfx.click(m.getWorldPosition(V(0, 0, 0)));
@@ -1785,7 +1923,7 @@ const TEMPLATES = {
     o.position.copy(w.sill); o.rotation.y = far.rotation.y; o.visible = false; puzzleGroup.add(o);
     scope.position.copy(w.scopeAt); scope.rotation.y = Math.atan2(w.dir.x, w.dir.z); scope.visible = true;
     let used = false;
-    scope.userData.interact = { label: () => used ? '' : 'E   Look through the telescope', act: async () => {
+    scope.userData.interact = { label: () => used ? '' : tr('E   Look through the telescope', 'E   望遠鏡をのぞく', 'E   用望远镜看', 'E   用望遠鏡看'), act: async () => {
       used = true; await lookThroughScope(w);
       w.lit.visible = false; far.visible = false; o.visible = true; o.scale.setScalar(0.001); world.reveals.push({ o, t0: performance.now(), done: false });
     } };
@@ -2012,7 +2150,7 @@ async function flickerOn() {
 // 推尽头的门时判定：本层「钥匙」都放回了 → 剧情台词、上楼；没齐 → 提示台词、回到本层
 async function openFarDoor() {
   const F = FLOORS[state.floor];
-  if (F.keys.some(k => state.keysGot.has(k) && !state.placed.has(k))) { say('I should put these back where they belong.', 2600); return; }
+  if (F.keys.some(k => state.keysGot.has(k) && !state.placed.has(k))) { say(tr('I should put these back where they belong.', 'これを元の場所に戻さなきゃ。', '我应该把这些放回原处。', '我應該把這些放回原處。'), 2600); return; }
   state.deciding = true;
   const all = F.keys.every(k => state.placed.has(k));
   const line = all ? LINES.success[state.floor] : state.wrong ? pick(LINES.confused) : pick(LINES.hint[state.floor]);
@@ -2038,16 +2176,38 @@ function stairWarp() {
   state.prevFloor = state.floor; net.sendFloor();
 }
 
-const INTRO = [['…Where am I?', 2400], ["I can't remember how I got here.", 3000], ['This hallway. I think I know this hallway.', 3400]];
+const INTRO = [[tr('…Where am I?', '……ここは、どこ？', '……我在哪儿？', '……我在哪裡？'), 2400], [tr("I can't remember how I got here.", 'どうやってここに来たのか、思い出せない。', '我想不起来是怎么到这里的。', '我想不起來是怎麼到這裡的。'), 3000],
+  [tr('This hallway. I think I know this hallway.', 'この廊下。知っている気がする。', '这条走廊。我好像认得这条走廊。', '這條走廊。我好像認得這條走廊。'), 3400]];
 // 结局：全白 → 主角的独白一句句浮现 → 结算（体验过的谜题 / 谜题总数）→ 点一下回到主菜单
-const MONOLOGUE = [
+const MONOLOGUE = tr([
   'We had a fight the summer I turned sixteen. I slammed the door and never came back.',
   'The sea came up. The town went under. The neighbours left, one by one.',
   'She stayed. She kept a lamp on in the window, and the door unlocked.',
   'She planted the seed I found when I was small, and watered it every day.',
   'It grew through every floor of this house, looking for me.',
   "I'm home, Mum.",
-];
+], [
+  '十六歳の夏、母さんと喧嘩した。ドアを叩きつけて出ていって、それきり帰らなかった。',
+  '海が上がってきて、町は沈んだ。近所の人たちは、ひとり、またひとりと去っていった。',
+  '母さんは残った。窓辺のランプを灯したまま、ドアの鍵を開けたまま。',
+  '私が小さいころ拾った種を植えて、毎日水をやっていた。',
+  'それはこの家のすべての階を突き抜けて伸びていった。私を探して。',
+  'ただいま、母さん。',
+], [
+  '十六岁那年夏天，我们吵了一架。我摔门而去，再也没有回来。',
+  '海水涨了上来，小镇沉了下去。邻居们一个接一个地离开。',
+  '她留了下来。窗边的灯一直亮着，门一直没有锁。',
+  '她种下了我小时候捡到的那颗种子，每天给它浇水。',
+  '它穿过这栋房子的每一层，一直长，一直在找我。',
+  '妈，我回来了。',
+], [
+  '十六歲那年夏天，我們吵了一架。我摔門而去，再也沒有回來。',
+  '海水漲了上來，小鎮沉了下去。鄰居們一個接一個地離開。',
+  '她留了下來。窗邊的燈一直亮著，門一直沒有鎖。',
+  '她種下了我小時候撿到的那顆種子，每天給它澆水。',
+  '它穿過這棟房子的每一層，一直長，一直在找我。',
+  '媽，我回來了。',
+]);
 async function endGame() {
   if (state.ended) return; state.ended = true; state.busy = true;
   if (net.role === 'child') net.send({ t: 'end' });
@@ -2059,11 +2219,14 @@ async function endGame() {
   const mo = $('monologue');
   for (const line of MONOLOGUE) { mo.textContent = line; mo.style.opacity = 1; await wait(1400 + line.length * 55); mo.style.opacity = 0; await wait(1500); }
   const total = Object.keys(TEMPLATES).length;
-  $('stats').innerHTML = `Time ${mm}:${ss}<br>Puzzles you came across: ${state.tplSeen.size} of ${total} kinds<br>Keepsakes found: ${state.solved}`;
-  $('again').textContent = `${CLICK} to return to the main menu`;
+  $('stats').innerHTML = tr(`Time ${mm}:${ss}<br>Puzzles you came across: ${state.tplSeen.size} of ${total} kinds<br>Keepsakes found: ${state.solved}`,
+    `プレイ時間 ${mm}:${ss}<br>出会った謎：${total} 種類中 ${state.tplSeen.size} 種類<br>見つけた思い出の品：${state.solved}`,
+    `用时 ${mm}:${ss}<br>遇到的谜题：${state.tplSeen.size} / ${total} 种<br>找回的纪念物：${state.solved}`,
+    `用時 ${mm}:${ss}<br>遇到的謎題：${state.tplSeen.size} / ${total} 種<br>找回的紀念物：${state.solved}`);
+  $('again').textContent = tr(`${CLICK} to return to the main menu`, `${CLK}してメインメニューへ`, `${CLK}返回主菜单`, `${CLK}返回主選單`);
   for (const id of ['t', 'stats', 'again']) { const el = id === 't' ? document.querySelector('#end .t') : $(id); el.style.opacity = id === 'stats' ? 0.75 : 1; }
   $('again').addEventListener('click', () => {   // 点了马上有反馈：字变成「正在返回」，画面淡出，再重新载入到主界面
-    $('again').textContent = 'Returning to the main menu…'; $('again').style.cursor = 'default';
+    $('again').textContent = tr('Returning to the main menu…', 'メインメニューに戻っています…', '正在返回主菜单…', '正在返回主選單…'); $('again').style.cursor = 'default';
     for (const el of [document.querySelector('#end .t'), $('stats')]) el.style.opacity = 0.15;
     setTimeout(() => location.reload(), 900);
   }, { once: true });
@@ -2096,18 +2259,48 @@ addEventListener('mousemove', e => {   // 拖动转视角只在按住时算；�
 });
 canvas.addEventListener('mousedown', e => { if (dragLook) dragging = true; if (playing && e.button === 0) tryInteract(); });
 addEventListener('mouseup', () => { dragging = false; });
-$('start').addEventListener('click', e => {
-  if (!ready || state.ended || e.target.closest('#mp button, #mp input, #restart') || (net.role === 'mother' && !net.synced)) return;
+// 主菜单：单人游戏 / 合作（作为协助者加入、邀请协助者加入）/ 语言；暂停时第一项变成「继续」，另有「从头开始」
+const MENU = {
+  solo: tr('Single Player', 'ひとりで遊ぶ', '单人游戏', '單人遊戲'), cont: tr('Continue', '続ける', '继续', '繼續'),
+  enter: tr('Enter as the helper', '協力者として入る', '以协助者身份进入', '以協助者身分進入'), waiting: tr('Waiting for the host…', 'ホストを待っています…', '正在等待房主…', '正在等待房主…'),
+  restart: tr('Restart from the beginning', '最初からやり直す', '从头开始', '從頭開始'), restarting: tr('Restarting…', 'やり直しています…', '正在重新开始…', '正在重新開始…'),
+  coop: tr('Co-op', '協力プレイ', '合作', '合作'), join: tr('Join as helper', '協力者として参加', '作为协助者加入', '以協助者身分加入'), invite: tr('Invite a helper', '協力者を招待', '邀请协助者加入', '邀請協助者加入'),
+  lang: tr('Language', '言語', '语言', '語言'), loading: tr('Loading…', '読み込み中…', '加载中…', '載入中…'),
+};
+document.querySelector('#end .t').textContent = tr('HOME', 'おかえり', '回家', '回家'); $('useBtn').textContent = tr('USE', '使う', '使用', '使用');
+$('rotateText').textContent = tr('Turn your phone sideways to play', '横向きにして遊んでください', '请横屏游玩', '請橫向遊玩');
+$('restart').textContent = MENU.restart; $('mCoop').textContent = MENU.coop; $('mpJoin').textContent = MENU.join; $('mpHost').textContent = MENU.invite; $('mLang').textContent = MENU.lang;
+$('help').innerHTML = TOUCH ? tr('Left thumb move · Right thumb look<br>Tap USE to interact', '左の親指で移動 · 右の親指で見回す<br>「使う」をタップで調べる', '左手拇指移动 · 右手拇指转视角<br>点“使用”进行互动', '左手拇指移動 · 右手拇指轉視角<br>點「使用」進行互動')
+  : tr('WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause', 'WASD 移動 · Shift 速く歩く · マウス 見回す<br>E / クリック 調べる · Esc 一時停止', 'WASD 移动 · Shift 快走 · 鼠标 转视角<br>E / 点击 互动 · Esc 暂停', 'WASD 移動 · Shift 快走 · 滑鼠 轉視角<br>E / 點擊 互動 · Esc 暫停');
+function menuLabels() {
+  const b = $('mSolo'), paused = $('start').classList.contains('paused'), helper = net.role === 'mother';
+  b.disabled = !ready || (helper && !net.synced);
+  b.textContent = !ready ? MENU.loading : paused ? MENU.cont : helper ? (net.synced ? MENU.enter : MENU.waiting) : MENU.solo;
+}
+for (const [code, name] of Object.entries(LANGS)) {   // 换语言：带着 ?lang= 重新载入
+  const b = document.createElement('button'); b.textContent = name; b.classList.toggle('cur', code === LANG); $('langs').append(b);
+  b.addEventListener('click', e => { e.stopPropagation(); if (code === LANG) return; try { localStorage.setItem('root.lang', code); } catch {}
+    const u = new URL(location.href); u.searchParams.set('lang', code); location.replace(u.href); });
+}
+const SUBS = [['mCoop', 'mp'], ['mLang', 'langs']];   // 二级菜单：点一下展开，再点收起；同时只开一个
+for (const [btn, sub] of SUBS) $(btn).addEventListener('click', e => {
+  e.stopPropagation(); const on = !$(sub).classList.contains('on');
+  for (const [b2, s2] of SUBS) { $(s2).classList.toggle('on', on && s2 === sub); $(b2).classList.toggle('on', on && b2 === btn); } });
+$('start').addEventListener('pointerdown', () => { initAudio(); if (!menuOpen) { menuOpen = true; music.start(); $('start').classList.add('open'); } });   // 第一下：音乐响起，主视觉亮起来
+$('mSolo').addEventListener('click', e => {
+  e.stopPropagation(); if (!ready || state.ended || (net.role === 'mother' && !net.synced)) return;
   initAudio();
-  if (!menuOpen) { menuOpen = true; music.start(); $('start').classList.add('open'); $('startText').textContent = CLICK + ' to begin'; return; }   // 第一下：音乐响起，主视觉亮起来
   if (TOUCH) { startPlaying(); return; }
   try { const p = canvas.requestPointerLock(); if (p?.catch) p.catch(() => enableDragLook()); } catch { enableDragLook(); }
   startPlaying();
 });
 function startPlaying() {
-  playing = true; $('start').style.display = 'none'; $('start').classList.remove('paused'); $('mp').style.display = 'none'; music.fade(0, 8);
+  playing = true; $('start').style.display = 'none'; $('start').classList.remove('paused'); $('start').classList.add('started'); music.fade(0, 8);
   if (TOUCH) $('touch').style.display = 'block';
-  if (net.role === 'mother' && !net.toldRole) { net.toldRole = true; say('You are their mother. You can see what they have lost. Look at it and ' + (TOUCH ? 'tap Use' : 'press E') + ' to show them.', 6000); }
+  if (net.role === 'mother' && !net.toldRole) { net.toldRole = true; say(tr('You are here to help. You can see what they have lost. Look at it and ' + (TOUCH ? 'tap Use' : 'press E') + ' to show them.',
+    'あなたは協力者。相手がなくした物が見えます。それを見て' + (TOUCH ? '「使う」をタップ' : 'E を押す') + 'と、相手に知らせられます。',
+    '你是协助者。你能看到对方遗失的东西。看着它' + (TOUCH ? '点“使用”' : '按 E') + '，就能指给对方。',
+    '你是協助者。你能看到對方遺失的東西。看著它' + (TOUCH ? '點「使用」' : '按 E') + '，就能指給對方。'), 6000); }
   if (!started) {
     started = true; state.t0 = performance.now(); Platform.emit('start', { floor: state.floor });
     if (net.role !== 'mother') (async () => { await wait(1200); for (const [t, ms] of INTRO) { if (state.phase !== 'corridor') break; await say(t, ms); } })();   // 开场的几句独白
@@ -2116,17 +2309,16 @@ function startPlaying() {
 function enableDragLook() { dragLook = true; startPlaying(); }
 // 暂停：游戏画面模糊压暗当背景，可以继续或从头开始
 function pauseGame() {
-  playing = false; $('start').classList.add('paused'); $('start').style.display = 'flex'; $('startText').textContent = CLICK + ' to continue';
+  playing = false; $('start').classList.add('paused'); $('start').style.display = 'flex'; menuLabels();
   if (TOUCH) $('touch').style.display = 'none';
 }
-$('restart').addEventListener('click', e => { e.stopPropagation(); $('restart').textContent = 'Restarting…'; $('startText').textContent = ''; setTimeout(() => location.reload(), 300); });
+$('restart').addEventListener('click', e => { e.stopPropagation(); $('restart').textContent = MENU.restarting; setTimeout(() => location.reload(), 300); });
 addEventListener('keydown', e => { if (e.code === 'Escape' && playing && (dragLook || TOUCH)) pauseGame(); });   // 没锁鼠标时 Esc 也能暂停
 
 // 触屏：左半屏按下的位置出现摇杆（松手回到左下角），右半屏拖动转视角，Use 按钮 = E
 const stick = { on: false, x: 0, y: 0 };
 if (TOUCH) {
   document.body.classList.add('touch');
-  $('help').innerHTML = 'Left thumb move · Right thumb look<br>Tap USE to interact';
   const base = $('stickBase'), knob = $('stickKnob'), R = 50, LOOK = 0.0055 / CFG.lookSens;
   let stickId = null, lookId = null, sx = 0, sy = 0, lx = 0, ly = 0;
   const home = () => { base.style.left = '15vw'; base.style.top = '72vh'; knob.style.transform = ''; base.style.opacity = 0.55; };
@@ -2212,7 +2404,7 @@ function updatePlayer(dt) {
     if (world.farLeaf.userData.col.enabled === false && p.x < 17.6) setDoor(world.farLeaf, false, true);  // 身后的门关上
     if (!state.roofMode && world.farLeaf.userData.closed && p.x < 12.7) stairWarp();
   }
-  if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sun.position.set(30, 40, 20); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }
+  if (state.roofMode && state.phase === 'stairs' && p.y > 3.05 && p.x < 8.4) { state.floor = 5; state.phase = 'roof'; sunFor(true); Platform.emit('floor', { floor: 5 }); net.sendFloor(); }
   if (state.phase === 'roof') { const l = world.portal.worldToLocal(p.clone().setY(world.portal.position.y)); if (Math.abs(l.x) < 0.6 && l.z > -0.95 && l.z < 0.3 && p.y > world.portal.position.y - 0.5) endGame(); }  // 走到门前就被白光吞没
 }
 
@@ -2309,7 +2501,7 @@ function hostRoom() { // 孩子：开房间，等母亲来敲门
   return net.code;
 }
 function joinRoom(code, status) { // 母亲：用房间码找到孩子
-  net.role = 'mother'; net.code = code; status('Connecting…');
+  net.role = 'mother'; net.code = code; status(tr('Connecting…', '接続中…', '正在连接…', '正在連線…'));
   net.sig = signal(code, async m => {
     if (m.t !== 'offer' || m.to !== net.id || net.pc) return;
     clearInterval(net.hello);
@@ -2320,7 +2512,7 @@ function joinRoom(code, status) { // 母亲：用房间码找到孩子
     net.sig.send({ t: 'answer', from: net.id, to: m.from, sdp: pc.localDescription.sdp });
   });
   const hello = () => net.sig.send({ t: 'hello', from: net.id }); hello(); net.hello = setInterval(hello, 2500);
-  setTimeout(() => { if (!net.synced) status("Couldn't connect. Check the code — or play on your own."); }, 30000);
+  setTimeout(() => { if (!net.synced) status(tr("Couldn't connect. Check the code — or play on your own.", '接続できませんでした。コードを確認するか、ひとりで遊んでください。', '连接失败。请检查房间码，或者单人游戏。', '連線失敗。請檢查房間碼，或者單人遊戲。')); }, 30000);
 }
 function ghostify(o, color, opacity) { // 母亲在孩子眼里：发暖光的半透明人形
   o.traverse(m => { if (!m.isMesh) return; const mt = m.material; mt.transparent = true; mt.opacity = opacity; mt.depthWrite = false;
@@ -2331,8 +2523,8 @@ function onNetOpen() {
   if (net.role === 'child') {
     const m = model('mother'); net.avatar = m ? ghostify(m, '#ffcf8a', 0.5) : group(new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), new THREE.MeshBasicMaterial({ color: '#ffd9a0', transparent: true, opacity: 0.4 })));
     building.add(net.avatar); net.avatar.visible = false; net.sendFloor();
-    $('mpPanel').textContent = 'The mother has joined.';
-    say('…I\'m not alone in here.', 3500);
+    $('mpPanel').textContent = tr('A helper has joined.', '協力者が参加しました。', '协助者已加入。', '協助者已加入。');
+    say(tr('…I\'m not alone in here.', '……ここにいるのは、私だけじゃない。', '……这里不止我一个人。', '……這裡不只我一個人。'), 3500);
   } else {
     net.avatar = model('child') || group(new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), std('#5a6c86')));
     building.add(net.avatar); net.avatar.visible = false;
@@ -2340,8 +2532,8 @@ function onNetOpen() {
 }
 function onNetClose() {
   if (net.avatar) { building.remove(net.avatar); net.avatar = null; } net.target = null;
-  if (net.role === 'child') { net.pc = null; net.dc = null; say('…The warmth is gone again.', 3000); }   // 母亲可以重新加入
-  else { net.dc = null; say('The connection was lost.', 4000); }
+  if (net.role === 'child') { net.pc = null; net.dc = null; say(tr('…The warmth is gone again.', '……あのぬくもりが、また消えた。', '……那份温暖又消失了。', '……那份溫暖又消失了。'), 3000); }   // 母亲可以重新加入
+  else { net.dc = null; say(tr('The connection was lost.', '接続が切れました。', '连接已断开。', '連線已中斷。'), 4000); }
 }
 function onNetMsg(m) {
   if (m.t === 'p') { net.target = m; if (net.avatar) net.avatar.visible = true;
@@ -2365,16 +2557,16 @@ function mirrorFloor(m) {
   if (n < 5) { applyContent(n); state.forceTpl = (m.tpls || []).slice(); genPuzzles(n, m.seed); state.forceTpl = []; }
   else clearPuzzles();
   applyRoomNotes(Math.min(n, 4)); setLook(n, !net.synced);
-  sun.position.set(...(n === 5 ? [30, 40, 20] : [0, 50, 0]));
+  sunFor(n === 5);
   for (const id in net.markers) building.remove(net.markers[id]);
   net.markers = {};
   for (const id of FLOORS[n]?.keys || []) {
     const mk = makeKey(id, 'real', M.glowKey); mk.visible = false; mk.userData.y = 0;
-    mk.userData.interact = { label: () => 'E   Show them this', act: () => pointAt(id) };
+    mk.userData.interact = { label: () => tr('E   Show them this', 'E   これを知らせる', 'E   指给对方看', 'E   指給對方看'), act: () => pointAt(id) };
     building.add(mk); net.markers[id] = mk;
   }
   if (m.pos) { player.pos.set(m.pos[0] + 0.7, m.pos[1], m.pos[2] + 0.3); player.vy = 0; }
-  if (!net.synced) { net.synced = true; $('mpPanel').textContent = 'Connected.'; $('startText').textContent = CLICK + ' to enter as the mother'; }
+  if (!net.synced) { net.synced = true; $('mpPanel').textContent = tr('Connected.', '接続しました。', '已连接。', '已連線。'); menuLabels(); }
 }
 function pointAt(id) {
   net.send({ t: 'point', id });
@@ -2388,20 +2580,22 @@ function showBeam(id) {
     new THREE.MeshBasicMaterial({ color: '#ffd890', transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
   m.position.set(v.x, 1.5, v.z); building.add(m); net.beams.push({ m, t0: performance.now() });
   if (audio) sfx.chime(v);
-  if (!net.told.beam) { net.told.beam = true; say('A warm light… like someone is showing me the way.', 3500); }
+  if (!net.told.beam) { net.told.beam = true; say(tr('A warm light… like someone is showing me the way.', 'あたたかい光……誰かが道を教えてくれているみたいだ。', '一束温暖的光……像是有人在为我指路。', '一束溫暖的光……像是有人在為我指路。'), 3500); }
 }
-for (const id of ['mpHost', 'mpJoin']) $(id).addEventListener('pointerdown', () => { initAudio(); music.start(); menuOpen = true; $('start').classList.add('open'); });
 $('mpHost').addEventListener('click', e => {
   e.stopPropagation(); if (net.role) return;
   const code = hostRoom();
   $('mpJoin').style.display = 'none'; $('mpHost').style.display = 'none';
-  $('mpPanel').innerHTML = `Room code <b>${code}</b><br>The other player opens this world, chooses “Join as the mother” and types this code. You can start now — they can join any time.`;
+  $('mpPanel').innerHTML = tr(`Room code <b>${code}</b><br>Your helper opens this world, chooses Co-op → “${MENU.join}” and types this code. You can start now — they can join any time.`,
+    `ルームコード <b>${code}</b><br>協力者はこのワールドを開き、協力プレイ →「${MENU.join}」を選んでこのコードを入力します。先に始めても大丈夫、あとからいつでも参加できます。`,
+    `房间码 <b>${code}</b><br>协助者打开这个世界，选择 合作 →“${MENU.join}”，输入这个房间码。你可以先开始，对方随时都能加入。`,
+    `房間碼 <b>${code}</b><br>協助者打開這個世界，選擇 合作 →「${MENU.join}」，輸入這個房間碼。你可以先開始，對方隨時都能加入。`);
 });
 $('mpJoin').addEventListener('click', e => {
   e.stopPropagation(); if (net.role) return;
   $('mpHost').style.display = 'none'; $('mpJoin').style.display = 'none';
-  $('mpPanel').innerHTML = 'Room code <input id="mpCode" maxlength="4" autocomplete="off"> <button id="mpGo">Join</button>';
-  const go = () => { const c = $('mpCode').value.trim().toUpperCase(); if (c.length !== 4) return; joinRoom(c, t => { $('mpPanel').textContent = t; }); };
+  $('mpPanel').innerHTML = `${tr('Room code', 'ルームコード', '房间码', '房間碼')} <input id="mpCode" maxlength="4" autocomplete="off"> <button id="mpGo">${tr('Join', '参加', '加入', '加入')}</button>`;
+  const go = () => { const c = $('mpCode').value.trim().toUpperCase(); if (c.length !== 4) return; joinRoom(c, t => { $('mpPanel').textContent = t; }); menuLabels(); };
   $('mpGo').addEventListener('click', go); $('mpCode').addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') go(); });
   $('mpCode').focus();
 });
@@ -2416,8 +2610,8 @@ function debugJump(n) {
   world.startDoor.visible = false; world.startDoor.userData.col.enabled = false;
   for (let k = 1; k < n; k++) FLOORS[k].keys.forEach(id => state.recovered.add(id));
   applyContent(n); applyRoomNotes(n); genPuzzles(n); setLook(n, true);
-  if (n === 5) { state.phase = 'roof'; sun.position.set(30, 40, 20); player.pos.set(6, 3.2, -19); player.yaw = Math.PI / 2; }
-  else { state.phase = 'corridor'; sun.position.set(0, 50, 0); spawn(); }
+  if (n === 5) { state.phase = 'roof'; sunFor(true); player.pos.set(6, 3.2, -19); player.yaw = Math.PI / 2; }
+  else { state.phase = 'corridor'; sunFor(false); spawn(); }
   net.sendFloor();
 }
 function debugCollectAll() { (FLOORS[state.floor].keys || []).forEach(k => state.keysGot.add(k)); }
@@ -2439,7 +2633,7 @@ function buildCity(R, fRing, live) {
   for (const [id, x, z, h] of [['cityFlat', 40, -285, 40], ['cityTower', 300, -210, 56], ['cityRow', -130, -200, 20], ['cityFlat', -110, 265, 42], ['cityTower', 95, 300, 52], ['cityChurch', -175, 220, 42]]) {
     const im = IMG['bb_' + id]; if (!im) continue;
     const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.needsUpdate = true;
-    const w = h * im.width / im.height, m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), new THREE.MeshBasicMaterial({ map: t, alphaTest: 0.35, side: THREE.DoubleSide }));
+    const w = h * im.width / im.height, m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1 }));   // 吃光：晨光照到的一面亮
     m.position.set(x, SEA_Y - h * 0.04, z); R.add(m); live.boards.push(m); rings.push([x, z, w * 0.5]);
   }
   const e = new THREE.Euler(), q = new THREE.Quaternion(), one = V(1, 1, 1);
@@ -2471,13 +2665,14 @@ function updateRoof(dt) {
   foamMats.forEach((m, i) => { m.opacity = 0.6 + 0.25 * Math.sin(t * 1.2 + i * 2); if (i === 0) m.map.offset.x = t * 0.02; });
 }
 // 过渡房间里一直提示该做什么；站着不动 3 秒左上角浮出操作说明
-const CONTROLS = TOUCH ? 'Left thumb — move<br>Right thumb — look around<br>USE — pick up / open / put back'
-  : 'W A S D — move<br>Shift — walk faster<br>Mouse — look around<br>E or Click — pick up / open / put back';
+const CONTROLS = TOUCH ? tr('Left thumb — move<br>Right thumb — look around<br>USE — pick up / open / put back', '左の親指 — 移動<br>右の親指 — 見回す<br>使う — 拾う / 開ける / 戻す', '左手拇指 — 移动<br>右手拇指 — 环顾四周<br>使用 — 拿起 / 打开 / 放回', '左手拇指 — 移動<br>右手拇指 — 環顧四周<br>使用 — 拿起 / 打開 / 放回')
+  : tr('W A S D — move<br>Shift — walk faster<br>Mouse — look around<br>E or Click — pick up / open / put back', 'W A S D — 移動<br>Shift — 速く歩く<br>マウス — 見回す<br>E / クリック — 拾う / 開ける / 戻す', 'W A S D — 移动<br>Shift — 快走<br>鼠标 — 环顾四周<br>E 或点击 — 拿起 / 打开 / 放回', 'W A S D — 移動<br>Shift — 快走<br>滑鼠 — 環顧四周<br>E 或點擊 — 拿起 / 打開 / 放回');
 function updateHints() {
   let t = '';
   if (playing && state.phase === 'room' && !state.deciding && !state.ended && net.role !== 'mother') {
     const holding = FLOORS[state.floor].keys.some(k => state.keysGot.has(k) && !state.placed.has(k));
-    t = holding ? 'Put back what you found. The faint outlines show where each thing belongs.' : 'When you are ready, open the far door.';
+    t = holding ? tr('Put back what you found. The faint outlines show where each thing belongs.', '見つけた物を元に戻そう。うっすらとした輪郭が、それぞれの置き場所。', '把找到的东西放回去。淡淡的轮廓就是它们原来的位置。', '把找到的東西放回去。淡淡的輪廓就是它們原來的位置。')
+      : tr('When you are ready, open the far door.', '準備ができたら、奥のドアを開けよう。', '准备好了，就打开那头的门。', '準備好了，就打開那頭的門。');
   }
   const h = $('hint'); if (t) h.textContent = t; h.style.opacity = t ? 0.85 : 0;
   const c = $('controls'), idle = playing && !state.ended && !state.scope && performance.now() - lastInput > 3000;
@@ -2508,6 +2703,11 @@ function tick() {
 (async () => {
   await Promise.all([loadModels(), loadImages()]);
   buildBuilding(); buildRoof();
+  if (!TOUCH) { // 天台的实时阴影：近处的实体投影、接影（透明的雾、天空、远景不参与）；大树和楼梯间也投影
+    const near = V(), ok = m => m.isMesh && !m.material.transparent && !(m.material.isShaderMaterial || m.material.isMeshBasicMaterial);
+    roof.traverse(m => { if (ok(m) && m.getWorldPosition(near).distanceTo(ROOF_C) < 45) m.castShadow = m.receiveShadow = true; });
+    for (const g of [world.tree, world.stairHouse]) g.traverse(m => { if (ok(m)) { m.castShadow = true; m.receiveShadow = g === world.stairHouse; } });
+  }
   { // 预先编译所有着色器（含天台、楼梯口复制品等平时看不到的部分），避免第一次看到时卡一下
     const hidden = []; scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
     if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera);
@@ -2520,7 +2720,7 @@ function tick() {
     $('hud').style.display = 'block';
     window.__game = { player, state, world, camera, T, Tinv, net, colliders, renderer, idleT: () => [performance.now() - lastInput, playing, !!state.scope, state.ended], debugJump, debugCollectAll, stairWarp, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
   }
-  ready = true; $('startText').textContent = CLICK + ' to enter';
+  ready = true; menuLabels();
   Platform.emit('ready');
   tick();
 })();
