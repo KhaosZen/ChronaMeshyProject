@@ -1390,6 +1390,26 @@ function buildCourtyard() {
     const m = new THREE.Mesh(geo, mat); m.position.set(x, k * 3.2 + 1.6, z); m.rotation.y = ry;
     m.userData.k = k; building.add(m); world.bands.push(m);
   }
+  // 1 楼天井底部的雾：几层由浅到浓、缓慢漂移的雾片，最下面一层几乎不透明，看不到天井的底（只在 1 楼显示）
+  { const tex = canvasTex(256, 256, (g, w, h) => { const rng = mulberry32(83); g.filter = 'blur(14px)';
+      for (let i = 0; i < 26; i++) { const x = rng() * w, y = rng() * h, r = 16 + rng() * 40; g.fillStyle = `rgba(255,255,255,${0.35 + rng() * 0.5})`;   // 稀疏的几团：中间留空，层与层之间、和墙/树干的交线被打散
+        for (const [ox, oy] of [[0, 0], [w, 0], [-w, 0], [0, h], [0, -h]]) { g.beginPath(); g.arc(x + ox, y + oy, r, 0, 7); g.fill(); } }   // 四边环绕着画：贴图可以无缝平铺
+      g.filter = 'none'; });
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    const edge = canvasTex(64, 64, (g, w, h) => { const im = g.createImageData(w, h);   // 靠墙的一圈慢慢变透明：雾片和墙的交线看不出来
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const e = Math.min(x, w - 1 - x, y, h - 1 - y) / (w * 0.16), a = Math.min(1, e) ** 1.5 * 255, o = (y * w + x) * 4; im.data[o] = im.data[o + 1] = im.data[o + 2] = a; im.data[o + 3] = 255; }
+      g.putImageData(im, 0, 0); });
+    edge.colorSpace = THREE.NoColorSpace;
+    const mist = world.courtMist = new THREE.Group(), C = COURT, W = C.x1 - C.x0 - 0.1, D = C.z1 - C.z0 - 0.1;
+    [[-0.5, 0.1], [-1.2, 0.13], [-1.9, 0.16], [-2.6, 0.2], [-3.3, 0.24], [-4.0, 0.28], [-4.8, 0.34], [-5.6, 0.42]].forEach(([y, op], i) => {
+      const t = tex.clone(); t.needsUpdate = true; t.repeat.set(W / 7, D / 7); t.offset.set(i * 0.37, i * 0.61);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(W, D).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: t, alphaMap: edge, transparent: true, opacity: op, depthWrite: false, fog: false }));
+      m.position.set((C.x0 + C.x1) / 2, y, (C.z0 + C.z1) / 2); m.renderOrder = 2; m.userData.drift = [(i % 2 ? 1 : -1) * (0.004 + i * 0.0015), 0.003 + i * 0.001]; mist.add(m);
+    });
+    const floorMist = new THREE.Mesh(new THREE.PlaneGeometry(W, D).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ fog: false }));   // 最底下一块实心的雾色，天井底不露出背景
+    floorMist.position.set((C.x0 + C.x1) / 2, -6.3, (C.z0 + C.z1) / 2); floorMist.userData.solid = true; mist.add(floorMist);
+    mist.visible = false; building.add(mist);
+  }
   // 大树：从水下长上来，高过楼顶；整棵树按楼层上下移动（站在 n 楼，看到的是这一段）
   const tree = world.tree = new THREE.Group(); building.add(tree);
   const T0 = TREE;
@@ -1579,7 +1599,7 @@ function applyContent(n, here = true) {   // here = false：玩家还在过渡�
   M.wallStub.map = WALL_TEX[f]; if (here) M.wall.map = WALL_TEX[f];
   world.tree.position.y = (4 - f) * 3.2;                           // 楼层越低，人越低：树相对你更高，看到的是更低的一段树干，树冠在头顶上方好几层
   world.bands.forEach(m => m.visible = m.userData.k <= 4 - f);     // 头顶还剩几层楼
-  world.sea.visible = n >= 2;
+  world.sea.visible = n >= 2; world.courtMist.visible = n === 1;
   if (n === 5) { world.ruins.forEach(r => r.visible = false); return; }   // 窗外谜题的远楼在天台上用不着
   world.roots.forEach((r, i) => r.visible = i < [4, 8, 12, 16][n - 1]);
   world.plants.forEach((p, i) => p.visible = i < [0, 8, 22, 44][n - 1]);
@@ -1737,6 +1757,9 @@ function updateLook(dt, instant) {
   applyPalette(look.f);
   scene.background.copy(look.sky); scene.fog.color.copy(look.sky); scene.fog.near = look.near; scene.fog.far = look.far;
   if (state.scope) { scene.fog.near = 60; scene.fog.far = 400; }  // 望远镜里看得清
+  if (world.courtMist?.visible) for (const m of world.courtMist.children) {   // 天井的雾跟着这一层的天色（关灯时暗一些），慢慢飘
+    m.material.color.copy(look.sky).lerp(_fogWhite, m.userData.solid ? 0 : 0.14).multiplyScalar(state.lightsOn ? 1 : 0.6);
+    if (m.material.map) { m.material.map.offset.x += m.userData.drift[0] * dt; m.material.map.offset.y += m.userData.drift[1] * dt; } }
   for (const m of world.fogPlanes || []) { m.visible = !state.scope && !state.roofMode; m.material.color.copy(look.sky).lerp(_fogWhite, 0.35); }   // 天台上看不到楼下的窗
   for (const m of world.glass || []) m.visible = !state.scope && !state.roofMode;   // 望远镜里看得清
   for (const g of world.innerWin || []) g.visible = g.userData.on !== false && !state.roofMode;
