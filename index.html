@@ -18,6 +18,9 @@
   .mi { font: inherit; color: #ece6d8; background: rgba(214,208,194,.06); border: none; border-left: 2px solid rgba(214,208,194,.35); padding: 11px 16px; font-size: 18px; letter-spacing: .16em;
     cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; transition: background .2s, border-color .2s, padding .2s; }
   .mi:hover, .mi:focus-visible { background: rgba(214,208,194,.16); border-left-color: #f0d9a8; padding-left: 22px; outline: none; }
+  .mi .ico { width: 20px; height: 20px; flex: none; margin-right: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+  .mi .lbl { flex: 1; }
+  .mi .i-cont { display: none; fill: currentColor; stroke-width: 0; } #start.paused .mi .i-solo { display: none; } #start.paused .mi .i-cont { display: block; }   /* 暂停时第一项是「继续」：换成播放图标 */
   .mi.exp::after { content: '▸'; font-size: 13px; opacity: .7; transition: transform .2s; }
   .mi.exp.on::after { transform: rotate(90deg); }
   .mi.on { background: rgba(214,208,194,.12); border-left-color: #f0d9a8; }
@@ -36,6 +39,7 @@
   #start.paused, #start.open.paused { background: rgba(10,11,14,.42); -webkit-backdrop-filter: blur(10px) brightness(.85); backdrop-filter: blur(10px) brightness(.85); }
   #restart { display: none; }
   #start.paused #restart { display: block; }
+  #start.paused ~ #controls, #start.paused ~ #hint { visibility: hidden; }   /* 暂停时立刻藏起操作说明，不等淡出 */
   #start.paused #mCoop, #start.paused #mp, #start.started #mCoop, #start.started #mp, #start.paused #mLang, #start.paused #langs { display: none; }   /* 换语言要重新载入：游戏中途不给换 */
   #pauseBtn { position: absolute; right: 18px; top: 14px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(214,208,194,.5); background: rgba(0,0,0,.3); display: flex; align-items: center; justify-content: center; font-size: 16px; letter-spacing: 2px; }
   #start.open { background: linear-gradient(90deg, rgba(8,9,12,.88) 0%, rgba(8,9,12,.62) 30%, rgba(8,9,12,.08) 62%, rgba(8,9,12,0) 100%), url(assets/tex/keyart.jpg) center / cover, #121212; }
@@ -91,12 +95,12 @@
 <div id="start" class="layer">
   <div id="menu">
     <h1>ROOT</h1>
-    <button class="mi" id="mSolo" disabled>Loading…</button>
+    <button class="mi" id="mSolo" disabled><svg class="ico i-solo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20.2c0-4 3.2-6.7 7.2-6.7s7.2 2.7 7.2 6.7"/></svg><svg class="ico i-cont" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><span class="lbl">Loading…</span></button>
     <div id="loadBar"><i></i></div>
-    <button class="mi" id="restart"></button>
-    <button class="mi exp" id="mCoop"></button>
+    <button class="mi" id="restart"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.6 4.2v4.4h-4.4"/></svg><span class="lbl"></span></button>
+    <button class="mi exp" id="mCoop"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.6" r="3.2"/><path d="M2.8 20.2c0-3.5 2.8-6 6.2-6s6.2 2.5 6.2 6"/><circle cx="16.6" cy="7.4" r="2.7"/><path d="M15.4 13.4c3.2.1 5.8 2.5 5.8 5.8"/></svg><span class="lbl"></span></button>
     <div class="sub" id="mp"><button id="mpJoin"></button><button id="mpHost"></button><div id="mpPanel"></div><button id="mpBack" hidden></button></div>
-    <button class="mi exp" id="mLang"></button>
+    <button class="mi exp" id="mLang"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2M12 3.4c2.5 2.4 3.8 5.3 3.8 8.6s-1.3 6.2-3.8 8.6c-2.5-2.4-3.8-5.3-3.8-8.6s1.3-6.2 3.8-8.6z"/></svg><span class="lbl"></span></button>
     <div class="sub" id="langs"></div>
     <p id="startText"></p>
     <p id="help"></p>
@@ -808,7 +812,8 @@ const LOAD = {};
 function loadTick(id, f, bytes) { const o = LOAD[id] ||= { f: 0, w: 2e5 }; o.f = Math.max(o.f, f); if (bytes) o.w = bytes; showLoad(); }
 function loadFrac() { let a = 0, b = 0; for (const k in LOAD) { a += LOAD[k].f * LOAD[k].w; b += LOAD[k].w; } return b ? a / b : 0; }
 let loadStage = 0;   // 0 下载中，>0 = 已到的总进度
-function showLoad() { const p = loadStage || loadFrac() * 0.85; $('loadBar').firstChild.style.width = (p * 100).toFixed(1) + '%'; if (!ready) $('mSolo').textContent = `${MENU.loading}  ${Math.floor(p * 100)}%`; }
+const lbl = id => $(id).querySelector('.lbl');   // 菜单按钮里的文字（图标在旁边，不能整个 textContent 覆盖）
+function showLoad() { const p = loadStage || loadFrac() * 0.85; $('loadBar').firstChild.style.width = (p * 100).toFixed(1) + '%'; if (!ready) lbl('mSolo').textContent = `${MENU.loading}  ${Math.floor(p * 100)}%`; }
 function loadImages() {
   const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'parapet', 'leafCluster.png', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
   return Promise.all(names.map(f => new Promise(res => {
@@ -2422,13 +2427,13 @@ const MENU = {
 };
 document.querySelector('#end .t').textContent = tr('HOME', 'おかえり', '回家', '回家'); $('useBtn').textContent = tr('USE', '使う', '使用', '使用');
 $('rotateText').textContent = tr('Turn your phone sideways to play', '横向きにして遊んでください', '请横屏游玩', '請橫向遊玩');
-$('restart').textContent = MENU.restart; $('mCoop').textContent = MENU.coop; $('mpJoin').textContent = MENU.join; $('mpHost').textContent = MENU.invite; $('mpBack').textContent = tr('← Back', '← 戻る', '← 返回', '← 返回'); $('mLang').textContent = MENU.lang;
+lbl('restart').textContent = MENU.restart; lbl('mCoop').textContent = MENU.coop; $('mpJoin').textContent = MENU.join; $('mpHost').textContent = MENU.invite; $('mpBack').textContent = tr('← Back', '← 戻る', '← 返回', '← 返回'); lbl('mLang').textContent = MENU.lang;
 $('help').innerHTML = TOUCH ? tr('Left thumb move · Right thumb look<br>Tap USE to interact', '左の親指で移動 · 右の親指で見回す<br>「使う」をタップで調べる', '左手拇指移动 · 右手拇指转视角<br>点“使用”进行互动', '左手拇指移動 · 右手拇指轉視角<br>點「使用」進行互動')
   : tr('WASD move · Shift walk faster · Mouse look<br>E / Click interact · Esc pause', 'WASD 移動 · Shift 速く歩く · マウス 見回す<br>E / クリック 調べる · Esc 一時停止', 'WASD 移动 · Shift 快走 · 鼠标 转视角<br>E / 点击 互动 · Esc 暂停', 'WASD 移動 · Shift 快走 · 滑鼠 轉視角<br>E / 點擊 互動 · Esc 暫停');
 function menuLabels() {
   const b = $('mSolo'), paused = $('start').classList.contains('paused'), helper = net.role === 'mother';
   b.disabled = !ready || (helper && !net.synced);
-  b.textContent = !ready ? MENU.loading : paused ? MENU.cont : helper ? (net.synced ? MENU.enter : MENU.waiting) : MENU.solo;
+  lbl('mSolo').textContent = !ready ? MENU.loading : paused ? MENU.cont : helper ? (net.synced ? MENU.enter : MENU.waiting) : MENU.solo;
 }
 for (const [code, name] of Object.entries(LANGS)) {   // 换语言：带着 ?lang= 重新载入
   const b = document.createElement('button'); b.textContent = name; b.classList.toggle('cur', code === LANG); $('langs').append(b);
@@ -2463,9 +2468,10 @@ function enableDragLook() { dragLook = true; startPlaying(); }
 // 暂停：游戏画面模糊压暗当背景，可以继续或从头开始
 function pauseGame() {
   playing = false; $('start').classList.add('paused'); $('start').style.display = 'flex'; menuLabels();
+  $('controls').style.opacity = $('hint').style.opacity = 0;   // 暂停菜单上不要叠着操作说明
   if (TOUCH) $('touch').style.display = 'none';
 }
-$('restart').addEventListener('click', e => { e.stopPropagation(); $('restart').textContent = MENU.restarting; setTimeout(() => location.reload(), 300); });
+$('restart').addEventListener('click', e => { e.stopPropagation(); lbl('restart').textContent = MENU.restarting; setTimeout(() => location.reload(), 300); });
 addEventListener('keydown', e => { if (e.code === 'Escape' && playing && (dragLook || TOUCH)) pauseGame(); });   // 没锁鼠标时 Esc 也能暂停
 
 // 触屏：左半屏按下的位置出现摇杆（松手回到左下角），右半屏拖动转视角，Use 按钮 = E
