@@ -21,6 +21,8 @@
   .mi.exp::after { content: '▸'; font-size: 13px; opacity: .7; transition: transform .2s; }
   .mi.exp.on::after { transform: rotate(90deg); }
   .mi.on { background: rgba(214,208,194,.12); border-left-color: #f0d9a8; }
+  #loadBar { height: 2px; background: rgba(214,208,194,.15); margin: -6px 0 2px; overflow: hidden; }
+  #loadBar i { display: block; height: 100%; width: 0; background: #f0d9a8; transition: width .25s; }
   .mi:disabled { cursor: default; opacity: .55; padding-left: 16px; background: rgba(214,208,194,.04); border-left-color: rgba(214,208,194,.2); }
   .sub { display: none; flex-direction: column; align-items: stretch; gap: 2px; margin: 0 0 6px 18px; padding-left: 10px; border-left: 1px solid rgba(214,208,194,.25); font-size: 15px; }
   .sub.on { display: flex; }
@@ -90,6 +92,7 @@
   <div id="menu">
     <h1>ROOT</h1>
     <button class="mi" id="mSolo" disabled>Loading…</button>
+    <div id="loadBar"><i></i></div>
     <button class="mi" id="restart"></button>
     <button class="mi exp" id="mCoop"></button>
     <div class="sub" id="mp"><button id="mpJoin"></button><button id="mpHost"></button><div id="mpPanel"></div><button id="mpBack" hidden></button></div>
@@ -800,10 +803,17 @@ function buildBuilding() {
 // 环境叙事：墙上的全家福、邻居门和搬迁通知、寻人启事、门口的拖鞋
 // 照片和儿童画（GPT image 生成，assets/tex/*.jpg）；载不到就退回下面的程序画法
 const IMG = {};
+// 载入进度：每个文件按字节数加权（图片和还没报大小的模型先按估计值），下载占 0–85%，搭场景、编译着色器占最后 15%
+const LOAD = {};
+function loadTick(id, f, bytes) { const o = LOAD[id] ||= { f: 0, w: 2e5 }; o.f = Math.max(o.f, f); if (bytes) o.w = bytes; showLoad(); }
+function loadFrac() { let a = 0, b = 0; for (const k in LOAD) { a += LOAD[k].f * LOAD[k].w; b += LOAD[k].w; } return b ? a / b : 0; }
+let loadStage = 0;   // 0 下载中，>0 = 已到的总进度
+function showLoad() { const p = loadStage || loadFrac() * 0.85; $('loadBar').firstChild.style.width = (p * 100).toFixed(1) + '%'; if (!ready) $('mSolo').textContent = `${MENU.loading}  ${Math.floor(p * 100)}%`; }
 function loadImages() {
   const names = ['family', 'family_missing', 'age_baby', 'age_kid', 'age_teen', 'age_empty', 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'grassA.png', 'grassB.png', 'mossClump.png', 'moss', 'bark', 'door', 'parapet', 'leafCluster.png', 'bb_cityRow.png', 'bb_cityFlat.png', 'bb_cityChurch.png', 'bb_cityWarehouse.png', 'bb_cityTower.png', 'bb_cityBridge.png'];
   return Promise.all(names.map(f => new Promise(res => {
-    const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { IMG[n] = im; res(); }; im.onerror = () => res();
+    const n = f.replace(/\.png$/, ''), im = new Image(); im.crossOrigin = 'anonymous'; loadTick('i:' + n, 0);
+    im.onload = () => { IMG[n] = im; loadTick('i:' + n, 1); res(); }; im.onerror = () => { loadTick('i:' + n, 1); res(); };
     im.src = `assets/tex/${f.includes('.') ? f : f + '.jpg'}`;
   })));
 }
@@ -1217,7 +1227,7 @@ function roofTreeFit(o, forkY) {
   o.updateMatrixWorld(true); const pts = [], v = V(0, 0, 0);
   o.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i++) pts.push(v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld).clone()); });
   const H = Math.max(...pts.map(p => p.y)), band = (y0, y1) => pts.filter(p => p.y >= y0 && p.y < y1);
-  const low = band(0, H * 0.08), cx = low.reduce((a, p) => a + p.x, 0) / low.length, cz = low.reduce((a, p) => a + p.z, 0) / low.length;
+  const low = band(H * 0.1, H * 0.3), cx = low.reduce((a, p) => a + p.x, 0) / low.length, cz = low.reduce((a, p) => a + p.z, 0) / low.length;   // 用直的那截树干定中心（底部喇叭口不对称）
   const med = a => { a.sort((x, y) => x - y); return a[a.length >> 1] || 0; }, rad = ps => med(ps.map(p => Math.hypot(p.x - cx, p.z - cz)));
   const Rt = rad(band(H * 0.05, H * 0.3));
   let fy = H * 0.3; while (fy < H * 0.8 && rad(band(fy, fy + H * 0.02)) < Rt * 1.6) fy += H * 0.02;   // 往上找：截面突然变宽的地方就是分叉
@@ -1250,7 +1260,7 @@ function leafCards(crown, parent) {
     }
   }
 }
-function barkTrunk(crown, at, y0) {
+function barkTrunk(crown, at, y0, flush = false) {   // flush：天台树——不切模型，按模型树干底部每个方向的粗细严丝合缝地接上
   // 量树冠模型自带的那截树干：底部外扩（R0）和往上到分叉前的粗细（Rmid）。
   // 把整个树冠放大，让它的树干和下面的主干（RT）一样粗；主干只长到树冠底部，接口前 1.6 米慢慢鼓到和树冠根部一样粗，再插进去一点 ——
   // 粗细连续，树皮是同一张贴图（树冠那边用 barkBlend 按世界坐标投影），看不出接缝
@@ -1263,29 +1273,68 @@ function barkTrunk(crown, at, y0) {
   for (let b = 0; b < NB; b++) prof.push(pct(bands[b].filter(d => d < R0u * 2.2), 0.5) || prof[b - 1] || R0u);
   let fork = 3; while (fork < NB - 1 && prof[fork] < 1.5 * prof.slice(0, fork).sort((x, y) => x - y)[fork >> 1]) fork++;
   const mid = prof.slice(2, Math.max(3, fork)).sort((x, y) => x - y), Rmid = mid[mid.length >> 1] || R0u;
-  const k = Math.min(1.8, Math.max(0.8, RT / Rmid));
+  const k = flush ? 1 : Math.min(1.8, Math.max(0.8, RT / Rmid));   // flush：roofTreeFit 已经按主干粗细缩放好了，不再缩（缩了分叉高度会变）
   crown.scale.multiplyScalar(k); crown.updateMatrixWorld(true);
   // 切掉树冠模型最下面那截（底部外扩和底面），在往上一点、树干已经规整的地方接上：接口处两边一样粗，看不到边
-  const bc = Math.min(Math.max(3, fork - 2), 6), hc = base + bc * BAND * k, Rc = prof[bc] * k, cutR = R0u * k * 1.6;
+  if (flush) { // 模型的直树干一圈粗一圈细（鼓包）：按 0.5 米一段把半径中位数拉到同一个粗细，越接近分叉越放开，保留分叉处的形状
+    const top = crown.userData.fork, B = 0.5, nb = Math.ceil((top - base) / B), md = Array.from({ length: nb }, () => []), inv = new THREE.Matrix4(), w = V(0, 0, 0);
+    crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position;
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); const b = Math.floor((v.y - base) / B); if (b < 0 || b >= nb) continue;
+        const d = Math.hypot(v.x - at.x, v.z - at.z); if (d < Rmid * 2) md[b].push(d); } });
+    const fac = md.map(a => a.length > 20 ? Rmid / pct(a, 0.6) : 1), fAt = y => { const t = (y - base) / B - 0.5, i = Math.max(0, Math.min(nb - 1, Math.floor(t))), j = Math.min(nb - 1, i + 1), u = Math.min(1, Math.max(0, t - i)); return fac[i] * (1 - u) + fac[j] * u; };
+    crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; inv.copy(m.matrixWorld).invert();
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y < base || v.y > top) continue;
+        const wt = 1 - Math.min(1, Math.max(0, (v.y - (top - 4.5)) / 3)), f = 1 + (fAt(v.y) - 1) * wt; if (Math.abs(f - 1) < 1e-3) continue;
+        w.set(at.x + (v.x - at.x) * f, v.y, at.z + (v.z - at.z) * f).applyMatrix4(inv); p.setXYZ(i, w.x, w.y, w.z); }
+      p.needsUpdate = true; m.geometry.computeVertexNormals(); });
+  }
+  let bf = 1; if (flush) for (let b = 0; b < 10; b++) if (prof[b] > Rmid * 1.15) bf = b;   // flush：模型树干底部 2.5 米内鼓出来的那圈（喇叭口）最高到哪
+  const cutF = base + Math.max(0.45, (bf + 1) * BAND * k + 0.1);   // 在鼓包以上、树干已经直了的地方切开接上
+  const bc = Math.min(Math.max(3, fork - 2), 6), hc = flush ? cutF + 0.3 : base + bc * BAND * k, Rc = prof[bc] * k, cutR = R0u * k * 1.6;
+  const A = 40, pa = [];   // flush：切口往上 55 cm 内，模型树干每个方向的半径
+  if (flush) {
+    const sec = Array.from({ length: A }, () => []);
+    crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position;
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y < cutF || v.y > cutF + 0.55) continue;
+        const dx = v.x - at.x, dz = v.z - at.z, d = Math.hypot(dx, dz); if (d > RT * 1.6) continue;
+        sec[((Math.round(Math.atan2(dz, dx) / (2 * Math.PI) * A) % A) + A) % A].push(d); } });
+    for (let i = 0; i < A; i++) pa.push(pct(sec[i], 0.6));
+    for (let pass = 0; pass < A; pass++) for (let i = 0; i < A; i++) if (!pa[i]) pa[i] = pa[(i + A - 1) % A] || pa[(i + 1) % A];   // 没采到点的方向用邻居补
+    for (let i = 0; i < A; i++) pa[i] = pa[i] || RT;
+    // 模型下半截树干上零星翘出来的树皮片：按「高度段 × 方向」求半径中位数，比中位数远出 12% 以上的顶点拉回来（只挪顶点不删面，不会出洞）
+    const H6 = 6, key = (y, x, z) => Math.floor((y - base) / 0.5) * A + ((Math.round(Math.atan2(z - at.z, x - at.x) / (2 * Math.PI) * A) % A) + A) % A, med = {}, inv = new THREE.Matrix4(), w = V(0, 0, 0);
+    crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position;
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y < base || v.y > base + H6) continue; (med[key(v.y, v.x, v.z)] ||= []).push(Math.hypot(v.x - at.x, v.z - at.z)); } });
+    for (const kk in med) med[kk] = pct(med[kk], 0.5);
+    crown.traverse(m => { if (!m.isMesh) return; const p = m.geometry.attributes.position; inv.copy(m.matrixWorld).invert(); let moved = false;
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.y < base || v.y > base + H6) continue;
+        const d = Math.hypot(v.x - at.x, v.z - at.z), md = med[key(v.y, v.x, v.z)]; if (!md || d < md * 1.12) continue;
+        const f = md * 1.08 / d; w.set(at.x + (v.x - at.x) * f, v.y, at.z + (v.z - at.z) * f).applyMatrix4(inv); p.setXYZ(i, w.x, w.y, w.z); moved = true; }
+      if (moved) { p.needsUpdate = true; m.geometry.computeVertexNormals(); } });
+  }
+  const cutY = flush ? cutF : hc;   // flush：切掉模型最底下的喇叭口，切口后面紧贴着就是程序主干
   crown.traverse(m => { if (!m.isMesh || !m.geometry.index) return;
     const g = m.geometry, p = g.attributes.position, ix = g.index.array, keep = [], a = V(), b = V(), c = V();
     for (let i = 0; i < ix.length; i += 3) {
       a.fromBufferAttribute(p, ix[i]).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(p, ix[i + 1]).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(p, ix[i + 2]).applyMatrix4(m.matrixWorld);
       const cy = (a.y + b.y + c.y) / 3, cr = Math.hypot((a.x + b.x + c.x) / 3 - at.x, (a.z + b.z + c.z) / 3 - at.z);
-      if (cy < hc && cr < cutR) continue; keep.push(ix[i], ix[i + 1], ix[i + 2]);
+      if (cy < cutY && cr < cutR) continue; keep.push(ix[i], ix[i + 1], ix[i + 2]);
     }
     g.setIndex(keep);
   });
-  const R = RT, y1 = hc + 0.6;
+  const R = RT, y1 = flush ? hc + 0.8 : hc + 0.6;
   const ss = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
   const radiusAt = y => y <= hc ? RT + (Rc * 0.99 - RT) * ss((y - hc + 2.5) / 2.5) : Rc * (0.99 - 0.12 * ss((y - hc) / 0.6));   // 到切口正好和树冠的树干一样粗，再往里收
-  const A = 40, N = 110, pos = [], uv = [], idx = [], circ = 2 * Math.PI * R / 3;
+  const N = 110, pos = [], uv = [], idx = [], circ = 2 * Math.PI * R / 3;
   for (let j = 0; j <= N; j++) {
     const y = y0 + (y1 - y0) * j / N, k = (y1 - y) / (y1 - y0);   // k：0 在顶、1 在底
     const ox = 0.35 * Math.sin(y * 0.11) * Math.max(0, (base - y) / (base - y0)), oz = 0.3 * Math.cos(y * 0.09 + 1) * Math.max(0, (base - y) / (base - y0));   // 越往上越正，接上树冠
     const rr = radiusAt(y) * (y <= base ? 1 + 0.05 * Math.sin(y * 0.5) * k : 1) ;
     for (let i = 0; i <= A; i++) {
-      const a = i / A * Math.PI * 2, tw = a + y * 0.06, rg = Math.min(1, Math.max(0, (base - 1.6 - y) / 3)), r = rr * (1 + rg * (0.07 * Math.sin(3 * tw) + 0.035 * Math.sin(7 * tw + y * 0.3)));   // 接口附近棱纹淡掉，切面变圆
+      const a = i / A * Math.PI * 2, tw = a + y * 0.06, rg = Math.min(1, Math.max(0, (base - 1.6 - y) / 3));
+      let r = rr * (1 + rg * (0.07 * Math.sin(3 * tw) + 0.035 * Math.sin(7 * tw + y * 0.3)));   // 接口附近棱纹淡掉，切面变圆
+      if (flush) { const Rp = pa[i % A] * 0.96, w0 = ss((y - (cutF - 4)) / 3);   // 主干往上 3 米慢慢变成模型树干切口处的截面（每个方向略细 4%），直接插进模型里：不鼓包、不往里收，切口锯齿后面紧贴着就是它
+        r = r + (Rp - r) * w0; }
       pos.push(at.x + ox + Math.cos(a) * r, y, at.z + oz + Math.sin(a) * r); uv.push(i / A * 3, (y - y0) / circ);
     }
   }
@@ -1301,7 +1350,9 @@ function barkTrunk(crown, at, y0) {
   nrm.colorSpace = THREE.NoColorSpace; nrm.wrapS = nrm.wrapT = THREE.RepeatWrapping;
   world.trunkJoin = { y: hc, r: Rc };
   const mat = world.barkMat = new THREE.MeshStandardMaterial({ map, normalMap: nrm, normalScale: new THREE.Vector2(0.7, 0.7), roughness: 0.95 });
-  return new THREE.Mesh(g, mat);
+  if (!flush) return new THREE.Mesh(g, mat);
+  const tm = mat.clone(); barkBlend(tm, map);   // 主干也按世界坐标三面投影树皮：和模型那截用同一种投影，接口上下纹理一致
+  return new THREE.Mesh(g, tm);
 }
 // 树冠模型里的树干和枝条换成和程序树干同一张树皮（按世界坐标三面投影），叶子（偏绿的像素）保持原样：整棵树看起来是一体的
 function barkBlend(mat, bark, dropAbove = null) {   // dropAbove：这个高度（世界坐标）以上，模型自带的绿叶碎片直接丢掉
@@ -1344,7 +1395,7 @@ function buildCourtyard() {
   const T0 = TREE;
   if (MODELS.roofTree && IMG.bark) { // 天台专用的整棵树（Meshy）：自带一长截圆柱主干，下面接程序生成的主干，两段一样粗、一样的树皮，接口埋在楼下
     const crown = model('roofTree'); roofTreeFit(crown, 9.5); crown.position.x += T0.x; crown.position.z += T0.z; tree.add(crown);
-    const trunk = barkTrunk(crown, T0, -32); tree.add(trunk);
+    const trunk = barkTrunk(crown, T0, -32, true); tree.add(trunk);
     crown.traverse(m => { if (m.isMesh) barkBlend(m.material, trunk.material.map, crown.userData.fork + 1.0); });   // 分叉以上模型自带的零碎树叶不要（看起来像碎片）
     leafCards(crown, tree);   // 多视图生成的模型树叶很少：枝头补叶团
     return;
@@ -1731,13 +1782,14 @@ if (!TOUCH) Object.assign(MODEL_SIZE, { cityRowHi: MODEL_SIZE.cityRow, cityWareh
 const MODELS = {};
 function loadModels() {
   const loader = new GLTFLoader();
-  return Promise.all(Object.keys(MODEL_SIZE).map(k => new Promise(res => loader.load(`assets/${k}.glb`, gl => {
+  for (const k of Object.keys(MODEL_SIZE)) loadTick('m:' + k, 0, 1.2e6);
+  return Promise.all(Object.keys(MODEL_SIZE).map(k => new Promise(res => loader.load(`assets/${k}.glb`, gl => { loadTick('m:' + k, 1);
     const o = gl.scene, s = MODEL_SIZE[k], bb = new THREE.Box3().setFromObject(o), sz = bb.getSize(V(0, 0, 0)), c = bb.getCenter(V(0, 0, 0));
     const f = s.h ? s.h / sz.y : s.w / Math.max(sz.x, sz.z);
     o.scale.setScalar(f); o.position.set(-c.x * f, -bb.min.y * f, -c.z * f);
     o.traverse(m => { if (m.isMesh) { m.material.roughness = 1; m.material.metalness = 0; } });
     MODELS[k] = { obj: group(o), size: sz.multiplyScalar(f) }; res();
-  }, undefined, () => res()))));
+  }, e => { if (e.total) loadTick('m:' + k, e.loaded / e.total * 0.98, e.total); }, () => { loadTick('m:' + k, 1); res(); }))));
 }
 // 大量重复摆放的模型（植物、树根）：共用材质，省显存和绘制开销
 function modelShared(id) {
@@ -2788,7 +2840,10 @@ function tick() {
 
 (async () => {
   await Promise.all([loadModels(), loadImages()]);
+  const stage = p => { loadStage = p; showLoad(); return new Promise(r => setTimeout(r, 30)); };   // 先让进度条画出来，再做下一步（下一步会占住主线程一会儿）
+  await stage(0.87);
   buildBuilding(); buildRoof();
+  await stage(0.93);
   if (!TOUCH) { // 天台的实时阴影：近处的实体投影、接影（透明的雾、天空、远景不参与）；大树和楼梯间也投影
     const near = V(), ok = m => m.isMesh && !m.material.transparent && !(m.material.isShaderMaterial || m.material.isMeshBasicMaterial);
     roof.traverse(m => { if (ok(m) && m.getWorldPosition(near).distanceTo(ROOF_C) < 45) m.castShadow = m.receiveShadow = true; });
@@ -2806,7 +2861,7 @@ function tick() {
     $('hud').style.display = 'block';
     window.__game = { player, state, world, camera, T, Tinv, net, colliders, renderer, idleT: () => [performance.now() - lastInput, playing, !!state.scope, state.ended], debugJump, debugCollectAll, stairWarp, genPuzzles, forceTemplates: l => { state.forceTpl = l.slice(); } };
   }
-  ready = true; menuLabels();
+  loadStage = 1; showLoad(); ready = true; menuLabels(); setTimeout(() => $('loadBar').style.visibility = 'hidden', 400);
   Platform.emit('ready');
   tick();
 })();
