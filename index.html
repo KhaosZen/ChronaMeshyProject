@@ -616,6 +616,7 @@ function buildRoofStair(B, c) {
     solid(ctx, xb + i * run, xb + (i + 1) * run, -0.1, M2 + (i + 1) * r, zB[0], zB[1], M.floor, false);
   }
   solid(ctx, 8.5, xb, -0.1, M2, -20.2, -17.8, M.floor, false);   // 中间的平台
+  solid(ctx, xa, 18.5, -0.3, 0, -20.4, -17.6, M.floor, false);   // 进门处的底层平台（原来直跑楼梯的平台在天台模式下藏起来了，这里要自己补上，不然从上面往下看是空的）
   solid(ctx, xa, 18.3, Y - 0.2, Y, zB[0], zB[1], M.floor, false);   // 顶上的平台（下面留出进门的空间）
   walkQuad(ctx, [xa, 0, -20.2], [18.5, 0, -20.2], [18.5, 0, -17.8], [xa, 0, -17.8]);
   walkQuad(ctx, [xb, M2, zA[0]], [xa, 0, zA[0]], [xa, 0, zA[1]], [xb, M2, zA[1]]);
